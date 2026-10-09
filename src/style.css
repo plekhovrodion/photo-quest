@@ -1,0 +1,20 @@
+:root { --bg: #fff7e6; --ink: #2b2b3a; --accent: #ff7a1a; --ok: #2eb872; --bad: #e0555a; }
+* { box-sizing: border-box; }
+body { margin: 0; min-height: 100vh; background: var(--bg); color: var(--ink);
+  font-family: system-ui, -apple-system, 'Segoe UI', sans-serif; }
+#app { min-height: 100vh; display: flex; flex-direction: column; align-items: center;
+  justify-content: center; gap: 24px; padding: 24px 16px; text-align: center; }
+h1 { font-size: clamp(32px, 8vw, 56px); margin: 0; }
+p { font-size: 22px; margin: 0; }
+button { font: inherit; font-size: 26px; font-weight: 700; color: #fff; background: var(--accent);
+  border: 0; border-radius: 20px; padding: 20px 36px; min-width: 240px; min-height: 64px; cursor: pointer; }
+button.secondary { background: transparent; color: var(--ink); border: 3px solid var(--ink); }
+button:disabled { opacity: .6; }
+.emoji { font-size: 96px; line-height: 1; }
+.ok .emoji { animation: pop .6s ease; }
+.progress { font-size: 18px; opacity: .7; }
+.spinner { width: 64px; height: 64px; border: 8px solid #ffd9b3; border-top-color: var(--accent);
+  border-radius: 50%; animation: spin 1s linear infinite; }
+.preview { max-width: min(80vw, 360px); max-height: 40vh; border-radius: 16px; }
+@keyframes spin { to { transform: rotate(360deg); } }
+@keyframes pop { 0% { transform: scale(.3); } 60% { transform: scale(1.3); } 100% { transform: scale(1); } }
