@@ -4,6 +4,7 @@ import { createGame, currentTask, canSkip, reduce, MAX_ATTEMPTS, type Action, ty
 import { takePhoto, compressPhoto } from './camera/capture';
 import { verifyPhoto } from './api/verify';
 import { playSuccess, playTryAgain, speak } from './audio/sounds';
+import { SLIDES, isOnboarded, markOnboarded } from './onboarding';
 import { loadProgress, saveProgress, recordResult, isPassed, buy, canBuy, SHOP, CURRENCY, LEVEL_BONUS, type Progress } from './progress';
 
 const root = document.getElementById('app')!;
@@ -74,6 +75,20 @@ function wallet() {
   return `<div class="wallet">${CURRENCY.emoji} ${progress.flashes}</div>`;
 }
 
+function renderOnboarding(i = 0) {
+  const slide = SLIDES[i];
+  const last = i === SLIDES.length - 1;
+  const dots = SLIDES.map((_, j) => `<span class="dot ${j === i ? 'on' : ''}"></span>`).join('');
+  show(`<div class="emoji">${slide.emoji}</div><h1>${slide.title}</h1><p>${slide.text}</p>
+    <div class="dots">${dots}</div>
+    <button id="onext">${last ? 'Поехали!' : 'Дальше'}</button>
+    ${last ? '' : '<button id="oskip" class="secondary">Пропустить</button>'}`);
+  speak(`${slide.title}. ${slide.text}`);
+  const done = () => { markOnboarded(); speechSynthesis?.cancel(); renderLevels(); };
+  on('onext', () => (last ? done() : renderOnboarding(i + 1)));
+  on('oskip', done);
+}
+
 function renderLevels() {
   const cards = LEVELS.map((l, i) => {
     const p = progress.levels[l.id];
@@ -84,11 +99,13 @@ function renderLevels() {
     </button>`;
   }).join('');
   show(`${wallet()}<h1>ФотоКвест</h1><p>Выбери любой уровень</p><div class="levels">${cards}</div>
-    <button id="shop" class="secondary">🛍 Магазин</button>`);
+    <button id="shop" class="secondary">🛍 Магазин</button>
+    <button id="howto" class="secondary">❓ Как играть</button>`);
   root.querySelectorAll<HTMLButtonElement>('.level').forEach((b) =>
     b.addEventListener('click', () => startLevel(LEVELS[Number(b.dataset.i)])),
   );
   on('shop', renderShop);
+  on('howto', () => renderOnboarding());
 }
 
 function renderShop() {
@@ -114,7 +131,7 @@ function renderShop() {
 }
 
 function render() {
-  if (!state || !level) return renderLevels();
+  if (!state || !level) return isOnboarded() ? renderLevels() : renderOnboarding();
   const s = state;
   const task = currentTask(s);
   const progressBar = `<div class="progress">${level.emoji} ${level.title} · задание ${Math.min(s.index + 1, s.tasks.length)} из ${s.tasks.length} · ${CURRENCY.emoji} ${s.stars}</div>`;
