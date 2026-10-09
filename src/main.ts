@@ -262,7 +262,7 @@ function renderLevels() {
     </button>`;
   }).join('');
   show(`${hud('<button id="howto" class="secondary small" aria-label="Как играть">?</button>')}
-    ${art('ship')}<h1>Покажи нам мир!</h1><p>Выбери, что показать Грише и Соне</p>
+    ${art('jet-1')}<h1>Покажи нам мир!</h1><p>Выбери, что показать Грише и Соне</p>
     <div class="world" style="aspect-ratio:${W} / ${H.toFixed(0)}">${cubes}</div>`, 'screen-menu');
   root.querySelectorAll<HTMLButtonElement>('.cube-btn').forEach((b) =>
     b.addEventListener('click', () => startLevel(LEVELS[Number(b.dataset.i)])),
@@ -357,15 +357,11 @@ function renderMap(l: Level) {
   }).join('');
 
   const np = pos.find((q) => q.node === (next < 0 ? 0 : next))!;
-  const guide = next >= 0
-    ? `<img class="map-char ${np.sx - minX < W / 2 ? 'at-left' : 'at-right'}" src="/art/sonya-walk.svg" alt="" aria-hidden="true"
-        style="left:${((np.sx - minX) / W) * 100}%;top:${((np.sy - NODE_H - minY) / H) * 100}%">` : '';
-
   const found = l.tasks.filter((t) => progress.found[t.id] !== undefined).length;
   show(`${hud(`<button id="back" class="secondary small" aria-label="Назад">${backIcon()}</button>`)}
     <h1>${l.title}</h1><p>Найдено: ${found} из ${n}</p>
     <div class="map" style="aspect-ratio:${W.toFixed(1)} / ${H.toFixed(1)};--w:${W.toFixed(0)}">
-      <svg viewBox="0 0 ${W.toFixed(1)} ${H.toFixed(1)}" aria-hidden="true">${tiles}</svg>${guide}${nodes}
+      <svg viewBox="0 0 ${W.toFixed(1)} ${H.toFixed(1)}" aria-hidden="true">${tiles}</svg>${nodes}
     </div>`, 'screen-map');
   root.querySelectorAll<HTMLButtonElement>('.stop').forEach((b) =>
     b.addEventListener('click', () => startTask(l.tasks[Number(b.dataset.i)])),
