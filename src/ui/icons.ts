@@ -49,8 +49,10 @@ export const albumIcon = () =>
     <rect x="3" y="6.5" width="14" height="14" rx="2.4" fill="currentColor"/>
     <circle cx="7.6" cy="11.4" r="1.5" fill="#fff"/><path d="M4.5 18.6l4-4 2.4 2.4 2.6-3 2 2.6" fill="none" stroke="#fff" stroke-width="1.8" stroke-linejoin="round" stroke-linecap="round"/>`);
 
-// Заврик: мордочка динозаврика
+// Заврик: мордочка динозаврика с зубцами на макушке
 export const zavrikIcon = () =>
-  svg(`<path d="M12 4c4.6 0 8 3 8 7.2 0 1.6-.4 3-1.2 4.2-.7 1.1-1.8 2-3 2.4H8.2c-1.2-.4-2.3-1.3-3-2.4C4.4 14.200 4 12.800 4 11.200 4 7 7.400 4 12 4z" fill="currentColor"/>
-    <path d="M8 2.200l1.500 2.200M12 1.500v3M16 2.200l-1.500 2.200" stroke="currentColor" stroke-width="2" stroke-linecap="round" fill="none"/>
-    <circle cx="9" cy="11" r="1.500" fill="#fff"/><circle cx="15" cy="11" r="1.500" fill="#fff"/><path d="M9 15.200c1.800 1.200 4.200 1.200 6 0" stroke="#fff" stroke-width="1.800" stroke-linecap="round" fill="none"/>`);
+  svg(`<path d="M5 9.500C5 6.700 7.800 5 12 5s7 1.700 7 4.500v4C19 17.300 16 19.500 12 19.500s-7-2.200-7-6z" fill="currentColor"/>
+    <path d="M7 5.300L8.200 1.800 10 4.600 12 1.200 14 4.600 15.800 1.800 17 5.300z" fill="currentColor"/>
+    <circle cx="9.300" cy="11" r="1.700" fill="#fff"/><circle cx="14.700" cy="11" r="1.700" fill="#fff"/>
+    <circle cx="9.300" cy="11" r=".8" fill="#1e1b4b"/><circle cx="14.700" cy="11" r=".8" fill="#1e1b4b"/>
+    <path d="M9 15.200c1.700 1.300 4.300 1.300 6 0" stroke="#fff" stroke-width="1.800" stroke-linecap="round" fill="none"/>`);

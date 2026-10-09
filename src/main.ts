@@ -15,6 +15,7 @@ import { playSuccess, playTryAgain, speak } from './audio/sounds';
 import { SLIDES, isOnboarded, markOnboarded } from './onboarding';
 import { feed, setLook, stageOf, fedOf, lookOf, ZAVRIKS, ZAVRIK_NAME, HUES, HATS, BADGES, UNLOCK_STAGE, MAX_STAGE, zavrikOfArt, type ZavrikId } from './zavrik';
 import { hatSvg, badgeSvg } from './ui/accessories';
+import { pictoSvg } from './ui/pictos';
 import { album, toSticker, type Sticker } from './album';
 import { CLIP_OBJECTS } from './data/clip';
 import { loadProgress, recordTask, isUnlocked, canUnlock, unlockLevel, priceOf, CURRENCY, LEVEL_BONUS, type Progress } from './progress';
@@ -290,13 +291,12 @@ function renderLevels() {
       <span class="cube-label">${l.title}</span></span></span>
     </button>`;
   }).join('');
-  show(`${hud('<button id="howto" class="secondary small" aria-label="Как играть">?</button>', '', '', `<button id="zavrik" class="secondary small" aria-label="Заврики">${zavrikIcon()}</button><button id="album" class="secondary small" aria-label="Мои находки">${albumIcon()}</button>`)}
+  show(`${hud('', '', '', `<button id="zavrik" class="hud-btn zv" aria-label="Заврики"><span class="hb-ico">${zavrikIcon()}</span><span class="hb-txt">Заврики</span></button><button id="album" class="hud-btn al" aria-label="Мои находки"><span class="hb-ico">${albumIcon()}</span><span class="hb-txt">Альбом</span></button>`)}
     ${art('jet-1')}<h1>Покажи нам мир!</h1><p>Выбери, что показать Грише и Соне</p>
     <div class="world" style="aspect-ratio:${W} / ${H.toFixed(0)}">${cubes}</div>`, 'screen-menu');
   root.querySelectorAll<HTMLButtonElement>('.cube-btn').forEach((b) =>
     b.addEventListener('click', () => startLevel(LEVELS[Number(b.dataset.i)])),
   );
-  on('howto', () => renderOnboarding());
   on('album', openAlbum);
   on('zavrik', () => { view = 'zavrik'; render(); });
 }
@@ -375,6 +375,17 @@ function renderZavrik(quiet = false) {
       setTimeout(() => t.remove(), 3200);
     }
   });
+}
+
+// Картинка к заданию: цветное пятно для цвета, контурный значок для предмета (ребёнок, который не читает, поймёт без звука).
+const COLOR_CSS: Record<string, string> = {
+  red: '#e11d48', orange: '#f97316', yellow: '#facc15', green: '#22c55e', blue: '#2563eb',
+  purple: '#9333ea', pink: '#ec4899', brown: '#92400e', white: '#ffffff', black: '#111827', gray: '#9ca3af',
+};
+function taskCard(t: Task): string {
+  if (t.local?.kind === 'color') return `<div class="task-card"><span class="swatch" style="--c:${COLOR_CSS[t.local.color]}"></span></div>`;
+  const pic = pictoSvg(t.id.replace(/^object-/, ''));
+  return pic ? `<div class="task-card">${pic}</div>` : '';
 }
 
 // Название предмета задания в именительном падеже для подписи наклейки.
@@ -574,11 +585,11 @@ function render() {
     case 'task':
     case 'camera': {
       const hint = s.attempts > 0 && task!.hint ? `<div class="hint">${bulbIcon()}<span>${task!.hint}</span></div>` : '';
-      show(`${bar}${art('grisha-cheer', 'talking')}
-        ${bubble(task!.prompt)}${hint}
+      show(`${bar}<div class="hero">${art('grisha-solo')}</div>
+        <div class="say-row">${bubble(task!.prompt)}<button id="say" class="say-btn" aria-label="Повторить задание">${speakerIcon()}</button></div>
+        ${taskCard(task!)}${hint}
         ${notice ? `<div class="notice">${notice}</div>` : ''}
-        <button id="shoot" class="breathe">${cameraIcon()}Сфотографировать</button>
-        <button id="say" class="secondary">${speakerIcon()}Повторить</button>`);
+        <button id="shoot" class="primary-xl">${cameraIcon()}Сфотографировать</button>`);
       on('shoot', capture);
       on('say', () => speak(task!.prompt));
       on('menu', toMap);
