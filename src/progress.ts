@@ -82,3 +82,24 @@ export const canBuy = (p: Progress, item: ShopItem): boolean =>
 export function buy(p: Progress, item: ShopItem): Progress {
   return canBuy(p, item) ? { ...p, flashes: p.flashes - item.price, owned: [...p.owned, item.id] } : p;
 }
+
+// Вспышки выводятся из найденного и купленного, поэтому при слиянии двух устройств не теряются траты.
+export function computeFlashes(p: Pick<Progress, 'found' | 'levels' | 'owned'>): number {
+  const earned = Object.values(p.found).reduce((n, v) => n + v, 0);
+  const bonuses = Object.values(p.levels).filter((l) => l.passed).length * LEVEL_BONUS;
+  const spent = p.owned.reduce((n, id) => n + (SHOP.find((i) => i.id === id)?.price ?? 0), 0);
+  return Math.max(0, earned + bonuses - spent);
+}
+
+// Слияние прогресса с двух устройств: объединяем найденное и купленное, звёзды берём максимальные.
+export function mergeProgress(a: Progress, b: Progress): Progress {
+  const found: Record<string, number> = { ...a.found };
+  for (const [id, stars] of Object.entries(b.found)) found[id] = Math.max(found[id] ?? 0, stars);
+  const levels: Progress['levels'] = { ...a.levels };
+  for (const [id, lp] of Object.entries(b.levels)) {
+    const prev = levels[id];
+    levels[id] = { stars: Math.max(prev?.stars ?? 0, lp.stars), passed: (prev?.passed ?? false) || lp.passed };
+  }
+  const owned = [...new Set([...a.owned, ...b.owned])];
+  return { found, levels, owned, flashes: computeFlashes({ found, levels, owned }) };
+}

@@ -7,9 +7,12 @@ import { preloadModel } from './vision/local';
 import { confetti } from './fx/confetti';
 import { playSuccess, playTryAgain, speak } from './audio/sounds';
 import { SLIDES, isOnboarded, markOnboarded } from './onboarding';
-import { loadProgress, saveProgress, recordTask, buy, canBuy, SHOP, CURRENCY, LEVEL_BONUS, type Progress } from './progress';
+import { loadProgress, recordTask, buy, canBuy, SHOP, CURRENCY, LEVEL_BONUS, type Progress } from './progress';
+
+import { createStore } from './storage/store';
 
 const root = document.getElementById('app')!;
+const store = createStore();
 let progress: Progress = loadProgress();
 let level: Level | null = null;
 let state: GameState | null = null;
@@ -48,7 +51,7 @@ function finishTask(): boolean {
   if (s.score === 0) return false;
   const res = recordTask(progress, level!, s.tasks[0].id, s.stars);
   progress = res.progress;
-  saveProgress(progress);
+  void store.save(progress);
   return res.levelDone;
 }
 
@@ -105,7 +108,7 @@ function renderLevels() {
   show(`${hud('<button id="howto" class="secondary small" aria-label="Как играть">❓</button>', '', '',
       '<button id="shop" class="secondary small" aria-label="Магазин">🛍</button>')}
     <div aria-hidden="true" class="mascot">📸</div><h1>ФотоКвест</h1><p>Выбери приключение!</p>
-    <div class="levels">${cards}</div>`);
+    <div class="levels">${cards}</div>`, 'screen-menu');
   root.querySelectorAll<HTMLButtonElement>('.level').forEach((b) =>
     b.addEventListener('click', () => startLevel(LEVELS[Number(b.dataset.i)])),
   );
@@ -127,7 +130,7 @@ function renderShop() {
     b.addEventListener('click', () => {
       const item = SHOP.find((x) => x.id === b.dataset.id)!;
       progress = buy(progress, item);
-      saveProgress(progress);
+      void store.save(progress);
       playSuccess();
       confetti(900);
       renderShop();
@@ -163,7 +166,7 @@ function renderMap(l: Level) {
     <div aria-hidden="true" class="mascot">${l.emoji}</div><h1>${l.title}</h1><p>Найдено: ${found} из ${n}</p>
     <div class="map" style="aspect-ratio:${MAP_W} / ${H}">
       <svg viewBox="0 0 ${MAP_W} ${H}" aria-hidden="true"><path d="${d}"/></svg>${nodes}
-    </div>`);
+    </div>`, 'screen-map');
   root.querySelectorAll<HTMLButtonElement>('.stop').forEach((b) =>
     b.addEventListener('click', () => startTask(l.tasks[Number(b.dataset.i)])),
   );
@@ -235,3 +238,10 @@ function render() {
 }
 
 render();
+
+// Подтягиваем прогресс с сервера (если он настроен) и перерисовываем, не прерывая задание.
+store.load().then((p) => {
+  progress = p;
+  // Перерисовываем только карту и меню: онбординг, магазин и игру не сбрасываем.
+  if (!state && /screen-(menu|map)/.test(root.className)) render();
+});
