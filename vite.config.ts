@@ -1,7 +1,8 @@
 import { defineConfig } from 'vite';
 
-// Туннели вроде trycloudflare.com приходят с чужим Host; без allowedHosts Vite их блокирует.
-const allowedHosts = ['.trycloudflare.com'];
+// Туннели вроде trycloudflare.com приходят с чужим Host; .local — имя Mac в домашней сети (Bonjour).
+// Без allowedHosts Vite такие запросы блокирует.
+const allowedHosts = ['.trycloudflare.com', '.local'];
 
 export default defineConfig({
   server: {
