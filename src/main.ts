@@ -5,7 +5,6 @@ import { takePhoto, compressPhoto } from './camera/capture';
 import { verifyPhoto } from './api/verify';
 import { confetti } from './fx/confetti';
 import { playSuccess, playTryAgain, speak } from './audio/sounds';
-import { PREMISE, FINALE, CHAPTERS, chapterFor } from './data/story';
 import { SLIDES, isOnboarded, markOnboarded } from './onboarding';
 import { loadProgress, saveProgress, recordResult, isPassed, buy, canBuy, SHOP, CURRENCY, LEVEL_BONUS, type Progress } from './progress';
 
@@ -33,15 +32,9 @@ function on(id: string, fn: () => void) {
 
 function startLevel(l: Level) {
   level = l;
-  state = null;
-  const ch = chapterFor(l.id);
-  show(`${hud('<button id="back" class="secondary small">← Назад</button>')}
-    <div aria-hidden="true" class="mascot">🗺️</div><h1>${ch.place}</h1>
-    <div class="bubble">${ch.intro}</div>
-    <button id="go" class="green">Поехали!</button>`);
-  speak(ch.intro);
-  on('go', () => { state = createGame(l.tasks); rewarded = false; render(); });
-  on('back', toMenu);
+  state = createGame(l.tasks);
+  rewarded = false;
+  render();
 }
 
 // Начисляет награду один раз за прохождение, даже если экран перерисуется.
@@ -100,44 +93,24 @@ function renderOnboarding(i = 0) {
   on('oskip', done);
 }
 
-const rainbow = () =>
-  `<div class="rainbow" role="img" aria-label="Кусочков радуги: ${piecesFound()} из ${CHAPTERS.length}">${CHAPTERS.map((c) =>
-    `<span class="stripe ${progress.levels[c.levelId]?.passed ? 'on' : ''}" style="--c:${c.color}"></span>`).join('')}</div>`;
-
-const piecesFound = () => CHAPTERS.filter((c) => progress.levels[c.levelId]?.passed).length;
-
 function renderLevels() {
-  const next = LEVELS.findIndex((l) => !progress.levels[l.id]?.passed);
-  const nodes = LEVELS.map((l, i) => {
+  const cards = LEVELS.map((l, i) => {
     const p = progress.levels[l.id];
-    const ch = chapterFor(l.id);
-    const cls = [p?.passed ? 'done' : '', i === next ? 'next' : '', i % 2 ? 'right' : 'left'].join(' ');
-    return `<button class="node ${cls}" data-i="${i}" style="--c:${ch.color}">
-      <span aria-hidden="true" class="emoji-s">${p?.passed ? '🏅' : l.emoji}</span>
-      <span class="node-text"><b>${ch.place}</b><small>${l.title} · ${
-        p ? `${CURRENCY.emoji} ${p.stars}/${maxStars(l)}` : `${l.tasks.length} заданий`}</small></span>
+    return `<button class="level ${p?.passed ? 'done' : ''}" data-i="${i}">
+      <span class="emoji-s" aria-hidden="true">${p?.passed ? '🏅' : l.emoji}</span>
+      <span>${l.title}</span>
+      <small>${p ? `${CURRENCY.emoji} ${p.stars}/${maxStars(l)}` : `${l.tasks.length} заданий`}</small>
     </button>`;
   }).join('');
   show(`${hud('<button id="howto" class="secondary small" aria-label="Как играть">❓</button>')}
-    <div aria-hidden="true" class="mascot">📸</div><h1>ФотоКвест</h1>
-    <p class="premise">${progress.levels && piecesFound() === 0 ? PREMISE : 'Собери все кусочки радуги!'}</p>
-    ${rainbow()}
-    <div class="path">${nodes}</div>
+    <div aria-hidden="true" class="mascot">📸</div><h1>ФотоКвест</h1><p>Выбери приключение!</p>
+    <div class="levels">${cards}</div>
     <button id="shop" class="secondary">🛍 Магазин</button>`);
-  root.querySelectorAll<HTMLButtonElement>('.node').forEach((b) =>
+  root.querySelectorAll<HTMLButtonElement>('.level').forEach((b) =>
     b.addEventListener('click', () => startLevel(LEVELS[Number(b.dataset.i)])),
   );
   on('shop', renderShop);
   on('howto', () => renderOnboarding());
-}
-
-function renderFinale() {
-  show(`${hud('')}<div aria-hidden="true" class="mascot cheer">🌈</div><h1>Радуга собрана!</h1>
-    <div class="bubble">${FINALE}</div>${rainbow()}
-    <button id="menu" class="green">К приключениям</button>`);
-  confetti(3000);
-  speak(FINALE);
-  on('menu', toMenu);
 }
 
 function renderShop() {
@@ -219,25 +192,19 @@ function render() {
       break;
     }
     case 'finish': {
-      const wasAll = piecesFound() === CHAPTERS.length;
       const { passed, firstPass } = finishLevel();
       const next = LEVELS[LEVELS.indexOf(level) + 1];
-      const ch = chapterFor(level.id);
-      const finale = firstPass && !wasAll && piecesFound() === CHAPTERS.length;
       show(`${hud('', pips(s))}<div aria-hidden="true" class="mascot cheer">${passed ? '🏆' : '💪'}</div>
         <h1>${passed ? 'Уровень пройден!' : 'Почти получилось!'}</h1>
         <p>Найдено: ${s.score} из ${s.tasks.length}</p>
-        ${passed ? `<div class="piece" style="--c:${ch.color}">🌈 ${ch.outro}</div>` : ''}
         <div class="reward">${CURRENCY.emoji} +${s.stars}${firstPass ? ` + бонус ${LEVEL_BONUS}` : ''}</div>
         ${!passed ? `<p>Найди хотя бы ${Math.ceil(s.tasks.length * PASS_RATIO)}, чтобы получить бонус за уровень.</p>` : ''}
-        ${finale ? '<button id="finale" class="green">🌈 Что дальше?</button>' : ''}
-        ${next && !finale ? `<button id="nextlevel" class="${passed ? 'green' : 'secondary'}">Следующий уровень</button>` : ''}
+        ${next ? `<button id="nextlevel" class="${passed ? 'green' : 'secondary'}">Следующий уровень</button>` : ''}
         <button id="again" class="${next ? 'secondary' : ''}">Сыграть ещё раз</button>
         <button id="menu" class="secondary small">К приключениям</button>`);
       if (passed) confetti(2200);
-      speak(passed ? ch.outro : 'Почти получилось!');
+      speak(passed ? 'Уровень пройден!' : 'Почти получилось!');
       on('nextlevel', () => startLevel(next));
-      on('finale', renderFinale);
       on('again', () => startLevel(level!));
       on('menu', toMenu);
       break;
