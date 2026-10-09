@@ -106,5 +106,3 @@ export function preloadModels(withClip = true): void {
   if (withClip) light.then(() => import('./clip')).then((m) => m.loadClip()).catch(() => {});
   else light.catch(() => {});
 }
-
-export const modelsReady = (): boolean => status.coco >= 1 && status.mobilenet >= 1;

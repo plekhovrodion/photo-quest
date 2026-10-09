@@ -24,9 +24,6 @@ export interface Level {
   tasks: Task[];
 }
 
-// Доля верных заданий, нужная для открытия следующего уровня.
-export const PASS_RATIO = 0.7;
-
 const t = (kind: Kind, id: string, prompt: string, criterion: string, hint?: string, local?: LocalCheck): Task => ({
   id: `${kind}-${id}`, kind, prompt, criterion, hint, local,
 });

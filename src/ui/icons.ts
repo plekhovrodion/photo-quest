@@ -24,10 +24,6 @@ export const imageIcon = () =>
   svg(`<rect x="3" y="4.5" width="18" height="15" rx="2.5" fill="none" stroke="currentColor" stroke-width="2"/>
     <circle cx="9" cy="10" r="1.7" fill="currentColor"/><path d="M4 18l5-5 3 3 3.5-4L20 17" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/>`);
 
-export const shopIcon = () =>
-  svg(`<path d="M5 8.5h14l-1.1 11a1.5 1.5 0 0 1-1.5 1.4H7.6a1.5 1.5 0 0 1-1.5-1.4z" fill="currentColor"/>
-    <path d="M8.5 10V7.5a3.5 3.5 0 0 1 7 0V10" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"/>`);
-
 export const starIcon = () =>
   svg(`<path d="M12 2.2l2.9 6.3 6.9.8-5.1 4.7 1.4 6.8L12 17.3 5.9 20.8l1.4-6.8L2.2 9.3l6.9-.8z" fill="currentColor" stroke="currentColor" stroke-width="1.4" stroke-linejoin="round"/>`);
 

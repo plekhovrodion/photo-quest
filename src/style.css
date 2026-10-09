@@ -51,9 +51,6 @@ button:focus-visible { outline: 4px solid var(--blue); outline-offset: 3px; }
 .pip.now { background: var(--gold); border-color: #d99a00; transform: scale(1.3); }
 
 /* Маскот и реплика */
-.mascot { font-size: 96px; line-height: 1; animation: bob 2.4s ease-in-out infinite; }
-.mascot.cheer { animation: cheer .7s ease both; }
-.mascot.sad { filter: grayscale(.3); animation: none; }
 @keyframes bob { 50% { transform: translateY(-10px) rotate(-3deg); } }
 @keyframes cheer { 0% { transform: scale(.4) rotate(-20deg); } 60% { transform: scale(1.3) rotate(8deg); } 100% { transform: scale(1); } }
 .bubble { position: relative; background: var(--panel); border-radius: 28px; padding: 18px 24px; max-width: 520px;
@@ -262,10 +259,6 @@ button.stop { width: 66px; height: 66px; font-size: 30px; background: #fff; colo
   box-shadow: 0 5px 0 var(--btn-d); }
 button.stop.next { border-color: #f59e0b; box-shadow: 0 5px 0 #b45309; }
 button.stop.done { background: #16a34a; border-color: #166534; color: #fff; box-shadow: 0 5px 0 #166534; }
-.map-char { position: absolute; width: 20%; height: auto; transform: translate(75%, -100%); pointer-events: none; animation: bob 2.4s ease-in-out infinite;
-  filter: drop-shadow(0 6px 8px rgba(10, 5, 40, .45)); }
-
-.map-char.at-right { transform: translate(-175%, -100%); }
 
 
 /* ===== Главная: парящие 3D-кубы ===== */
@@ -571,7 +564,7 @@ button.stop.done .ico { width: 62%; height: 62%; }
 .char.sad { animation: char-in .5s ease-out backwards; }
 .char.shake { animation: char-in .5s ease-out backwards, shake .6s .4s ease both; }
 .char.talking { animation: char-in .5s ease-out backwards !important; }
-.mascot, .zv-char, .acc-hat, .acc-badge, .map-char { animation: none; }
+.zv-char, .acc-hat, .acc-badge { animation: none; }
 .zv-stage.s5::before { animation: none; }
 button.breathe { animation: slide-in .45s var(--ease) .24s backwards; }
 button.stop, button.stop.done { animation: stop-in .5s calc(var(--i, 0) * 50ms + .2s) var(--spring) backwards; }
