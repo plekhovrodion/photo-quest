@@ -388,7 +388,7 @@ function render() {
     case 'task':
     case 'camera': {
       const hint = s.attempts > 0 && task!.hint ? `<div class="hint">${bulbIcon()}<span>${task!.hint}</span></div>` : '';
-      show(`${bar}${art('grisha-happy', 'talking')}
+      show(`${bar}${art('grisha-cheer', 'talking')}
         ${bubble(task!.prompt)}${hint}
         ${notice ? `<div class="notice">${notice}</div>` : ''}
         <button id="shoot" class="breathe">${cameraIcon()}Сфотографировать</button>
