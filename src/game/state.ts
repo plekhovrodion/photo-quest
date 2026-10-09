@@ -11,6 +11,7 @@ export interface GameState {
   attempts: number;
   lastMatch: boolean | null;
   score: number;
+  stars: number;
 }
 
 export type Action =
@@ -29,8 +30,12 @@ export function createGame(tasks: Task[]): GameState {
     attempts: 0,
     lastMatch: null,
     score: 0,
+    stars: 0,
   };
 }
+
+// 3 звезды с первой попытки, 2 — со второй.
+export const starsFor = (attempt: number): number => Math.max(0, MAX_ATTEMPTS + 2 - attempt);
 
 export function currentTask(s: GameState): Task | undefined {
   return s.tasks[s.index];
@@ -60,6 +65,7 @@ export function reduce(s: GameState, a: Action): GameState {
         lastMatch: a.match,
         attempts: s.attempts + 1,
         score: a.match ? s.score + 1 : s.score,
+        stars: a.match ? s.stars + starsFor(s.attempts + 1) : s.stars,
       };
     case 'next': {
       if (s.phase !== 'result') return s;

@@ -55,3 +55,14 @@ describe('game state', () => {
     expect(reduce(s, { type: 'next' })).toBe(s);
   });
 });
+
+describe('звёзды', () => {
+  it('3 звезды с первой попытки, 2 со второй', () => {
+    const first = attempt(createGame(TASKS.slice(0, 2)), true);
+    expect(first.stars).toBe(3);
+    let second = attempt(createGame(TASKS.slice(0, 2)), false);
+    second = reduce(second, { type: 'next' });
+    second = attempt(second, true);
+    expect(second.stars).toBe(2);
+  });
+});
