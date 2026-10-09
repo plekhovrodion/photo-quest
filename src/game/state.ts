@@ -12,6 +12,7 @@ export interface GameState {
   lastMatch: boolean | null;
   score: number;
   stars: number;
+  results: boolean[];
 }
 
 export type Action =
@@ -31,6 +32,7 @@ export function createGame(tasks: Task[]): GameState {
     lastMatch: null,
     score: 0,
     stars: 0,
+    results: [],
   };
 }
 
@@ -76,6 +78,7 @@ export function reduce(s: GameState, a: Action): GameState {
       return {
         ...s,
         index,
+        results: [...s.results, s.lastMatch === true],
         phase: index >= s.tasks.length ? 'finish' : 'task',
         attempts: 0,
         lastMatch: null,
