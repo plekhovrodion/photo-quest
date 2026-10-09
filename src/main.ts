@@ -16,6 +16,7 @@ import { SLIDES, isOnboarded, markOnboarded } from './onboarding';
 import { feed, setLook, stageOf, fedOf, lookOf, ZAVRIKS, ZAVRIK_NAME, HUES, HATS, BADGES, UNLOCK_STAGE, MAX_STAGE, zavrikOfArt, type ZavrikId } from './zavrik';
 import { hatSvg, badgeSvg } from './ui/accessories';
 import { objectSvg, colorBallSvg, fitObject } from './map/objects';
+import { menuDecor } from './map/decor';
 import { album, toSticker, type Sticker } from './album';
 import { CLIP_OBJECTS } from './data/clip';
 import { loadProgress, recordTask, isUnlocked, canUnlock, unlockLevel, priceOf, CURRENCY, LEVEL_BONUS, type Progress } from './progress';
@@ -253,7 +254,8 @@ function renderOnboarding(i = 0) {
   const slide = SLIDES[i];
   const last = i === SLIDES.length - 1;
   const dots = SLIDES.map((_, j) => `<span class="dot ${j === i ? 'on' : ''}"></span>`).join('');
-  show(`${art(slide.art, 'talking')}<div class="who">${slide.who}</div>${bubble(slide.text)}
+  const pic = slide.obj === 'ball-red' ? colorBallSvg(COLOR_CSS.red) : slide.obj ? objectSvg(slide.obj) : '';
+  show(`${art(slide.art, 'talking')}${pic ? `<div class="task-card ob-card">${pic}</div>` : ''}<div class="who">${slide.who}</div>${bubble(slide.text)}
     <div class="dots">${dots}</div>
     <button id="onext" class="green">${last ? 'Поехали!' : 'Дальше'}</button>
     ${last ? '' : '<button id="oskip" class="secondary">Пропустить</button>'}`);
@@ -293,7 +295,7 @@ function renderLevels() {
     </button>`;
   }).join('');
   show(`${hud('', '', '', `<button id="album" class="hud-btn al" aria-label="Мои находки"><span class="hb-ico">${albumIcon()}</span><span class="hb-txt">Альбом</span></button>`)}
-    <h1>Покажи нам мир!</h1><p>Выбери, что показать Грише и Соне</p>
+    ${menuDecor()}<h1>Покажи нам мир!</h1><p>Выбери, что показать Грише и Соне</p>
     <div class="world" style="aspect-ratio:${W} / ${H.toFixed(0)}">${cubes}</div>`, 'screen-menu');
   root.querySelectorAll<HTMLButtonElement>('.cube-btn').forEach((b) =>
     b.addEventListener('click', () => startLevel(LEVELS[Number(b.dataset.i)])),
@@ -382,6 +384,10 @@ const COLOR_CSS: Record<string, string> = {
   red: '#e11d48', orange: '#f97316', yellow: '#facc15', green: '#22c55e', blue: '#2563eb',
   purple: '#9333ea', pink: '#ec4899', brown: '#92400e', white: '#ffffff', black: '#111827', gray: '#9ca3af',
 };
+function taskArt(t: Task, cls = 'obj3d'): string {
+  if (t.local?.kind === 'color') return colorBallSvg(COLOR_CSS[t.local.color], cls);
+  return objectSvg(t.id.replace(/^object-/, ''), cls);
+}
 function taskCard(t: Task): string {
   if (t.local?.kind === 'color') return `<div class="task-card">${colorBallSvg(COLOR_CSS[t.local.color])}</div>`;
   const pic = objectSvg(t.id.replace(/^object-/, ''));
@@ -413,7 +419,7 @@ async function renderAlbum() {
     const cards = l.tasks.map((t) => {
       const st = stickers.get(t.id);
       const tilt = (((k++ * 37) % 7) - 3) * 1.1;
-      if (!st) return `<div class="sticker empty" style="--tilt:${tilt}deg"><span class="q">?</span><small>${esc(taskName(t))}</small></div>`;
+      if (!st) return `<div class="sticker empty" style="--tilt:${tilt}deg"><span class="q">${taskArt(t, t.local?.kind === 'color' ? 'obj3d sil sil-color' : 'obj3d sil')}</span><small>${esc(taskName(t))}</small></div>`;
       const url = URL.createObjectURL(st.blob);
       urls.set(t.id, url);
       return `<button class="sticker" data-t="${t.id}" style="--tilt:${tilt}deg;--i:${k}" aria-label="${esc(taskName(t))}"><img src="${url}" alt=""><small>${esc(taskName(t))}</small></button>`;
@@ -552,10 +558,18 @@ function renderMap(l: Level) {
   }).join('');
 
   const found = l.tasks.filter((t) => progress.found[t.id] !== undefined).length;
+  // Картинки по бокам карты (на больших экранах): предметы этого места и флаг у последнего задания.
+  const lastP = pos.find((q) => q.node === n - 1)!;
+  const props = l.tasks.slice(0, 8).map((t, i) => {
+    const left = i % 2 === 0;
+    const top = 4 + (Math.floor(i / 2) * 24) + (left ? 0 : 10);
+    return `<span class="prop ${left ? 'pl' : 'pr'}" style="top:${top}%;--r:${left ? -6 + i : 6 - i}deg">${taskArt(t, 'obj3d prop-obj')}</span>`;
+  }).join('');
+  const flag = `<span class="prop flag" style="left:${(((lastP.sx - minX) / W) * 100 + 14).toFixed(1)}%;top:${(((lastP.sy - NODE_H - minY) / H) * 100 - 6).toFixed(1)}%">${objectSvg('flag', 'obj3d prop-obj')}</span>`;
   show(`${hud(`<button id="back" class="secondary small" aria-label="Назад">${backIcon()}</button>`)}
     <h1>${l.title}</h1><p>Найдено: ${found} из ${n}</p>
     <div class="map" style="aspect-ratio:${W.toFixed(1)} / ${H.toFixed(1)};--w:${W.toFixed(0)}">
-      <svg viewBox="0 0 ${W.toFixed(1)} ${H.toFixed(1)}" aria-hidden="true">${tiles}</svg>${nodes}
+      <svg viewBox="0 0 ${W.toFixed(1)} ${H.toFixed(1)}" aria-hidden="true">${tiles}</svg>${props}${flag}${nodes}
     </div>`, 'screen-map');
   root.querySelectorAll<HTMLButtonElement>('.stop').forEach((b) =>
     b.addEventListener('click', () => startTask(l.tasks[Number(b.dataset.i)])),
@@ -564,7 +578,7 @@ function renderMap(l: Level) {
 }
 
 function renderLevelDone() {
-  show(`${hud('')}<div class="duo">${art('grisha-cheer', 'cheer')}${art('sonya-cheer', 'cheer')}</div><h1>Все найдено!</h1>
+  show(`${hud('')}<div class="duo">${art('grisha-cheer', 'cheer')}${art('sonya-cheer', 'cheer')}</div><div class="trophy">${objectSvg('trophy')}</div><h1>Все найдено!</h1>
     <p>Ты справился со всей категорией «${level!.title}»</p>
     <div class="reward">${flashIcon()}бонус +${LEVEL_BONUS}</div>
     <button id="map" class="green">К заданиям</button>`);
@@ -605,7 +619,7 @@ function render() {
         const got = starsFor(s.attempts);
         const again = progress.found[task!.id] !== undefined;
         const says = sonyaSays(task!);
-        show(`${bar}${art('sonya-cheer', 'cheer talking')}${bubble(says)}
+        show(`${bar}<div class="res-hero">${art('sonya-cheer', 'cheer')}<div class="res-obj">${taskCard(task!)}</div></div>${bubble(says)}
           <div class="explain" id="explain" hidden></div>
           ${starRow(got)}
           ${again ? '' : `<div class="reward">${flashIcon()}+${got}</div>`}
@@ -615,7 +629,7 @@ function render() {
         speak(`${says} Молодец!`, false, 'sonya');
         attachExplain(task!.local?.kind === 'color' ? `${COLOR_RU[task!.local.color]} цвет` : lastLabel);
       } else if (canSkip(s)) {
-        show(`${bar}${art('sonya-sad', 'sad shake talking')}<div class="banner no">Это сложное задание</div>
+        show(`${bar}<div class="res-hero">${art('sonya-sad', 'sad shake')}<div class="res-obj">${taskCard(task!)}</div></div><div class="banner no">Это сложное задание</div>
           ${photoUrl ? `<img class="preview mini" src="${photoUrl}" alt="">` : ''}
           ${bubble(`${grishaExplains(task!)} Давай попробуем другое!`)}
           <div class="explain" id="explain" hidden></div><button id="next">Дальше</button>`);
@@ -623,7 +637,7 @@ function render() {
         attachExplain(lastFoundLabel);
       } else {
         const left = MAX_ATTEMPTS - s.attempts;
-        show(`${bar}${art('sonya-sad', 'sad shake talking')}<div class="banner no">Пока не то</div>
+        show(`${bar}<div class="res-hero">${art('sonya-sad', 'sad shake')}<div class="res-obj">${taskCard(task!)}</div></div><div class="banner no">Пока не то</div>
           ${photoUrl ? `<img class="preview mini" src="${photoUrl}" alt="">` : ''}
           ${bubble(grishaExplains(task!))}
           <div class="explain" id="explain" hidden></div>

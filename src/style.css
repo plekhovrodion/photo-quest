@@ -660,3 +660,52 @@ button.cube-btn { touch-action: manipulation; -webkit-tap-highlight-color: trans
 button.cube-btn .cube-in { transition: transform .15s ease-out; }
 @media (hover: hover) { button.cube-btn:hover .cube-in { transform: scale(1.04); } }
 button.cube-btn:active .cube-in { transform: scale(.97); transition: transform .06s; }
+
+
+/* =====================================================================
+   Больше графики: планеты на главной, предметы вокруг карты, картинки в результатах
+   ===================================================================== */
+/* Декор главной: на телефоне только искорки, на больших экранах планеты в пустых полях */
+.deco { position: absolute; inset: 0; z-index: -1; overflow: hidden; pointer-events: none; }
+.deco .d { position: absolute; display: block; }
+.deco .d svg { display: block; width: 100%; height: auto; }
+.d5 { left: 8%; top: 12%; width: 18px; opacity: .8; } .d6 { right: 10%; top: 20%; width: 26px; opacity: .7; } .d7 { left: 14%; top: 46%; width: 14px; opacity: .7; }
+.d1, .d2, .d3, .d4 { display: none !important; }
+@media (min-width: 1000px) {
+  .d1, .d2, .d3, .d4 { display: block !important; }
+  /* планеты по бокам заголовка: поля у сетки мест узкие, поэтому декор сверху */
+  .d1 { left: 19%; top: 1.5%; width: min(9vw, 125px); animation: pop-in .6s .2s var(--spring) backwards; }
+  .d3 { right: 26%; top: 3%; width: min(8vw, 112px); animation: pop-in .6s .35s var(--spring) backwards; }
+  .d2 { left: 6%; top: 9%; width: min(6vw, 84px); animation: pop-in .6s .3s var(--spring) backwards; }
+  .d4 { right: 5%; top: 13%; width: min(11vw, 160px); opacity: .9; transform: rotate(10deg); animation: pop-in .6s .5s var(--spring) backwards; }
+  .d5 { width: 26px; } .d6 { width: 34px; } .d7 { width: 22px; }
+}
+
+/* Результат: заврик и предмет рядом */
+.res-hero { display: flex; align-items: center; justify-content: center; gap: 12px; flex: none; }
+.res-hero .char { height: clamp(130px, 22vh, 190px); }
+.res-obj .task-card { width: clamp(120px, 20vh, 170px); height: clamp(120px, 20vh, 170px); border-radius: 30px; }
+.res-obj .task-card .obj3d { width: 90%; height: 90%; }
+
+/* Кубок на экране «Все найдено» */
+.trophy { width: clamp(120px, 20vh, 190px); aspect-ratio: 1; flex: none; animation: pop-in .6s .3s var(--spring) backwards; }
+.trophy .obj3d { width: 100%; height: 100%; overflow: visible; filter: drop-shadow(0 6px 0 rgba(10, 5, 40, .15)); }
+
+/* Онбординг: картинка к реплике */
+.ob-card { width: 150px; height: 150px; }
+.ob-card .obj3d { width: 88%; height: 88%; overflow: visible; }
+
+/* Альбом: ненайденное — тёмный силуэт предмета, видно, что искать */
+.sticker.empty .q { padding: 6px; }
+.sticker.empty .q .obj3d { width: 100%; height: 100%; overflow: visible; filter: grayscale(1) brightness(.45) contrast(.9); opacity: .55; }
+.sticker.empty .q { font-size: 0; opacity: 1; }
+
+/* Предметы вокруг карты: только на больших экранах */
+.map .prop { display: none; }
+@media (min-width: 900px) {
+  .map .prop { display: block; position: absolute; width: 36%; pointer-events: none; transform: rotate(var(--r, 0deg)); }
+  .map .prop.pl { left: -52%; } .map .prop.pr { right: -52%; }
+  .map .prop-obj { width: 100%; height: auto; overflow: visible; filter: drop-shadow(0 6px 0 rgba(10, 5, 40, .14)); }
+  .map .prop.flag { width: 16%; transform: none; }
+}
+.sticker.empty .q .obj3d.sil-color { filter: saturate(.6) brightness(.62); opacity: .7; }
