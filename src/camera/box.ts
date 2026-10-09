@@ -30,28 +30,49 @@ export const centerBox = (frame: { w: number; h: number }, share = 0.6): Box => 
 const lerp = (a: number, b: number, t: number) => a + (b - a) * t;
 export const lerpBox = (a: Box, b: Box, t: number): Box => ({ x: lerp(a.x, b.x, t), y: lerp(a.y, b.y, t), w: lerp(a.w, b.w, t), h: lerp(a.h, b.h, t) });
 
-// Сглаживает дрожание рамки между кадрами и считает, как долго она стоит почти на месте («захват» цели).
-export class BoxTracker {
-  private cur: Box | null = null;
+// Следит за найденной рамкой: детектор присылает её несколько раз в секунду, а на экране рамка плавно
+// «догоняет» цель на каждом кадре отрисовки. Пропуски детектора (до ghostMs) не сбрасывают рамку,
+// а время, пока цель почти не двигается, показывает, что предмет «захвачен».
+export class BoxFollower {
+  private target: Box | null = null;
+  private shown: Box | null = null;
+  private lastSeen = 0;
   private since = 0;
+  private lastFrame: number | null = null;
 
-  constructor(private alpha = 0.35, private jumpIou = 0.3, private calmIou = 0.8) {}
+  constructor(private tauMs = 90, private ghostMs = 450, private jumpIou = 0.25, private calmIou = 0.8) {}
 
-  update(next: Box | null, now: number): { box: Box | null; stableMs: number } {
-    if (!next) {
-      this.cur = null;
-      return { box: null, stableMs: 0 };
+  // Результат детектора: рамка предмета или null, если в этот раз ничего не найдено.
+  observe(box: Box | null, now: number): void {
+    if (box) {
+      if (!this.target || iou(this.target, box) < this.jumpIou) {
+        this.target = box; // новая цель: рамка плавно переедет на неё
+        this.since = now;
+      } else {
+        if (iou(this.target, box) < this.calmIou) this.since = now; // цель заметно двигается
+        this.target = lerpBox(this.target, box, 0.5);
+      }
+      this.lastSeen = now;
+    } else if (this.target && now - this.lastSeen > this.ghostMs) {
+      this.target = null;
     }
-    // новая цель или резкий скачок — начинаем заново
-    if (!this.cur || iou(this.cur, next) < this.jumpIou) {
-      this.cur = next;
-      this.since = now;
-      return { box: next, stableMs: 0 };
-    }
-    if (iou(this.cur, next) < this.calmIou) this.since = now; // рамка заметно двигается
-    this.cur = lerpBox(this.cur, next, this.alpha);
-    return { box: this.cur, stableMs: now - this.since };
   }
 
-  reset() { this.cur = null; this.since = 0; }
+  // Кадр отрисовки: плавное приближение к цели (зависит от времени, а не от числа кадров).
+  frame(now: number): { box: Box | null; stableMs: number; ghost: boolean } {
+    if (!this.target) {
+      this.shown = null;
+      this.lastFrame = now;
+      return { box: null, stableMs: 0, ghost: false };
+    }
+    const dt = this.lastFrame === null ? 0 : Math.max(0, now - this.lastFrame);
+    this.lastFrame = now;
+    this.shown = this.shown ? lerpBox(this.shown, this.target, 1 - Math.exp(-dt / this.tauMs)) : this.target;
+    return { box: this.shown, stableMs: now - this.since, ghost: now - this.lastSeen > 120 };
+  }
+
+  // Текущая рамка (для обрезки по кнопке «Снять»).
+  current(): Box | null { return this.shown ?? this.target; }
+
+  reset(): void { this.target = null; this.shown = null; this.since = 0; this.lastSeen = 0; }
 }

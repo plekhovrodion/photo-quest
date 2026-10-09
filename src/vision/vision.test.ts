@@ -99,3 +99,25 @@ describe('colorPhrase', () => {
     expect(colorPhrase(shares({ white: 0.05, gray: 0.05 }))).toBeUndefined();
   });
 });
+
+import { fusePredictions } from './local';
+
+describe('fusePredictions', () => {
+  it('без живого класса возвращает предсказания как есть', () => {
+    const top = [{ className: 'mug', probability: 0.3 }];
+    expect(fusePredictions(top)).toBe(top);
+  });
+  it('живой класс идёт первым и засчитывается заданию', () => {
+    const fused = fusePredictions([{ className: 'ping-pong ball', probability: 0.6 }], 'cup');
+    expect(fused[0]).toEqual({ className: 'cup', probability: 0.9 });
+    expect(matchesLabels(fused, ['cup', 'mug'])).toBe(true);
+    expect(matchesLabels(fusePredictions([{ className: 'ping-pong ball', probability: 0.6 }]), ['cup', 'mug'])).toBe(false);
+  });
+});
+
+describe('мягкие границы цветов', () => {
+  it('тёплый белый и тёмный коричневый определяются', () => {
+    expect(classifyPixel(235, 228, 215)).toBe('white');
+    expect(classifyPixel(100, 60, 35)).toBe('brown');
+  });
+});

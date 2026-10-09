@@ -362,3 +362,8 @@ button[hidden] { display: none !important; }
 .chip.coin .ico-flash, .reward .ico-flash { color: #fff; filter: drop-shadow(0 2px 0 rgba(131, 24, 67, .5)); }
 .chip.coin .ico, .reward .ico { width: 1.05em; height: 1.05em; margin-right: .2em; }
 button.level small .ico-flash { color: var(--btn); }
+
+/* ===== Отладочная панель камеры (?debug=1) ===== */
+.cam-debug { margin: 0; max-width: min(100%, 720px); color: #bbf7d0; background: rgba(0, 0, 0, .55); border-radius: 12px; padding: 8px 12px;
+  font: 12px/1.35 ui-monospace, Menlo, monospace; white-space: pre-wrap; text-align: left; }
+.dbg-copy { color: #fff; text-decoration: underline; cursor: pointer; font-size: 14px; }

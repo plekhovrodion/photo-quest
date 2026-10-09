@@ -18,11 +18,22 @@ describe('pickDetection', () => {
     );
     expect(d?.className).toBe('cup');
   });
-  it('без подсказки берёт крупный предмет ближе к центру', () => {
-    const d = pickDetection([P('cup', 0.7, [10, 10, 40, 40]), P('book', 0.7, [220, 160, 200, 160])], frame, {});
+  it('без подсказки берёт предмет у прицела, а не крупный в стороне', () => {
+    const d = pickDetection([P('cup', 0.9, [10, 10, 40, 40]), P('book', 0.7, [250, 190, 140, 100])], frame, {});
+    expect(d?.className).toBe('book');
+  });
+  it('предмет далеко от центра без совпадения с заданием игнорируется', () => {
+    expect(pickDetection([P('cup', 0.9, [10, 10, 40, 40])], frame, {})).toBeNull();
+  });
+  it('класс из задания берётся даже в стороне от центра', () => {
+    const d = pickDetection([P('cup', 0.7, [10, 10, 60, 60])], frame, { words: ['cup'] });
+    expect(d?.className).toBe('cup');
+  });
+  it('предпочитает рамку, внутри которой центр кадра', () => {
+    const d = pickDetection([P('bottle', 0.8, [20, 200, 80, 150]), P('book', 0.6, [200, 140, 240, 200])], frame, {});
     expect(d?.className).toBe('book');
   });
   it('возвращает рамку в координатах кадра', () => {
-    expect(pickDetection([P('cup', 0.8, [10, 20, 30, 40])], frame, {})?.box).toEqual({ x: 10, y: 20, w: 30, h: 40 });
+    expect(pickDetection([P('cup', 0.8, [300, 220, 30, 40])], frame, {})?.box).toEqual({ x: 300, y: 220, w: 30, h: 40 });
   });
 });

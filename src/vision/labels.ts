@@ -4,7 +4,7 @@ export interface Prediction {
 }
 
 // Минимальная уверенность MobileNet, чтобы засчитать класс.
-export const PROB_MIN = 0.08;
+export const PROB_MIN = 0.05;
 
 // MobileNet отдаёт классы ImageNet вида «coffee mug, mug»; сравниваем по целым словам.
 export function matchesLabels(predictions: Prediction[], words: string[]): boolean {

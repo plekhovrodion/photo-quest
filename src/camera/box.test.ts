@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { BoxTracker, centerBox, expandBox, iou } from './box';
+import { BoxFollower, centerBox, expandBox, iou } from './box';
 
 describe('iou', () => {
   it('одинаковые рамки — 1, непересекающиеся — 0', () => {
@@ -32,37 +32,52 @@ describe('expandBox', () => {
   });
 });
 
-describe('BoxTracker', () => {
+describe('BoxFollower', () => {
   const a = { x: 100, y: 100, w: 100, h: 100 };
-  it('без рамки сбрасывается', () => {
-    const t = new BoxTracker();
-    t.update(a, 0);
-    expect(t.update(null, 100)).toEqual({ box: null, stableMs: 0 });
+  it('держит рамку-призрак при коротких пропусках детектора', () => {
+    const f = new BoxFollower();
+    f.observe(a, 0);
+    f.frame(0);
+    f.observe(null, 200); // пропуск 200 мс < 450
+    expect(f.frame(200).box).not.toBeNull();
   });
-  it('на месте — растёт время «захвата»', () => {
-    const t = new BoxTracker();
-    t.update(a, 0);
-    expect(t.update({ ...a, x: 101 }, 300).stableMs).toBe(300);
-    expect(t.update({ ...a, x: 100 }, 700).stableMs).toBe(700);
+  it('сбрасывает рамку после долгого пропуска', () => {
+    const f = new BoxFollower();
+    f.observe(a, 0);
+    f.frame(0);
+    f.observe(null, 600);
+    expect(f.frame(600).box).toBeNull();
+    expect(f.current()).toBeNull();
   });
-  it('при движении время захвата обнуляется', () => {
-    const t = new BoxTracker();
-    t.update(a, 0);
-    t.update(a, 500);
-    const r = t.update({ x: 130, y: 100, w: 100, h: 100 }, 600); // сдвиг: iou < 0.8
-    expect(r.stableMs).toBe(0);
+  it('на месте — растёт время захвата, при движении обнуляется', () => {
+    const f = new BoxFollower();
+    f.observe(a, 0);
+    f.observe({ ...a, x: 101 }, 300);
+    expect(f.frame(300).stableMs).toBe(300);
+    f.observe({ x: 140, y: 100, w: 100, h: 100 }, 400); // заметный сдвиг
+    expect(f.frame(400).stableMs).toBe(0);
   });
-  it('резкий скачок — новая цель без сглаживания', () => {
-    const t = new BoxTracker();
-    t.update(a, 0);
-    const far = { x: 400, y: 300, w: 80, h: 80 };
-    expect(t.update(far, 100).box).toEqual(far);
+  it('плавно приближается к цели, а не прыгает', () => {
+    const f = new BoxFollower(100);
+    f.observe(a, 0);
+    f.frame(0);
+    f.observe({ x: 160, y: 100, w: 100, h: 100 }, 16);
+    const s1 = f.frame(16).box!.x;
+    expect(s1).toBeGreaterThan(100);
+    expect(s1).toBeLessThan(160);
+    const s2 = f.frame(400).box!.x;
+    expect(s2).toBeGreaterThan(s1);
   });
-  it('сглаживает дрожание', () => {
-    const t = new BoxTracker(0.5);
-    t.update(a, 0);
-    const r = t.update({ ...a, x: 110 }, 100);
-    expect(r.box!.x).toBeGreaterThan(100);
-    expect(r.box!.x).toBeLessThan(110);
+  it('резкий скачок — новая цель', () => {
+    const f = new BoxFollower();
+    f.observe(a, 0);
+    f.frame(0);
+    f.observe({ x: 400, y: 300, w: 80, h: 80 }, 100);
+    expect(f.frame(100).stableMs).toBe(0);
+  });
+  it('первый кадр без плавности', () => {
+    const f = new BoxFollower();
+    f.observe(a, 0);
+    expect(f.frame(0).box).toEqual(a);
   });
 });

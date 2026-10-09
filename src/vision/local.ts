@@ -3,6 +3,7 @@ import { colorShares, type ColorName } from './color';
 import { evaluate, type Ctx } from './evaluate';
 import { matchesLabels, PROB_MIN, type Prediction } from './labels';
 import { COLOR_RU, ruName } from './names';
+import { loadMobilenet } from './models';
 
 const SAMPLE = 96;
 
@@ -16,21 +17,7 @@ async function toCanvas(photo: Blob): Promise<HTMLCanvasElement> {
   return canvas;
 }
 
-// Модель и tfjs грузятся лениво, при первой проверке предмета, чтобы не раздувать старт.
-let modelPromise: Promise<{ classify(img: HTMLCanvasElement, topk: number): Promise<Prediction[]> }> | null = null;
-function loadModel() {
-  modelPromise ??= (async () => {
-    const [tf, mobilenet] = await Promise.all([import('@tensorflow/tfjs'), import('@tensorflow-models/mobilenet')]);
-    await tf.ready();
-    return mobilenet.load({ version: 2, alpha: 1.0 });
-  })();
-  modelPromise.catch(() => { modelPromise = null; });
-  return modelPromise;
-}
-
-export function preloadModel(): void {
-  loadModel().catch(() => {});
-}
+export { preloadModels as preloadModel } from './models';
 
 // Все слова-метки, участвующие в проверке (для выбора подписи найденного предмета).
 function wordsOf(check: LocalCheck): string[] {
@@ -69,9 +56,20 @@ function anyLabel(preds: Prediction[] | null): string | undefined {
   return undefined;
 }
 
+// Сигналы проверки: класс, найденный живой камерой, идёт первым и считается уверенным.
+export function fusePredictions(top: Prediction[], liveClass?: string): Prediction[] {
+  return liveClass ? [{ className: liveClass, probability: 0.9 }, ...top] : top;
+}
+
+export interface VerifyOpts {
+  cropped?: boolean; // кадр уже вырезан по предмету — цвет считаем по всему кадру
+  liveClass?: string; // класс, который живая камера нашла в рамке (COCO), учитывается как ещё один сигнал
+}
+
 export async function localVerify(
   photo: Blob,
   check: LocalCheck,
+  opts: VerifyOpts = {},
 ): Promise<{ match: boolean; reason: string; label?: string; found?: string }> {
   const canvas = await toCanvas(photo);
   const cache: { preds: Prediction[] | null; shares: Record<ColorName, number> | null } = { preds: null, shares: null };
@@ -81,11 +79,18 @@ export async function localVerify(
       small.width = small.height = SAMPLE;
       const c2d = small.getContext('2d', { willReadFrequently: true })!;
       c2d.drawImage(canvas, 0, 0, SAMPLE, SAMPLE);
-      cache.shares = colorShares(c2d.getImageData(0, 0, SAMPLE, SAMPLE).data, SAMPLE, SAMPLE);
+      cache.shares = colorShares(c2d.getImageData(0, 0, SAMPLE, SAMPLE).data, SAMPLE, SAMPLE, opts.cropped ? 0.06 : 0.2);
     }
     return cache.shares;
   };
-  const getPreds = async () => (cache.preds ??= await (await loadModel()).classify(canvas, 5));
+  // Сигналы: MobileNet по снимку (top-10) и класс, найденный живой камерой.
+  const getPreds = async () => {
+    if (!cache.preds) {
+      const top = await (await loadMobilenet()).classify(canvas, 10);
+      cache.preds = fusePredictions(top, opts.liveClass);
+    }
+    return cache.preds;
+  };
   const match = await evaluate(check, { shares: getShares, predictions: getPreds });
   const reason = cache.preds?.[0]?.className ?? 'local';
   if (match) return { match, reason, label: pickLabel(cache.preds, check) };

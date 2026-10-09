@@ -1,9 +1,12 @@
 import { cameraIcon, imageIcon } from '../ui/icons';
-import { BoxTracker, expandBox, type Box } from './box';
-import { detectObject, loadDetector } from './detector';
+import { BoxFollower, expandBox, type Box } from './box';
+import { detectObject, lastPreds } from './detector';
 import type { Target } from './target';
 import { colorBlob } from '../vision/colorBlob';
+import { colorShares, type ColorName } from '../vision/color';
 import { COLOR_RU, ruName } from '../vision/names';
+import { loadCoco, modelStatus, onModelStatus, preloadModels } from '../vision/models';
+import { matchesLabels } from '../vision/labels';
 
 const MAX_SIDE = 1024;
 const QUALITY = 0.8;
@@ -35,8 +38,8 @@ export function pickPhotoFile(): Promise<Blob | null> {
   });
 }
 
-// Снимок и признак того, что он уже обрезан по найденному предмету (тогда ручная обрезка не нужна).
-export interface Captured { blob: Blob; cropped: boolean }
+// Снимок, признак «уже вырезан по предмету» и класс, который нашла живая камера (учитывается при проверке).
+export interface Captured { blob: Blob; cropped: boolean; liveClass?: string }
 
 // Живая камера в браузере нужна getUserMedia, а он работает только в безопасном контексте (https или localhost).
 export function canUseLiveCamera(): boolean {
@@ -47,14 +50,21 @@ function stop(stream: MediaStream | null) {
   stream?.getTracks().forEach((t) => t.stop());
 }
 
-const LOCK_MS = 500; // сколько рамка должна стоять почти на месте, чтобы стать зелёной
-const TICK_MS = 200; // как часто ищем предмет
+const LOCK_MS = 450; // сколько рамка должна стоять почти на месте, чтобы стать зелёной
+const LOCK_MATCH_MS = 250; // быстрее, если найден именно тот предмет, что в задании
 const MARGIN = 0.12; // запас вокруг предмета при обрезке
+const MIN_GAP_MS = 110; // не чаще ~9 раз в секунду ищем предмет нейросетью
+const COLOR_GAP_MS = 50; // цветовое пятно считается за миллисекунды — можно чаще
+const LOST_HINT_MS = 3000; // через сколько без рамки подсказываем, что делать
+const SMALL = { w: 96, h: 72 };
 
-// Оверлей с живым видео: ищет предмет, рисует рамку и подпись. «Снять» вырезает предмет по рамке.
-// При ошибке доступа предлагаем выбрать файл (диалог можно открыть только по отдельному клику).
+interface Found { box: Box; label: string; className?: string; matches: boolean }
+
+// Оверлей с живым видео. Два независимых цикла: поиск предмета (несколько раз в секунду) и отрисовка рамки
+// (на каждом кадре экрана, плавно догоняет цель). «Снять» вырезает предмет по рамке.
 function liveCamera(target: Target): Promise<Captured | null> {
   return new Promise((resolve) => {
+    const debug = new URLSearchParams(location.search).has('debug');
     const overlay = document.createElement('div');
     overlay.className = 'cam-overlay';
     overlay.setAttribute('role', 'dialog');
@@ -62,6 +72,7 @@ function liveCamera(target: Target): Promise<Captured | null> {
     overlay.innerHTML = `
       <div class="cam-stage"><video class="cam-video" autoplay playsinline muted></video><canvas class="cam-boxes"></canvas></div>
       <p class="cam-hint" aria-live="polite"></p>
+      ${debug ? '<pre class="cam-debug"></pre><span class="dbg-copy" role="button" tabindex="0">Скопировать отчёт</span>' : ''}
       <p class="cam-msg" hidden></p>
       <div class="cam-actions">
         <button class="cam-shoot" type="button">${cameraIcon()}Снять</button>
@@ -76,11 +87,15 @@ function liveCamera(target: Target): Promise<Captured | null> {
     const msg = overlay.querySelector<HTMLElement>('.cam-msg')!;
     const shoot = overlay.querySelector<HTMLButtonElement>('.cam-shoot')!;
     const fileBtn = overlay.querySelector<HTMLButtonElement>('.cam-file')!;
+    const dbgEl = overlay.querySelector<HTMLElement>('.cam-debug');
     let stream: MediaStream | null = null;
     let alive = true;
+    let raf = 0;
 
     const done = (r: Captured | null) => {
       alive = false;
+      cancelAnimationFrame(raf);
+      unsub();
       stop(stream);
       overlay.remove();
       removeEventListener('keydown', onKey);
@@ -91,6 +106,7 @@ function liveCamera(target: Target): Promise<Captured | null> {
 
     const fail = (text: string) => {
       alive = false;
+      cancelAnimationFrame(raf);
       msg.textContent = text;
       msg.hidden = false;
       shoot.hidden = true;
@@ -101,95 +117,189 @@ function liveCamera(target: Target): Promise<Captured | null> {
 
     // «Снять» активна только когда пошло видео, иначе кадр будет пустым.
     shoot.disabled = true;
-    video.addEventListener('loadeddata', () => { shoot.disabled = false; }, { once: true });
+    video.addEventListener('loadeddata', () => { shoot.disabled = false; startedAt = performance.now(); }, { once: true });
+    let startedAt = 0;
 
-    // ---- поиск предмета в реальном времени ----
-    const tracker = new BoxTracker();
+    // ---- состояние поиска ----
+    const follower = new BoxFollower();
     const small = document.createElement('canvas');
-    small.width = 96;
-    small.height = 72;
+    small.width = SMALL.w;
+    small.height = SMALL.h;
     const sctx = small.getContext('2d', { willReadFrequently: true })!;
     const needDetector = !target.color || !!target.words?.length; // для чистых заданий на цвет нейросеть не нужна
-    let modelReady = !needDetector;
-    if (needDetector) loadDetector().then(() => { modelReady = true; }).catch(() => { modelReady = false; });
+    preloadModels();
+    let detectorReady = !needDetector || modelStatus().coco >= 1;
+    let modelPct = Math.round(modelStatus().coco * 100);
+    const unsub = onModelStatus((s) => {
+      modelPct = Math.round(s.coco * 100);
+      if (s.coco >= 1) detectorReady = true;
+    });
+    if (needDetector) loadCoco().then(() => { detectorReady = true; }).catch(() => { detectorReady = false; });
 
-    async function findBox(): Promise<{ box: Box; label: string } | null> {
+    let current: { label: string; className?: string; matches: boolean } = { label: '', matches: false };
+    let colorTop = '';
+    const stats = { detMs: 0, detRuns: 0, detStart: performance.now(), frames: 0, fpsStart: performance.now(), fps: 0 };
+    const log: Array<{ t: number; found: boolean; cls?: string; ms: number }> = [];
+
+    async function findBox(): Promise<Found | null> {
       const vw = video.videoWidth, vh = video.videoHeight;
       if (!vw) return null;
-      let color: { box: Box; label: string } | null = null;
-      if (target.color) {
-        sctx.drawImage(video, 0, 0, small.width, small.height);
-        const b = colorBlob(sctx.getImageData(0, 0, small.width, small.height).data, small.width, small.height, target.color);
-        if (b) {
-          const kx = vw / small.width, ky = vh / small.height;
-          color = { box: { x: b.x * kx, y: b.y * ky, w: b.w * kx, h: b.h * ky }, label: `${COLOR_RU[target.color]} цвет` };
+      let colorFound: Found | null = null;
+      if (target.color || debug) {
+        sctx.drawImage(video, 0, 0, SMALL.w, SMALL.h);
+        const data = sctx.getImageData(0, 0, SMALL.w, SMALL.h).data;
+        if (target.color) {
+          const b = colorBlob(data, SMALL.w, SMALL.h, target.color);
+          if (b) {
+            const kx = vw / SMALL.w, ky = vh / SMALL.h;
+            colorFound = { box: { x: b.x * kx, y: b.y * ky, w: b.w * kx, h: b.h * ky }, label: `${COLOR_RU[target.color]} цвет`, matches: true };
+          }
+        }
+        if (debug) {
+          const sh = colorShares(data, SMALL.w, SMALL.h, 0);
+          colorTop = (Object.entries(sh) as [ColorName, number][]).sort((a, b) => b[1] - a[1]).slice(0, 3)
+            .map(([n, v]) => `${n} ${(v * 100).toFixed(0)}%`).join(', ');
         }
       }
-      if (modelReady && needDetector) {
+      if (detectorReady && needDetector) {
         try {
           const d = await detectObject(video, target);
-          if (d) return { box: d.box, label: ruName(d.className) ?? d.className };
+          if (d) {
+            const matches = !!target.words?.length && matchesLabels([{ className: d.className, probability: 1 }], target.words);
+            // для задания на предмет+цвет рамка по детектору, если он нашёл нужный класс; иначе цветовое пятно
+            if (!(target.color && colorFound && !matches)) {
+              return { box: d.box, label: ruName(d.className) ?? d.className, className: d.className, matches };
+            }
+          }
         } catch { /* детектор не сработал на этом кадре — берём цветовое пятно */ }
       }
-      return color;
-    }
-
-    let current: { box: Box | null; label: string; stableMs: number } = { box: null, label: '', stableMs: 0 };
-
-    function draw() {
-      const w = video.clientWidth, h = video.clientHeight;
-      if (canvas.width !== w || canvas.height !== h) { canvas.width = w; canvas.height = h; }
-      const ctx = canvas.getContext('2d')!;
-      ctx.clearRect(0, 0, w, h);
-      const b = current.box;
-      if (!b || !video.videoWidth) return;
-      const kx = w / video.videoWidth, ky = h / video.videoHeight;
-      const x = b.x * kx, y = b.y * ky, bw = b.w * kx, bh = b.h * ky;
-      const locked = current.stableMs >= LOCK_MS;
-      ctx.lineWidth = 5;
-      ctx.strokeStyle = locked ? '#22c55e' : '#ffffff';
-      ctx.setLineDash(locked ? [] : [14, 9]);
-      ctx.beginPath();
-      ctx.roundRect(x, y, bw, bh, 14);
-      ctx.stroke();
-      ctx.setLineDash([]);
-      // подпись над рамкой
-      ctx.font = '800 22px "Factor A", system-ui, sans-serif';
-      const text = current.label;
-      const tw = ctx.measureText(text).width + 24;
-      const ty = Math.max(4, y - 38);
-      ctx.fillStyle = locked ? '#22c55e' : '#ffffff';
-      ctx.beginPath();
-      ctx.roundRect(Math.min(Math.max(4, x), w - tw - 4), ty, tw, 32, 16);
-      ctx.fill();
-      ctx.fillStyle = locked ? '#ffffff' : '#1e1b4b';
-      ctx.fillText(text, Math.min(Math.max(4, x), w - tw - 4) + 12, ty + 23);
-    }
-
-    function setHint() {
-      hint.textContent = !modelReady
-        ? 'Включаю умное зрение…'
-        : !current.box ? 'Наведи камеру на предмет'
-        : current.stableMs >= LOCK_MS ? 'Нашёл! Нажми «Снять»' : 'Держи ровно…';
+      return colorFound;
     }
 
     let busy = false;
-    const tick = async () => {
+    let lastStart = 0;
+    const baseGap = needDetector ? MIN_GAP_MS : COLOR_GAP_MS;
+    let gap = baseGap;
+    const detectLoop = async () => {
       if (!alive) return;
-      if (!busy && video.readyState >= 2) {
+      const t = performance.now();
+      if (!busy && video.readyState >= 2 && t - lastStart >= gap) {
         busy = true;
+        lastStart = t;
         try {
           const f = await findBox();
-          const t = tracker.update(f?.box ?? null, performance.now());
-          current = { box: t.box, label: f?.label ?? current.label, stableMs: t.stableMs };
+          const now = performance.now();
+          follower.observe(f?.box ?? null, now);
+          if (f) current = { label: f.label, className: f.className, matches: f.matches };
+          const ms = now - t;
+          stats.detMs = stats.detMs ? stats.detMs * 0.8 + ms * 0.2 : ms;
+          stats.detRuns++;
+          gap = ms > 80 ? Math.min(400, ms * 1.5) : baseGap; // если телефон не успевает, ищем реже
+          if (debug) { log.push({ t: Math.round(now), found: !!f, cls: f?.className ?? (f ? 'color' : undefined), ms: Math.round(ms) }); if (log.length > 30) log.shift(); }
         } catch { /* пропускаем кадр */ }
         busy = false;
-        if (alive) { draw(); setHint(); }
       }
-      setTimeout(tick, TICK_MS);
+      setTimeout(detectLoop, 30);
     };
-    setHint();
-    video.addEventListener('loadeddata', tick, { once: true });
+    video.addEventListener('loadeddata', detectLoop, { once: true });
+
+    // ---- отрисовка ----
+    let lastHintAt = 0;
+    const setHint = (locked: boolean, hasBox: boolean, now: number) => {
+      if (now - lastHintAt < 150) return;
+      lastHintAt = now;
+      hint.textContent = needDetector && !detectorReady
+        ? `Загружаю умное зрение… ${modelPct}%`
+        : locked ? 'Нашёл! Нажми «Снять»'
+        : hasBox ? 'Держи ровно…'
+        : startedAt && now - startedAt > LOST_HINT_MS ? 'Не вижу предмета. Держи его в рамке посередине или нажми «Снять» и обрежь сам'
+        : 'Наведи камеру на предмет';
+    };
+
+    function brackets(ctx: CanvasRenderingContext2D, w: number, h: number) {
+      // прицел: уголки по центру, куда нужно поместить предмет
+      const bw = w * 0.42, bh = h * 0.42, x = (w - bw) / 2, y = (h - bh) / 2, l = Math.min(bw, bh) * 0.22;
+      ctx.save();
+      ctx.strokeStyle = 'rgba(255,255,255,.55)';
+      ctx.lineWidth = 4;
+      ctx.lineCap = 'round';
+      ctx.beginPath();
+      for (const [px, py, dx, dy] of [[x, y, 1, 1], [x + bw, y, -1, 1], [x, y + bh, 1, -1], [x + bw, y + bh, -1, -1]] as const) {
+        ctx.moveTo(px, py + dy * l); ctx.lineTo(px, py); ctx.lineTo(px + dx * l, py);
+      }
+      ctx.stroke();
+      ctx.restore();
+    }
+
+    const render = (now: number) => {
+      if (!alive) return;
+      raf = requestAnimationFrame(render);
+      const w = video.clientWidth, h = video.clientHeight;
+      if (w && h) {
+        const dpr = Math.min(devicePixelRatio || 1, 2);
+        if (canvas.width !== Math.round(w * dpr) || canvas.height !== Math.round(h * dpr)) { canvas.width = Math.round(w * dpr); canvas.height = Math.round(h * dpr); }
+        const ctx = canvas.getContext('2d')!;
+        ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+        ctx.clearRect(0, 0, w, h);
+        const f = follower.frame(now);
+        const lockNeeded = current.matches ? LOCK_MATCH_MS : LOCK_MS;
+        const locked = !!f.box && f.stableMs >= lockNeeded && !f.ghost;
+        if (!f.box) brackets(ctx, w, h);
+        if (f.box && video.videoWidth) {
+          const kx = w / video.videoWidth, ky = h / video.videoHeight;
+          const x = f.box.x * kx, y = f.box.y * ky, bw = f.box.w * kx, bh = f.box.h * ky;
+          ctx.globalAlpha = f.ghost ? 0.5 : 1;
+          ctx.lineWidth = 5;
+          ctx.strokeStyle = locked ? '#22c55e' : '#ffffff';
+          ctx.setLineDash(locked ? [] : [14, 9]);
+          ctx.beginPath();
+          ctx.roundRect(x, y, bw, bh, 14);
+          ctx.stroke();
+          ctx.setLineDash([]);
+          ctx.font = '800 22px "Factor A", system-ui, sans-serif';
+          const tw = ctx.measureText(current.label).width + 24;
+          const tx = Math.min(Math.max(4, x), w - tw - 4), ty = Math.max(4, y - 38);
+          ctx.fillStyle = locked ? '#22c55e' : '#ffffff';
+          ctx.beginPath();
+          ctx.roundRect(tx, ty, tw, 32, 16);
+          ctx.fill();
+          ctx.fillStyle = locked ? '#ffffff' : '#1e1b4b';
+          ctx.fillText(current.label, tx + 12, ty + 23);
+          ctx.globalAlpha = 1;
+        }
+        setHint(locked, !!f.box, now);
+      }
+      stats.frames++;
+      if (now - stats.fpsStart > 1000) { stats.fps = Math.round((stats.frames * 1000) / (now - stats.fpsStart)); stats.frames = 0; stats.fpsStart = now; }
+      if (dbgEl && stats.frames % 15 === 0) dbgEl.textContent = debugText();
+    };
+    raf = requestAnimationFrame(render);
+
+    // ---- отладочная панель (?debug=1) ----
+    const report = () => {
+      const f = follower.current();
+      return {
+        time: new Date().toISOString(), ua: navigator.userAgent, backend: modelStatus().backend,
+        models: { coco: modelStatus().coco, mobilenet: modelStatus().mobilenet },
+        target, video: { w: video.videoWidth, h: video.videoHeight },
+        stats: { fps: stats.fps, detMs: Math.round(stats.detMs), detRuns: stats.detRuns },
+        box: f, label: current.label, className: current.className,
+        topPreds: lastPreds.slice(0, 5).map((p) => ({ cls: p.class, score: +p.score.toFixed(2) })),
+        colors: colorTop, log,
+      };
+    };
+    function debugText() {
+      const r = report();
+      return [`backend ${r.backend}  fps ${r.stats.fps}  поиск ${r.stats.detMs} мс  (${r.stats.detRuns})`,
+        `модели: coco ${Math.round(r.models.coco * 100)}%  mobilenet ${Math.round(r.models.mobilenet * 100)}%`,
+        `видео ${r.video.w}x${r.video.h}  цели: ${JSON.stringify(target)}`,
+        `COCO: ${r.topPreds.map((p) => `${p.cls} ${p.score}`).join(', ') || '—'}`,
+        r.colors ? `цвета: ${r.colors}` : ''].filter(Boolean).join('\n');
+    }
+    overlay.querySelector('.dbg-copy')?.addEventListener('click', () => {
+      void navigator.clipboard?.writeText(JSON.stringify(report(), null, 2));
+      const el = overlay.querySelector('.dbg-copy'); if (el) el.textContent = 'Скопировано';
+    });
 
     overlay.querySelector('.cam-cancel')!.addEventListener('click', () => done(null));
     fileBtn.addEventListener('click', async () => {
@@ -200,13 +310,14 @@ function liveCamera(target: Target): Promise<Captured | null> {
       const vw = video.videoWidth, vh = video.videoHeight;
       if (!vw) return;
       // если предмет найден — вырезаем его с запасом, иначе берём весь кадр (дальше будет ручная обрезка)
-      const crop = current.box ? expandBox(current.box, MARGIN, { w: vw, h: vh }) : null;
+      const box = follower.current();
+      const crop = box ? expandBox(box, MARGIN, { w: vw, h: vh }) : null;
       const c = document.createElement('canvas');
       const r = crop ?? { x: 0, y: 0, w: vw, h: vh };
       c.width = Math.round(r.w);
       c.height = Math.round(r.h);
       c.getContext('2d')!.drawImage(video, r.x, r.y, r.w, r.h, 0, 0, c.width, c.height);
-      c.toBlob((b) => done(b ? { blob: b, cropped: !!crop } : null), 'image/jpeg', 0.92);
+      c.toBlob((b) => done(b ? { blob: b, cropped: !!crop, liveClass: crop ? current.className : undefined } : null), 'image/jpeg', 0.92);
     });
 
     navigator.mediaDevices

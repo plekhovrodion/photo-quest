@@ -25,6 +25,18 @@ describe('colorBlob', () => {
     const d = frame((s) => { rect(s, 2, 2, 4, 4, [30, 60, 210]); rect(s, 20, 10, 12, 12, [30, 60, 210]); });
     expect(colorBlob(d, W, H, 'blue')).toEqual({ x: 20, y: 10, w: 12, h: 12 });
   });
+  it('пятно у прицела важнее большого в стороне', () => {
+    const d = frame((s) => { rect(s, 1, 1, 10, 10, [30, 60, 210]); rect(s, 17, 11, 7, 7, [30, 60, 210]); });
+    expect(colorBlob(d, W, H, 'blue')).toEqual({ x: 17, y: 11, w: 7, h: 7 });
+  });
+  it('фон на весь кадр отбрасывается', () => {
+    const d = frame((s) => rect(s, 0, 0, W, H, [220, 30, 30]));
+    expect(colorBlob(d, W, H, 'red')).toBeNull();
+  });
+  it('полоса вдоль трёх сторон — тоже фон', () => {
+    const d = frame((s) => { rect(s, 0, 0, W, 4, [220, 30, 30]); rect(s, 0, 0, 4, H, [220, 30, 30]); rect(s, W - 4, 0, 4, H, [220, 30, 30]); });
+    expect(colorBlob(d, W, H, 'red')).toBeNull();
+  });
   it('мелкий шум игнорируется', () => {
     const d = frame((s) => rect(s, 5, 5, 2, 2, [220, 30, 30]));
     expect(colorBlob(d, W, H, 'red')).toBeNull();

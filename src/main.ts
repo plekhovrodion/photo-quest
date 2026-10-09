@@ -6,7 +6,7 @@ import { cropPhoto } from './camera/crop';
 import { targetOf } from './camera/target';
 import { verifyPhoto } from './api/verify';
 import { COLOR_RU } from './vision/names';
-import { preloadModel } from './vision/local';
+import { preloadModels } from './vision/models';
 import { confetti } from './fx/confetti';
 import { typeText, stopTyping } from './fx/typewriter';
 import { setBackground } from './fx/background';
@@ -80,13 +80,14 @@ function on(id: string, fn: () => void) {
 }
 
 function startLevel(l: Level) {
+  preloadModels();
   level = l;
   state = null;
   render();
 }
 
 function startTask(task: Task) {
-  if (task.local?.kind === 'labels' || task.local?.kind === 'and' || task.local?.kind === 'any') preloadModel();
+  preloadModels();
   state = createGame([task]);
   render();
 }
@@ -109,12 +110,13 @@ async function capture() {
   // живая камера уже вырезала предмет; иначе даём обрезать вручную или взять весь кадр
   const framed = cap.cropped ? cap.blob : await cropPhoto(cap.blob);
   if (!framed) return dispatch({ type: 'cancel-camera' });
+  const wasCropped = cap.cropped || framed !== cap.blob; // вырезано автоматически или вручную
   try {
     const photo = await compressPhoto(framed);
     if (photoUrl) URL.revokeObjectURL(photoUrl);
     photoUrl = URL.createObjectURL(photo);
     dispatch({ type: 'photo-taken' });
-    const { match, label, found } = await verifyPhoto(photo, task);
+    const { match, label, found } = await verifyPhoto(photo, task, { cropped: wasCropped, liveClass: cap.liveClass });
     lastLabel = label ?? null;
     lastFound = found ?? null;
     dispatch({ type: 'verified', match });
@@ -382,3 +384,6 @@ store.load().then((p) => {
   // Перерисовываем только карту и меню: онбординг, магазин и игру не сбрасываем.
   if (!state && /screen-(menu|map)/.test(root.className)) render();
 });
+
+// Готовим умное зрение заранее, пока ребёнок смотрит главный экран: к камере модели уже загружены.
+setTimeout(preloadModels, 600);
