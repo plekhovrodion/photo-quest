@@ -1,3 +1,7 @@
+@font-face { font-family: 'Factor A'; font-weight: 400; font-style: normal; font-display: swap; src: url('/fonts/FactorA-Regular.woff2') format('woff2'); }
+@font-face { font-family: 'Factor A'; font-weight: 700; font-style: normal; font-display: swap; src: url('/fonts/FactorA-Bold.woff2') format('woff2'); }
+@font-face { font-family: 'Factor A'; font-weight: 800 900; font-style: normal; font-display: swap; src: url('/fonts/FactorA-Extrabold.woff2') format('woff2'); }
+
 :root {
   --sky1: #7dd3fc; --sky2: #e0f2fe; --ink: #1e2a4a; --panel: #ffffff;
   --accent: #ff8a1f; --accent-d: #d96a00; --ok: #2eb872; --ok-d: #1f8f58;
@@ -7,7 +11,7 @@
 html, body { margin: 0; height: 100%; }
 body {
   color: var(--ink); overflow-x: hidden;
-  font-family: ui-rounded, 'Nunito', 'SF Pro Rounded', system-ui, -apple-system, 'Segoe UI', sans-serif;
+  font-family: 'Factor A', ui-rounded, system-ui, -apple-system, 'Segoe UI', sans-serif;
   background: linear-gradient(180deg, var(--sky1) 0%, var(--sky2) 55%, #fef3c7 100%) fixed;
 }
 body::before, body::after { /* облака */
