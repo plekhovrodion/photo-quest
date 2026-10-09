@@ -4,6 +4,8 @@ import { evaluate, type Ctx } from './evaluate';
 import { matchesLabels, PROB_MIN, type Prediction } from './labels';
 import { COLOR_RU, ruName } from './names';
 import { loadCoco, loadMobilenet } from './models';
+import { rankObjects, clipHas, type ClipRank } from './clip';
+import { CLIP_OBJECTS } from '../data/clip';
 
 const SAMPLE = 96;
 
@@ -95,9 +97,19 @@ export async function localVerify(
     }
     return cache.preds;
   };
-  const match = await evaluate(check, { shares: getShares, predictions: getPreds });
+  let clipRanks: ClipRank[] | null | undefined;
+  const getClip = async () => {
+    if (clipRanks === undefined) clipRanks = await rankObjects(canvas, canvas.width, canvas.height).catch(() => null);
+    return clipRanks;
+  };
+  const match = await evaluate(check, { shares: getShares, predictions: getPreds, clip: getClip });
   const reason = cache.preds?.[0]?.className ?? 'local';
-  if (match) return { match, reason, label: pickLabel(cache.preds, check) };
+  if (match) {
+    const byPreds = pickLabel(cache.preds, check);
+    const viaClip = check.kind === 'labels' && check.clip && clipRanks && clipHas(clipRanks, check.clip);
+    // Если предмет узнал только CLIP, называем его по заданию, а не по случайному классу MobileNet.
+    return { match, reason, label: viaClip ? CLIP_OBJECTS[check.clip!] : byPreds };
+  }
 
   // Неверно: объясняем, что заврик увидел на фото.
   let found: string | undefined;
@@ -105,7 +117,7 @@ export async function localVerify(
   if (check.kind === 'color' || check.kind === 'multicolor') {
     found = colorPhrase(getShares());
   } else {
-    foundLabel = anyLabel(await getPreds());
+    foundLabel = anyLabel(await getPreds()) ?? (await getClip())?.[0]?.ru;
     found = foundLabel ? `Это ${foundLabel}` : colorPhrase(getShares());
   }
   return { match, reason, found, foundLabel };

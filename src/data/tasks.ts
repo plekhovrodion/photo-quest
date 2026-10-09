@@ -3,7 +3,7 @@ export type Kind = 'color' | 'object';
 // Локальная проверка без сервера: по цвету пикселей или по классам предметов (MobileNet и COCO-SSD).
 export type LocalCheck =
   | { kind: 'color'; color: import('../vision/color').ColorName }
-  | { kind: 'labels'; words: string[] }
+  | { kind: 'labels'; words: string[]; clip?: string } // clip — название предмета для CLIP (src/data/clip.ts)
   | { kind: 'and'; checks: LocalCheck[] }
   | { kind: 'any' } // мягкая проверка: на фото есть узнаваемый предмет
   | { kind: 'multicolor'; min: number }; // не меньше min разных цветов
@@ -39,7 +39,19 @@ const color = (id: string, name: string, gen: string, hint: string) =>
 // Конкретный предмет. words — английские названия классов ImageNet (MobileNet) и COCO (детектор):
 // достаточно, чтобы любая из моделей назвала один из них. Проверено по реальным спискам классов.
 const thing = (id: string, accusative: string, hint: string, ...words: string[]) =>
-  t('object', id, `Найди ${accusative}!`, `На фото виден предмет: ${accusative}.`, hint, { kind: 'labels', words });
+  t('object', id, `Найди ${accusative}!`, `На фото виден предмет: ${accusative}.`, hint, { kind: 'labels', words, clip: CLIP_OF[id] });
+
+// Название предмета для CLIP по id задания.
+const CLIP_OF: Record<string, string> = {
+  spoon: 'spoon', fork: 'fork', cup: 'cup', plate: 'plate', bowl: 'bowl', bottle: 'bottle', fridge: 'refrigerator',
+  microwave: 'microwave oven', sink: 'sink', bed: 'bed', sofa: 'sofa', chair: 'chair', tv: 'television', book: 'book',
+  clock: 'wall clock', plant: 'potted plant', teddy: 'teddy bear', vase: 'vase', pen: 'pen', scissors: 'scissors',
+  ruler: 'ruler', laptop: 'laptop', phone: 'mobile phone', keyboard: 'computer keyboard', mouse: 'computer mouse',
+  umbrella: 'umbrella', shoe: 'shoe', backpack: 'backpack', bag: 'handbag', skateboard: 'skateboard', banana: 'banana',
+  apple: 'apple', orange: 'orange fruit', carrot: 'carrot', broccoli: 'broccoli', pizza: 'pizza', sandwich: 'sandwich',
+  cake: 'cake', bike: 'bicycle', car: 'car', bus: 'bus', bench: 'bench', dog: 'dog', cat: 'cat', bird: 'bird',
+  butterfly: 'butterfly', flower: 'flower', mushroom: 'mushroom', toothbrush: 'toothbrush', toilet: 'toilet', towel: 'towel',
+};
 
 export const LEVELS: Level[] = [
   {
@@ -68,7 +80,6 @@ export const LEVELS: Level[] = [
       thing('bottle', 'бутылку', 'В ней бывает вода или сок', 'bottle'),
       thing('fridge', 'холодильник', 'В нём живёт еда и холод', 'refrigerator'),
       thing('microwave', 'микроволновку', 'В ней разогревают еду', 'microwave'),
-      thing('sink', 'раковину', 'Над ней кран с водой', 'sink', 'washbasin'),
     ],
   },
   {
@@ -98,6 +109,15 @@ export const LEVELS: Level[] = [
     ],
   },
   {
+    id: 'bath', title: 'Ванная', price: 20,
+    tasks: [
+      thing('sink', 'раковину', 'Над ней кран с водой', 'sink', 'washbasin'),
+      thing('toothbrush', 'зубную щётку', 'Ею чистят зубы', 'toothbrush'),
+      thing('towel', 'полотенце', 'Им вытираются после душа', 'towel'),
+      thing('toilet', 'унитаз', 'Он стоит в туалете', 'toilet'),
+    ],
+  },
+  {
     id: 'hall', title: 'Прихожая', price: 25,
     tasks: [
       thing('umbrella', 'зонт', 'Он спасает от дождя', 'umbrella'),
@@ -112,23 +132,27 @@ export const LEVELS: Level[] = [
     tasks: [
       thing('banana', 'банан', 'Он жёлтый и в кожуре', 'banana'),
       thing('apple', 'яблоко', 'Оно растёт на дереве', 'apple', 'granny smith'),
+      thing('orange', 'апельсин', 'Он круглый и оранжевый', 'orange'),
       thing('carrot', 'морковку', 'Её любят зайцы', 'carrot'),
       thing('broccoli', 'брокколи', 'Она похожа на маленькое деревце', 'broccoli'),
       thing('pizza', 'пиццу', 'Её режут на кусочки', 'pizza'),
       thing('sandwich', 'бутерброд', 'Хлеб с чем-то вкусным', 'sandwich', 'hotdog', 'cheeseburger', 'hamburger'),
+      thing('cake', 'торт', 'Его едят на день рождения', 'cake'),
     ],
   },
   {
-    id: 'outdoor', title: 'Двор', price: 35,
+    id: 'outdoor', title: 'Двор и лес', price: 35,
     tasks: [
       thing('bike', 'велосипед', 'У него два колеса и педали', 'bicycle', 'bike'),
       thing('car', 'машину', 'Она ездит по дороге', 'car', 'cab', 'jeep', 'minivan'),
       thing('bus', 'автобус', 'В нём ездят много людей', 'bus'),
-      thing('truck', 'грузовик', 'Он возит тяжёлые грузы', 'truck', 'pickup'),
-      thing('hydrant', 'пожарный гидрант', 'Он красный и стоит у дороги', 'fire hydrant', 'hydrant'),
+      thing('bench', 'скамейку', 'На ней отдыхают в парке', 'bench'),
       thing('dog', 'собаку', 'Она виляет хвостом', 'dog'),
       thing('cat', 'кошку', 'Она мяукает', 'cat', 'tabby'),
       thing('bird', 'птицу', 'Она умеет летать', 'bird'),
+      thing('butterfly', 'бабочку', 'У неё яркие крылья', 'butterfly'),
+      thing('flower', 'цветок', 'Он красиво пахнет', 'daisy', 'sunflower', 'flower'),
+      thing('mushroom', 'гриб', 'Он растёт в лесу, трогать его нельзя', 'mushroom', 'agaric', 'bolete'),
     ],
   },
 ];
