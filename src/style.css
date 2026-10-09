@@ -405,3 +405,20 @@ button.cube-btn .cube-badge { right: calc(var(--du) * 6); top: calc(var(--du) * 
 .fh-list { list-style: none; margin: 0; padding: 0; text-align: left; display: flex; flex-direction: column; gap: 10px; font-size: 19px; font-weight: 700; line-height: 1.3; }
 .fh-list li { position: relative; padding-left: 28px; }
 .fh-list li::before { content: ''; position: absolute; left: 4px; top: .45em; width: 14px; height: 14px; border-radius: 50%; background: var(--btn2); }
+
+
+/* ===== Закрытые места и покупка ===== */
+button.cube-btn.locked svg.place-svg { filter: grayscale(.92) brightness(.72) drop-shadow(0 6px 0 rgba(10, 5, 40, .12)); }
+button.cube-btn.locked .cube-label { background: rgba(255, 255, 255, .85); }
+.cube-lock { position: absolute; right: calc(var(--du) * 6); top: calc(var(--du) * 2); width: calc(var(--du) * 38); height: calc(var(--du) * 38);
+  display: grid; place-items: center; border-radius: 50%; background: #1e1b4b; color: #fff; border: calc(var(--du) * 3) solid #fff; }
+.cube-lock .ico { width: 60%; height: 60%; vertical-align: 0; }
+.cube-price { position: absolute; left: calc(var(--du) * 6); top: calc(var(--du) * 4); display: inline-flex; align-items: center; gap: calc(var(--du) * 4);
+  background: var(--btn2); color: #fff; border: calc(var(--du) * 3) solid #fff; border-radius: 999px; padding: calc(var(--du) * 3) calc(var(--du) * 11);
+  font-size: calc(var(--du) * 22); font-weight: 900; line-height: 1; box-shadow: 0 calc(var(--du) * 3) 0 var(--btn2-d); }
+.cube-price .ico { width: calc(var(--du) * 20); height: calc(var(--du) * 20); vertical-align: 0; margin: 0; }
+.modal-place { width: min(70%, 230px); }
+.modal-place .place-svg { display: block; width: 100%; height: auto; filter: drop-shadow(0 6px 0 rgba(10, 5, 40, .15)); }
+.modal-text { margin: 0; font-size: 20px; font-weight: 700; line-height: 1.3; color: var(--ink); text-shadow: none; }
+.modal button { white-space: nowrap; font-size: 28px; }
+.modal button .ico { width: 1.05em; height: 1.05em; }

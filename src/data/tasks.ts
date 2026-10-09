@@ -20,6 +20,7 @@ export interface Task {
 export interface Level {
   id: string;
   title: string;
+  price: number; // сколько вспышек стоит открыть место; 0 — открыто сразу
   tasks: Task[];
 }
 
@@ -42,7 +43,7 @@ const thing = (id: string, accusative: string, hint: string, ...words: string[])
 
 export const LEVELS: Level[] = [
   {
-    id: 'colors', title: 'Цвета',
+    id: 'colors', title: 'Цвета', price: 0,
     tasks: [
       color('red', 'красным', 'красного', 'Посмотри на помидор или яблоко'),
       color('blue', 'синим', 'синего', 'Может быть, это что-то из одежды?'),
@@ -57,7 +58,7 @@ export const LEVELS: Level[] = [
     ],
   },
   {
-    id: 'kitchen', title: 'Кухня',
+    id: 'kitchen', title: 'Кухня', price: 10,
     tasks: [
       thing('spoon', 'ложку', 'Она лежит рядом с тарелкой', 'spoon'),
       thing('fork', 'вилку', 'Ею накалывают еду', 'fork'),
@@ -70,7 +71,7 @@ export const LEVELS: Level[] = [
     ],
   },
   {
-    id: 'room', title: 'Комната',
+    id: 'room', title: 'Комната', price: 15,
     tasks: [
       thing('bed', 'кровать', 'На ней спят ночью', 'bed'),
       thing('sofa', 'диван', 'На нём сидят и смотрят мультики', 'couch'),
@@ -83,7 +84,7 @@ export const LEVELS: Level[] = [
     ],
   },
   {
-    id: 'school', title: 'Школа',
+    id: 'school', title: 'Школа', price: 20,
     tasks: [
       thing('pen', 'ручку', 'Ею пишут в тетради', 'pen', 'ballpoint', 'biro'),
       thing('scissors', 'ножницы', 'Ими режут бумагу', 'scissors'),
@@ -96,7 +97,7 @@ export const LEVELS: Level[] = [
     ],
   },
   {
-    id: 'bath', title: 'Ванная',
+    id: 'bath', title: 'Ванная', price: 20,
     tasks: [
       thing('toothbrush', 'зубную щётку', 'Ею чистят зубы', 'toothbrush'),
       thing('towel', 'полотенце', 'Им вытираются после душа', 'towel'),
@@ -106,7 +107,7 @@ export const LEVELS: Level[] = [
     ],
   },
   {
-    id: 'hall', title: 'Прихожая',
+    id: 'hall', title: 'Прихожая', price: 25,
     tasks: [
       thing('umbrella', 'зонт', 'Он спасает от дождя', 'umbrella'),
       thing('shoe', 'обувь', 'Её надевают на улицу', 'shoe', 'sandal', 'loafer', 'clog', 'boot'),
@@ -116,7 +117,7 @@ export const LEVELS: Level[] = [
     ],
   },
   {
-    id: 'food', title: 'Еда',
+    id: 'food', title: 'Еда', price: 30,
     tasks: [
       thing('banana', 'банан', 'Он жёлтый и в кожуре', 'banana'),
       thing('apple', 'яблоко', 'Оно растёт на дереве', 'apple', 'granny smith'),
@@ -129,7 +130,7 @@ export const LEVELS: Level[] = [
     ],
   },
   {
-    id: 'outdoor', title: 'Двор и лес',
+    id: 'outdoor', title: 'Двор и лес', price: 35,
     tasks: [
       thing('bike', 'велосипед', 'У него два колеса и педали', 'bicycle', 'bike'),
       thing('car', 'машину', 'Она ездит по дороге', 'car', 'cab', 'jeep', 'minivan'),

@@ -13,10 +13,10 @@ import { typeText, stopTyping } from './fx/typewriter';
 import { setBackground } from './fx/background';
 import { playSuccess, playTryAgain, speak } from './audio/sounds';
 import { SLIDES, isOnboarded, markOnboarded } from './onboarding';
-import { loadProgress, recordTask, buy, canBuy, SHOP, CURRENCY, LEVEL_BONUS, type Progress } from './progress';
+import { loadProgress, recordTask, isUnlocked, canUnlock, unlockLevel, priceOf, CURRENCY, LEVEL_BONUS, type Progress } from './progress';
 
 import { createStore } from './storage/store';
-import { flashIcon, cameraIcon, speakerIcon, bulbIcon, shopIcon, starIcon, checkIcon, closeIcon, backIcon } from './ui/icons';
+import { flashIcon, cameraIcon, speakerIcon, bulbIcon, lockIcon, starIcon, checkIcon, closeIcon, backIcon } from './ui/icons';
 import { isoPath, project, TW, TH, NODE_H, ROAD_H, WORLD, worldLayout } from './map/iso';
 import { placeSvg } from './map/places';
 
@@ -85,6 +85,7 @@ function on(id: string, fn: () => void) {
 }
 
 function startLevel(l: Level) {
+  if (!isUnlocked(progress, l.id)) return showUnlock(l);
   preloadModels();
   level = l;
   state = null;
@@ -181,7 +182,6 @@ const wallet = () =>
 // Окно «Что такое вспышки?»: открывается по нажатию на счётчик на любом экране.
 function showFlashInfo() {
   if (document.querySelector('.modal-overlay')) return;
-  const canShop = /screen-(menu|map)/.test(root.className);
   const overlay = document.createElement('div');
   overlay.className = 'modal-overlay';
   overlay.setAttribute('role', 'dialog');
@@ -195,9 +195,8 @@ function showFlashInfo() {
       <li>Вспышки — награда за каждый найденный предмет.</li>
       <li>Нашёл с первой попытки — 3 вспышки, со второй — 2, с третьей — 1.</li>
       <li>Нашёл всё в категории — ещё ${LEVEL_BONUS} вспышек в подарок.</li>
-      <li>Вспышки можно потратить в магазине на новых друзей.</li>
+      <li>На вспышки открываются новые места: кухня, комната, школа и другие.</li>
     </ul>
-    ${canShop ? '<button class="fh-shop" type="button">В магазин</button>' : ''}
     <button class="fh-ok secondary" type="button">Понятно</button>
   </div>`;
   document.body.appendChild(overlay);
@@ -206,7 +205,6 @@ function showFlashInfo() {
   addEventListener('keydown', onKey);
   overlay.addEventListener('click', (e) => { if (e.target === overlay) close(); });
   overlay.querySelector('.fh-ok')!.addEventListener('click', close);
-  overlay.querySelector('.fh-shop')?.addEventListener('click', () => { close(); level = null; state = null; renderShop(); });
   overlay.querySelector<HTMLElement>('.fh-ok')!.focus();
 }
 document.addEventListener('click', (e) => { if ((e.target as Element).closest('.chip.coin')) showFlashInfo(); });
@@ -239,45 +237,62 @@ function renderLevels() {
   const cubes = LEVELS.map((l, i) => {
     const p = progress.levels[l.id];
     const it = items[i];
-    return `<button class="cube-btn ${p?.passed ? 'done' : ''}" data-i="${i}" aria-label="${l.title}"
+    const locked = !isUnlocked(progress, l.id);
+    const badge = locked
+      ? `<span class="cube-lock" aria-hidden="true">${lockIcon()}</span><span class="cube-price" aria-hidden="true">${flashIcon()}${priceOf(l.id)}</span>`
+      : p?.passed ? `<span class="cube-badge" aria-hidden="true">${checkIcon()}</span>` : '';
+    return `<button class="cube-btn ${p?.passed ? 'done' : ''} ${locked ? 'locked' : ''}" data-i="${i}"
+      aria-label="${l.title}${locked ? `, закрыто, стоит ${priceOf(l.id)} вспышек` : ''}"
       style="left:${(it.cx / W) * 100}%;top:${(it.top / H) * 100}%;width:${(WORLD.CUBE_W / W) * 100}%;--i:${i};--ph:${(i * 0.7).toFixed(1)}s">
-      ${placeSvg(l.id)}
-      ${p?.passed ? `<span class="cube-badge" aria-hidden="true">${checkIcon()}</span>` : ''}
+      ${placeSvg(l.id)}${badge}
       <span class="cube-label">${l.title}</span>
     </button>`;
   }).join('');
-  show(`${hud('<button id="howto" class="secondary small" aria-label="Как играть">?</button>', '', '',
-      `<button id="shop" class="secondary small" aria-label="Магазин">${shopIcon()}</button>`)}
+  show(`${hud('<button id="howto" class="secondary small" aria-label="Как играть">?</button>')}
     ${art('ship')}<h1>Покажи нам мир!</h1><p>Выбери, что показать Грише и Соне</p>
     <div class="world" style="aspect-ratio:${W} / ${H.toFixed(0)}">${cubes}</div>`, 'screen-menu');
   root.querySelectorAll<HTMLButtonElement>('.cube-btn').forEach((b) =>
     b.addEventListener('click', () => startLevel(LEVELS[Number(b.dataset.i)])),
   );
-  on('shop', renderShop);
   on('howto', () => renderOnboarding());
 }
 
-function renderShop() {
-  const items = SHOP.map((it) => {
-    const owned = progress.owned.includes(it.id);
-    const label = owned ? 'Твой!' : `${flashIcon()}${it.price}`;
-    const dis = owned || !canBuy(progress, it);
-    return `<button class="level ${owned ? 'owned' : ''}" data-id="${it.id}" ${dis ? 'disabled' : ''} style="--i:${SHOP.indexOf(it)}">
-      <img class="shop-art" src="/art/${it.art}.svg" alt="" aria-hidden="true"><span>${it.name}</span><small class="price">${label}</small></button>`;
-  }).join('');
-  show(`${hud(`<button id="back" class="secondary small" aria-label="Назад">${backIcon()}</button>`)}
-    <h1>Магазин</h1><p>Трать ${CURRENCY.name} на друзей</p><div class="levels">${items}</div>`);
-  root.querySelectorAll<HTMLButtonElement>('.level[data-id]').forEach((b) =>
-    b.addEventListener('click', () => {
-      const item = SHOP.find((x) => x.id === b.dataset.id)!;
-      progress = buy(progress, item);
-      void store.save(progress);
-      playSuccess();
-      confetti(900);
-      renderShop();
-    }),
-  );
-  on('back', () => { goBack(); renderLevels(); });
+// Окно покупки места: открыть за вспышки или подсказать, сколько не хватает.
+function showUnlock(l: Level) {
+  if (document.querySelector('.modal-overlay')) return;
+  const price = priceOf(l.id);
+  const ok = canUnlock(progress, l.id);
+  const missing = price - progress.flashes;
+  const overlay = document.createElement('div');
+  overlay.className = 'modal-overlay';
+  overlay.setAttribute('role', 'dialog');
+  overlay.setAttribute('aria-modal', 'true');
+  overlay.setAttribute('aria-labelledby', 'ul-title');
+  overlay.innerHTML = `<div class="modal">
+    <div class="modal-place">${placeSvg(l.id)}</div>
+    <h2 id="ul-title">${ok ? `Открыть «${l.title}»?` : `«${l.title}» пока закрыто`}</h2>
+    <p class="fh-balance">${flashIcon()}У тебя ${progress.flashes}, нужно ${price}</p>
+    <p class="modal-text">${ok
+      ? `Это место стоит ${price} вспышек. Там ${l.tasks.length} новых заданий.`
+      : `Не хватает ${missing} вспышек. Находи предметы в открытых местах, и вспышки накопятся!`}</p>
+    ${ok ? `<button class="ul-buy" type="button">${flashIcon()}Открыть за ${price}</button>` : ''}
+    <button class="ul-cancel secondary" type="button">${ok ? 'Не сейчас' : 'Понятно'}</button>
+  </div>`;
+  document.body.appendChild(overlay);
+  const close = () => { overlay.remove(); removeEventListener('keydown', onKey); };
+  const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape') close(); };
+  addEventListener('keydown', onKey);
+  overlay.addEventListener('click', (e) => { if (e.target === overlay) close(); });
+  overlay.querySelector('.ul-cancel')!.addEventListener('click', close);
+  overlay.querySelector('.ul-buy')?.addEventListener('click', () => {
+    progress = unlockLevel(progress, l.id);
+    void store.save(progress);
+    close();
+    playSuccess();
+    confetti(1400);
+    startLevel(l);
+  });
+  overlay.querySelector<HTMLElement>(ok ? '.ul-buy' : '.ul-cancel')!.focus();
 }
 
 const toMenu = () => { goBack(); state = null; level = null; render(); };
@@ -429,7 +444,7 @@ render();
 // Подтягиваем прогресс с сервера (если он настроен) и перерисовываем, не прерывая задание.
 store.load().then((p) => {
   progress = p;
-  // Перерисовываем только карту и меню: онбординг, магазин и игру не сбрасываем.
+  // Перерисовываем только карту и меню: онбординг и игру не сбрасываем.
   if (!state && /screen-(menu|map)/.test(root.className)) render();
 });
 

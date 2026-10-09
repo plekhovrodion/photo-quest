@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from 'vitest';
-import { computeFlashes, mergeProgress, LEVEL_BONUS, SHOP, type Progress } from '../progress';
+import { computeFlashes, mergeProgress, priceOf, LEVEL_BONUS, type Progress } from '../progress';
 import { SyncedStore, type ProgressStore } from './store';
 
 const P = (over: Partial<Progress> = {}): Progress => ({ levels: {}, found: {}, flashes: 0, owned: [], ...over });
@@ -15,12 +15,12 @@ describe('mergeProgress', () => {
     expect(mergeProgress(a, b).found).toEqual({ x: 3, y: 3, z: 2 });
   });
   it('объединяет покупки и не теряет траты', () => {
-    const item = SHOP[0];
-    const a = P({ found: { x: 3, y: 3, z: 3, w: 3 }, owned: [item.id], flashes: 12 - item.price });
+    const price = priceOf('kitchen');
+    const a = P({ found: { x: 3, y: 3, z: 3, w: 3 }, owned: ['kitchen'], flashes: 12 - price });
     const b = P({ found: { x: 3 }, flashes: 3 });
     const m = mergeProgress(a, b);
-    expect(m.owned).toEqual([item.id]);
-    expect(m.flashes).toBe(12 - item.price); // найдено 12, потрачено на покупку
+    expect(m.owned).toEqual(['kitchen']);
+    expect(m.flashes).toBe(Math.max(0, 12 - price)); // найдено 12, потрачено на открытие места
   });
   it('бонус за категорию учитывается один раз', () => {
     const lv = { stars: 5, passed: true };
@@ -28,7 +28,7 @@ describe('mergeProgress', () => {
     expect(m.flashes).toBe(5 + LEVEL_BONUS);
   });
   it('computeFlashes не уходит в минус', () => {
-    expect(computeFlashes(P({ owned: [SHOP[0].id] }))).toBe(0);
+    expect(computeFlashes(P({ owned: ['kitchen'] }))).toBe(0);
   });
 });
 

@@ -1,3 +1,5 @@
+import { LEVELS } from './data/tasks';
+
 export interface LevelProgress {
   stars: number;
   passed: boolean;
@@ -8,29 +10,25 @@ export interface Progress {
   levels: Record<string, LevelProgress>;
   found: Record<string, number>; // id задания -> звёзды, с которыми оно найдено
   flashes: number;
-  owned: string[];
-}
-
-export interface ShopItem {
-  id: string;
-  art: string; // картинка друга-заврика в /art
-  name: string;
-  price: number;
+  owned: string[]; // id мест (категорий), открытых за вспышки
 }
 
 export const CURRENCY = { name: 'вспышки' };
 export const LEVEL_BONUS = 5;
 
-export const SHOP: ShopItem[] = [
-  { id: 'grisha', art: 'grisha-happy', name: 'Гриша', price: 10 },
-  { id: 'sonya', art: 'sonya-wave', name: 'Соня', price: 10 },
-  { id: 'walker', art: 'sonya-walk', name: 'Соня в пути', price: 20 },
-  { id: 'sonya-cheer', art: 'sonya-cheer', name: 'Весёлая Соня', price: 30 },
-  { id: 'grisha-cheer', art: 'grisha-cheer', name: 'Весёлый Гриша', price: 40 },
-  { id: 'jet-sonya', art: 'jet-1', name: 'Реактивная Соня', price: 50 },
-  { id: 'jet-grisha', art: 'jet-2', name: 'Реактивный Гриша', price: 60 },
-  { id: 'ship', art: 'ship', name: 'Космический корабль', price: 100 },
-];
+// Места открываются за вспышки: «Цвета» бесплатны, остальные покупаются (цена — в data/tasks.ts).
+export const priceOf = (levelId: string): number => LEVELS.find((l) => l.id === levelId)?.price ?? 0;
+export const isUnlocked = (p: Pick<Progress, 'owned'>, levelId: string): boolean => priceOf(levelId) === 0 || p.owned.includes(levelId);
+export const canUnlock = (p: Pick<Progress, 'owned' | 'flashes'>, levelId: string): boolean =>
+  !isUnlocked(p, levelId) && p.flashes >= priceOf(levelId);
+
+export function unlockLevel(p: Progress, levelId: string): Progress {
+  return canUnlock(p, levelId) ? { ...p, flashes: p.flashes - priceOf(levelId), owned: [...p.owned, levelId] } : p;
+}
+
+// Оставляем только существующие платные места (в старых сохранениях там лежали id друзей из магазина).
+export const sanitizeOwned = (owned: unknown): string[] =>
+  Array.isArray(owned) ? [...new Set(owned.filter((id): id is string => typeof id === 'string' && priceOf(id) > 0))] : [];
 
 const KEY = 'photoquest.progress.v2';
 const empty = (): Progress => ({ levels: {}, found: {}, flashes: 0, owned: [] });
@@ -38,7 +36,9 @@ const empty = (): Progress => ({ levels: {}, found: {}, flashes: 0, owned: [] })
 export function loadProgress(): Progress {
   try {
     const raw = localStorage.getItem(KEY);
-    return raw ? { ...empty(), ...(JSON.parse(raw) as Progress) } : empty();
+    if (!raw) return empty();
+    const data = { ...empty(), ...(JSON.parse(raw) as Progress) };
+    return { ...data, owned: sanitizeOwned(data.owned) };
   } catch {
     return empty();
   }
@@ -76,18 +76,11 @@ export function recordTask(
   };
 }
 
-export const canBuy = (p: Progress, item: ShopItem): boolean =>
-  !p.owned.includes(item.id) && p.flashes >= item.price;
-
-export function buy(p: Progress, item: ShopItem): Progress {
-  return canBuy(p, item) ? { ...p, flashes: p.flashes - item.price, owned: [...p.owned, item.id] } : p;
-}
-
 // Вспышки выводятся из найденного и купленного, поэтому при слиянии двух устройств не теряются траты.
 export function computeFlashes(p: Pick<Progress, 'found' | 'levels' | 'owned'>): number {
   const earned = Object.values(p.found).reduce((n, v) => n + v, 0);
   const bonuses = Object.values(p.levels).filter((l) => l.passed).length * LEVEL_BONUS;
-  const spent = p.owned.reduce((n, id) => n + (SHOP.find((i) => i.id === id)?.price ?? 0), 0);
+  const spent = p.owned.reduce((n, id) => n + priceOf(id), 0);
   return Math.max(0, earned + bonuses - spent);
 }
 
