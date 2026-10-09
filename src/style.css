@@ -445,13 +445,13 @@ button.stop.done .ico { width: 62%; height: 62%; }
 .album-sec h2 { display: flex; align-items: center; justify-content: space-between; margin: 0 0 10px; font-size: 24px; color: #fff; }
 .album-sec h2 span { font-size: 18px; background: rgba(255, 255, 255, .22); border-radius: 999px; padding: 3px 12px; }
 .album-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; }
-#app button.sticker { position: relative; display: flex; flex-direction: column; align-items: center; gap: 6px; padding: 7px 7px 8px; border: 0; cursor: pointer;
+:is(#app, .ghost) button.sticker { position: relative; display: flex; flex-direction: column; align-items: center; gap: 6px; padding: 7px 7px 8px; border: 0; cursor: pointer;
   background: #fff; color: var(--ink); border-radius: 18px; box-shadow: 0 5px 0 rgba(10, 5, 40, .3); transform: rotate(var(--tilt, 0deg));
   min-height: 0; min-width: 0; width: auto; height: auto; font: inherit; font-size: 14px; text-shadow: none; animation: pop-in .45s calc(var(--i, 0) * 40ms) var(--spring) backwards; }
-#app .sticker img { display: block; width: 100%; aspect-ratio: 1; object-fit: cover; border-radius: 12px; background: #e9defa; }
-#app .sticker small { font-size: 14px; font-weight: 800; line-height: 1.1; text-align: center; overflow-wrap: anywhere; }
-@media (hover: hover) { #app button.sticker:hover { transform: rotate(0deg) scale(1.06); transition: transform .2s var(--spring); filter: none; } }
-#app button.sticker:active { transform: scale(.96); box-shadow: 0 2px 0 rgba(10, 5, 40, .3); }
+:is(#app, .ghost) .sticker img { display: block; width: 100%; aspect-ratio: 1; object-fit: cover; border-radius: 12px; background: #e9defa; }
+:is(#app, .ghost) .sticker small { font-size: 14px; font-weight: 800; line-height: 1.1; text-align: center; overflow-wrap: anywhere; }
+@media (hover: hover) { :is(#app, .ghost) button.sticker:hover { transform: rotate(0deg) scale(1.06); transition: transform .2s var(--spring); filter: none; } }
+:is(#app, .ghost) button.sticker:active { transform: scale(.96); box-shadow: 0 2px 0 rgba(10, 5, 40, .3); }
 .sticker.empty { background: rgba(255, 255, 255, .14); box-shadow: none; border: 3px dashed rgba(255, 255, 255, .45); color: rgba(255, 255, 255, .85); cursor: default; padding: 7px; animation: none; }
 .sticker.empty .q { display: grid; place-items: center; width: 100%; aspect-ratio: 1; font-size: 40px; font-weight: 900; opacity: .6; }
 .album-empty, .album-note { margin: 0; text-align: center; font-size: 18px; font-weight: 700; color: #fff; }
@@ -470,10 +470,10 @@ button.stop.done .ico { width: 62%; height: 62%; }
 #app.quiet > * { animation: none !important; }
 .screen-zavrik { gap: 12px; }
 .zv-tabs { display: flex; gap: 10px; width: min(100%, 420px); }
-#app .zv-tab { flex: 1; height: auto; min-height: 56px; padding: 8px 12px; display: flex; flex-direction: column; align-items: center; gap: 2px;
+:is(#app, .ghost) .zv-tab { flex: 1; height: auto; min-height: 56px; padding: 8px 12px; display: flex; flex-direction: column; align-items: center; gap: 2px;
   font-size: 22px; background: rgba(255, 255, 255, .18); color: #fff; box-shadow: none; border: 3px solid transparent; border-radius: 20px; }
-#app .zv-tab small { font-size: 14px; font-weight: 800; opacity: .85; }
-#app .zv-tab.on { background: var(--btn); border-color: #fff; box-shadow: 0 5px 0 var(--btn-d); }
+:is(#app, .ghost) .zv-tab small { font-size: 14px; font-weight: 800; opacity: .85; }
+:is(#app, .ghost) .zv-tab.on { background: var(--btn); border-color: #fff; box-shadow: 0 5px 0 var(--btn-d); }
 .zv-stage { position: relative; width: min(50%, 210px); display: grid; place-items: center; --grow: 1; transition: transform .4s var(--spring); transform: scale(var(--grow)); }
 .zv-stage.s1 { --grow: .8; } .zv-stage.s2 { --grow: .88; } .zv-stage.s3 { --grow: .96; } .zv-stage.s4 { --grow: 1.04; } .zv-stage.s5 { --grow: 1.12; }
 .zv-stage.s5::before { content: ''; position: absolute; inset: -12%; border-radius: 50%; background: radial-gradient(circle, rgba(253, 224, 71, .55), transparent 65%); animation: pulse-glow 2.4s ease-in-out infinite; }
@@ -498,10 +498,10 @@ button.stop.done .ico { width: 62%; height: 62%; }
 .zv-row > div { display: flex; gap: 8px; flex-wrap: wrap; }
 .zv-lock { display: inline-flex; align-items: center; gap: 4px; margin-left: 8px; font-size: 14px; background: rgba(0, 0, 0, .3); border-radius: 999px; padding: 2px 10px; }
 .zv-lock .ico { width: 14px; height: 14px; vertical-align: 0; }
-#app .zv-chip { width: 52px; height: 52px; min-height: 0; min-width: 0; padding: 4px; display: grid; place-items: center; font-size: 22px; font-weight: 900;
+:is(#app, .ghost) .zv-chip { width: 52px; height: 52px; min-height: 0; min-width: 0; padding: 4px; display: grid; place-items: center; font-size: 22px; font-weight: 900;
   background: #fff; color: var(--ink); border: 3px solid transparent; border-radius: 16px; box-shadow: 0 4px 0 rgba(10, 5, 40, .3); text-shadow: none; }
-#app .zv-chip.on { border-color: var(--btn); box-shadow: 0 4px 0 var(--btn-d); }
-#app .zv-chip:disabled { opacity: .35; filter: grayscale(1); box-shadow: none; }
+:is(#app, .ghost) .zv-chip.on { border-color: var(--btn); box-shadow: 0 4px 0 var(--btn-d); }
+:is(#app, .ghost) .zv-chip:disabled { opacity: .35; filter: grayscale(1); box-shadow: none; }
 .zv-mini { width: 100%; height: 100%; }
 .zv-dot { display: block; width: 30px; height: 30px; border-radius: 50%; background: conic-gradient(#ec4899, #f59e0b, #22c55e, #3b82f6, #ec4899); }
 .zv-up { position: fixed; left: 50%; top: 16%; transform: translateX(-50%); z-index: 70; background: #fff; color: var(--ink); font-weight: 900; font-size: 22px; padding: 12px 22px;
@@ -515,21 +515,21 @@ button.stop.done .ico { width: 62%; height: 62%; }
    ===================================================================== */
 
 /* --- Роли --- */
-#app button.secondary, .modal-overlay button.secondary {
+:is(#app, .ghost) button.secondary, .modal-overlay button.secondary {
   background: transparent; color: #fff; box-shadow: none; text-shadow: none;
   border: 3px solid rgba(255, 255, 255, .85);
 }
 .modal-overlay .modal button.secondary { color: var(--btn); border-color: var(--btn); }
-#app button.secondary:active:not(:disabled), .modal-overlay button.secondary:active:not(:disabled) { transform: scale(.96); box-shadow: none; background: rgba(255, 255, 255, .15); }
-@media (hover: hover) { #app button.secondary:hover:not(:disabled) { background: rgba(255, 255, 255, .14); filter: none; } }
-#app button.secondary.small { width: 56px; min-width: 56px; height: 56px; min-height: 56px; padding: 0; border-radius: 50%; display: grid; place-items: center; background: rgba(255, 255, 255, .12); }
-#app button.secondary.small .ico { width: 28px; height: 28px; vertical-align: 0; }
+:is(#app, .ghost) button.secondary:active:not(:disabled), .modal-overlay button.secondary:active:not(:disabled) { transform: scale(.96); box-shadow: none; background: rgba(255, 255, 255, .15); }
+@media (hover: hover) { :is(#app, .ghost) button.secondary:hover:not(:disabled) { background: rgba(255, 255, 255, .14); filter: none; } }
+:is(#app, .ghost) button.secondary.small { width: 56px; min-width: 56px; height: 56px; min-height: 56px; padding: 0; border-radius: 50%; display: grid; place-items: center; background: rgba(255, 255, 255, .12); }
+:is(#app, .ghost) button.secondary.small .ico { width: 28px; height: 28px; vertical-align: 0; }
 
 .chip.coin, .reward { background: rgba(255, 255, 255, .16); border: 2px solid rgba(255, 255, 255, .4); box-shadow: none; text-shadow: none; color: #fff; }
 .chip.coin .ico-flash, .reward .ico-flash { color: #fde047; filter: none; }
 
 /* --- Верхняя панель главной: иконка с подписью, у каждой свой цвет --- */
-#app button.hud-btn { width: 76px; min-width: 76px; height: 82px; min-height: 82px; padding: 6px 2px 4px; display: flex; flex-direction: column; align-items: center;
+:is(#app, .ghost) button.hud-btn { width: 76px; min-width: 76px; height: 82px; min-height: 82px; padding: 6px 2px 4px; display: flex; flex-direction: column; align-items: center;
   justify-content: center; gap: 3px; border-radius: 22px; background: rgba(255, 255, 255, .14); border: 2px solid rgba(255, 255, 255, .4);
   box-shadow: none; font-size: 14px; font-weight: 800; color: #fff; text-shadow: none; }
 .hb-ico { width: 40px; height: 40px; border-radius: 50%; display: grid; place-items: center; color: #fff; }
@@ -546,17 +546,17 @@ button.stop.done .ico { width: 62%; height: 62%; }
 .hero .char { height: 94%; width: auto; filter: hue-rotate(var(--hue, 0deg)); }
 .say-row { display: flex; align-items: center; gap: 10px; width: min(100%, 540px); }
 .say-row .bubble { flex: 1; min-width: 0; }
-#app button.say-btn { flex: none; width: 60px; min-width: 60px; height: 60px; min-height: 60px; padding: 0; border-radius: 50%; display: grid; place-items: center;
+:is(#app, .ghost) button.say-btn { flex: none; width: 60px; min-width: 60px; height: 60px; min-height: 60px; padding: 0; border-radius: 50%; display: grid; place-items: center;
   background: #fff; color: var(--btn); box-shadow: 0 5px 0 rgba(10, 5, 40, .3); }
-#app button.say-btn .ico { width: 30px; height: 30px; vertical-align: 0; margin: 0; }
+:is(#app, .ghost) button.say-btn .ico { width: 30px; height: 30px; vertical-align: 0; margin: 0; }
 .task-card { flex: none; width: 150px; height: 150px; border-radius: 34px; display: grid; place-items: center; color: #fff;
   background: rgba(255, 255, 255, .12); border: 3px solid rgba(255, 255, 255, .45); animation: pop-in .45s .2s var(--spring) backwards; }
 .task-card .picto { width: 98px; height: 98px; stroke-width: 1.5; }
 .task-card .swatch { width: 98px; height: 98px; border-radius: 50%; background: var(--c); border: 6px solid #fff; box-shadow: 0 0 0 3px rgba(10, 5, 40, .35); }
-#app button.primary-xl { width: min(100%, 440px); min-height: 92px; font-size: 28px; padding: 0 14px; white-space: nowrap; border-radius: 30px; gap: 12px; display: inline-flex; align-items: center; justify-content: center;
+:is(#app, .ghost) button.primary-xl { width: min(100%, 440px); min-height: 92px; font-size: 28px; padding: 0 14px; white-space: nowrap; border-radius: 30px; gap: 12px; display: inline-flex; align-items: center; justify-content: center;
   background: var(--btn); box-shadow: 0 10px 0 var(--btn-d), 0 0 0 4px rgba(255, 255, 255, .3); }
-#app button.primary-xl .ico { width: 1.15em; height: 1.15em; vertical-align: 0; margin: 0; }
-#app button.primary-xl:active:not(:disabled) { transform: translateY(6px) scale(.98); box-shadow: 0 4px 0 var(--btn-d), 0 0 0 4px rgba(255, 255, 255, .3); }
+:is(#app, .ghost) button.primary-xl .ico { width: 1.15em; height: 1.15em; vertical-align: 0; margin: 0; }
+:is(#app, .ghost) button.primary-xl:active:not(:disabled) { transform: translateY(6px) scale(.98); box-shadow: 0 4px 0 var(--btn-d), 0 0 0 4px rgba(255, 255, 255, .3); }
 
 /* --- Движение: только появление, нажатие, награда --- */
 .char { animation: char-in .5s ease-out backwards; }
@@ -647,7 +647,7 @@ body::before, body::after, .bg-layer { animation: none; }
 /* Реплика строго по центру под заврика, динамик справа в своей колонке */
 .say-row { display: grid; grid-template-columns: 70px minmax(0, 1fr) 70px; align-items: center; gap: 0; }
 .say-row .bubble { grid-column: 2; }
-#app button.say-btn { grid-column: 3; justify-self: end; }
+:is(#app, .ghost) button.say-btn { grid-column: 3; justify-self: end; }
 
 /* Переходы между экранами без «улёта»: старый экран гаснет на месте, новый мягко поднимается */
 #app.go-fwd, #app.go-back { animation: screen-in .3s ease-out both; }
