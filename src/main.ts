@@ -232,6 +232,19 @@ function renderOnboarding(i = 0) {
   on('oskip', done);
 }
 
+// Круглый прогресс места: сколько заданий найдено; когда все — зелёный круг с галочкой.
+function progressRing(l: Level): string {
+  const total = l.tasks.length;
+  const found = l.tasks.filter((t) => progress.found[t.id] !== undefined).length;
+  if (found === 0) return `<span class="cube-ring" aria-hidden="true"><svg viewBox="0 0 44 44"><circle class="ring-track" cx="22" cy="22" r="17"/></svg><b>0/${total}</b></span>`;
+  const full = found >= total;
+  const pct = Math.round((found / total) * 100);
+  return `<span class="cube-ring ${full ? 'full' : ''}" aria-hidden="true">
+    <svg viewBox="0 0 44 44"><circle class="ring-track" cx="22" cy="22" r="17"/>
+    <circle class="ring-arc" cx="22" cy="22" r="17" pathLength="100" style="--pct:${pct}" transform="rotate(-90 22 22)"/></svg>
+    ${full ? checkIcon() : `<b>${found}/${total}</b>`}</span>`;
+}
+
 function renderLevels() {
   const { W, H, items } = worldLayout(LEVELS.length);
   const cubes = LEVELS.map((l, i) => {
@@ -240,12 +253,12 @@ function renderLevels() {
     const locked = !isUnlocked(progress, l.id);
     const badge = locked
       ? `<span class="cube-lock" aria-hidden="true">${lockIcon()}</span><span class="cube-price" aria-hidden="true">${flashIcon()}${priceOf(l.id)}</span>`
-      : p?.passed ? `<span class="cube-badge" aria-hidden="true">${checkIcon()}</span>` : '';
+      : progressRing(l);
     return `<button class="cube-btn ${p?.passed ? 'done' : ''} ${locked ? 'locked' : ''}" data-i="${i}"
-      aria-label="${l.title}${locked ? `, закрыто, стоит ${priceOf(l.id)} вспышек` : ''}"
+      aria-label="${l.title}${locked ? `, закрыто, стоит ${priceOf(l.id)} вспышек` : `, найдено ${l.tasks.filter((t) => progress.found[t.id] !== undefined).length} из ${l.tasks.length}`}"
       style="left:${(it.cx / W) * 100}%;top:${(it.top / H) * 100}%;width:${(WORLD.CUBE_W / W) * 100}%;--i:${i};--ph:${(i * 0.7).toFixed(1)}s">
-      ${placeSvg(l.id)}${badge}
-      <span class="cube-label">${l.title}</span>
+      <span class="cube-in"><span class="cube-float">${placeSvg(l.id)}${badge}
+      <span class="cube-label">${l.title}</span></span></span>
     </button>`;
   }).join('');
   show(`${hud('<button id="howto" class="secondary small" aria-label="Как играть">?</button>')}

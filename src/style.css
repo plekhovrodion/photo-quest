@@ -272,7 +272,7 @@ button.stop.done { background: #16a34a; border-color: #166534; color: #fff; box-
 .world { position: relative; width: min(100%, 420px); container-type: inline-size; }
 button.cube-btn { --du: calc(100cqw / 360); position: absolute; padding: 0; border: 0; background: none; color: var(--ink);
   transform: translateX(-50%); cursor: pointer; box-shadow: none; text-align: center; width: auto; min-width: 0;
-  animation: cube-in .7s calc(var(--i, 0) * 90ms + .15s) var(--spring) backwards, cube-bob 4s calc(var(--ph, 0s) + 1s) ease-in-out infinite; }
+  }
 button.cube-btn svg { display: block; width: 100%; height: auto; overflow: visible; filter: drop-shadow(0 4px 0 rgba(10, 5, 40, .12)); }
 button.cube-btn .cube-label { position: absolute; left: 50%; top: calc(var(--du) * 122); transform: translateX(-50%); white-space: nowrap;
   background: #fff; color: var(--ink); font-weight: 900; font-size: calc(var(--du) * 22); line-height: 1; padding: calc(var(--du) * 7) calc(var(--du) * 16);
@@ -280,10 +280,14 @@ button.cube-btn .cube-label { position: absolute; left: 50%; top: calc(var(--du)
 button.cube-btn .cube-badge { position: absolute; right: calc(var(--du) * 4); top: calc(var(--du) * -2); width: calc(var(--du) * 34); height: calc(var(--du) * 34);
   display: grid; place-items: center; border-radius: 50%; background: #16a34a; color: #fff; font-size: calc(var(--du) * 22); font-weight: 900;
   border: calc(var(--du) * 3) solid #fff; }
-@keyframes cube-in { from { opacity: 0; transform: translate(-50%, -90px) scale(.6) rotate(-8deg); } }
-@keyframes cube-bob { 50% { transform: translate(-50%, -9px); } }
-@media (hover: hover) { button.cube-btn:hover { animation: none; transform: translate(-50%, -12px) scale(1.04); transition: transform .2s var(--spring); } }
-button.cube-btn:active { animation: none; transform: translate(-50%, 6px) scale(.97); transition: transform .08s; }
+@keyframes cube-in { from { opacity: 0; transform: translateY(-90px) scale(.6) rotate(-8deg); } }
+@keyframes cube-bob { 50% { transform: translateY(-9px); } }
+/* вход, парение и наведение на разных слоях, чтобы ховер не перезапускал появление */
+button.cube-btn .cube-in { display: block; position: relative; transition: transform .2s var(--spring);
+  animation: cube-in .7s calc(var(--i, 0) * 90ms + .15s) var(--spring) backwards; }
+button.cube-btn .cube-float { display: block; position: relative; animation: cube-bob 4s calc(var(--ph, 0s) + 1s) ease-in-out infinite; }
+@media (hover: hover) { button.cube-btn:hover .cube-in { transform: translateY(-12px) scale(1.04); } }
+button.cube-btn:active .cube-in { transform: translateY(6px) scale(.97); transition: transform .08s; }
 button.cube-btn:focus-visible { outline: 4px solid #fde68a; outline-offset: 6px; border-radius: 24px; }
 
 
@@ -422,3 +426,25 @@ button.cube-btn.locked .cube-label { background: rgba(255, 255, 255, .85); }
 .modal-text { margin: 0; font-size: 20px; font-weight: 700; line-height: 1.3; color: var(--ink); text-shadow: none; }
 .modal button { white-space: nowrap; font-size: 28px; }
 .modal button .ico { width: 1.05em; height: 1.05em; }
+
+
+/* ===== Галочки и круглый прогресс ===== */
+.tick { stroke-dasharray: 1; stroke-dashoffset: 0; animation: tick-draw .45s .45s ease-out backwards; }
+@keyframes tick-draw { from { stroke-dashoffset: 1; } }
+button.stop.done { animation: stop-in .55s calc(var(--i, 0) * 60ms + .25s) var(--spring) backwards, done-pop .5s calc(var(--i, 0) * 60ms + .55s) var(--spring) backwards; }
+@keyframes done-pop { 40% { box-shadow: 0 0 0 10px rgba(22, 163, 74, .35), 0 5px 0 #166534; } }
+button.stop.done .ico { width: 62%; height: 62%; }
+
+.cube-ring { position: absolute; right: calc(var(--du) * 2); top: calc(var(--du) * -2); width: calc(var(--du) * 54); height: calc(var(--du) * 54);
+  display: grid; place-items: center; border-radius: 50%; background: #fff; color: var(--ink); box-shadow: 0 calc(var(--du) * 3) 0 rgba(10, 5, 40, .25);
+  animation: pop-in .5s .6s var(--spring) backwards; }
+.cube-ring svg { position: absolute; inset: 0; width: 100%; height: 100%; filter: none; }
+.cube-ring .ring-track { fill: none; stroke: #e9defa; stroke-width: 5; }
+.cube-ring .ring-arc { fill: none; stroke: var(--btn); stroke-width: 5; stroke-linecap: round; stroke-dasharray: var(--pct) 100;
+  animation: ring-fill .9s .7s ease-out backwards; }
+@keyframes ring-fill { from { stroke-dasharray: 0 100; } }
+.cube-ring b { position: relative; font-size: calc(var(--du) * 14); font-weight: 900; line-height: 1; letter-spacing: -.02em; }
+.cube-ring.full { background: #16a34a; color: #fff; }
+.cube-ring.full .ring-track { stroke: rgba(255, 255, 255, .35); }
+.cube-ring.full .ring-arc { stroke: #fff; }
+.cube-ring.full .ico { position: relative; width: 52%; height: 52%; vertical-align: 0; }
