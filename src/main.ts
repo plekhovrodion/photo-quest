@@ -192,7 +192,7 @@ function attachExplain(label: string | null) {
     if (!text) { el.remove(); return; }
     el.textContent = text;
     el.classList.add('ready');
-    speak(text, true);
+    speak(text, true, 'sonya');
   });
 }
 
@@ -255,7 +255,7 @@ function renderOnboarding(i = 0) {
     <div class="dots">${dots}</div>
     <button id="onext" class="green">${last ? 'Поехали!' : 'Дальше'}</button>
     ${last ? '' : '<button id="oskip" class="secondary">Пропустить</button>'}`);
-  speak(slide.text);
+  speak(slide.text, false, slide.who === 'Соня' ? 'sonya' : 'grisha');
   const done = () => { markOnboarded(); speechSynthesis?.cancel(); renderLevels(); };
   on('onext', () => (last ? done() : renderOnboarding(i + 1)));
   on('oskip', done);
@@ -311,7 +311,7 @@ function askConfirm(task: Task): Promise<'yes' | 'no' | 'closer'> {
       <button id="cf-yes" class="green">Да</button>
       <button id="cf-no" class="secondary">Нет</button>
       <button id="cf-closer" class="secondary">${cameraIcon()}Снять ближе</button>`);
-    speak(q);
+    speak(q, false, 'sonya');
     on('cf-yes', () => resolve('yes'));
     on('cf-no', () => resolve('no'));
     on('cf-closer', () => resolve('closer'));
@@ -543,7 +543,7 @@ function render() {
           ${stickerNew === null ? '' : `<div class="sticker-new"><img src="${photoUrl}" alt=""><span>${stickerNew ? 'Новая наклейка в альбоме!' : 'Фото в альбоме обновлено'}</span></div>`}
           <button id="next" class="green">Дальше</button>`, 'ok');
         confetti();
-        speak(`${says} Молодец!`);
+        speak(`${says} Молодец!`, false, 'sonya');
         attachExplain(task!.local?.kind === 'color' ? `${COLOR_RU[task!.local.color]} цвет` : lastLabel);
       } else if (canSkip(s)) {
         show(`${bar}${art('sonya-sad', 'sad shake talking')}<div class="banner no">Это сложное задание</div>
