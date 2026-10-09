@@ -5,6 +5,7 @@ import { takePhoto, compressPhoto } from './camera/capture';
 import { cropPhoto } from './camera/crop';
 import { targetOf } from './camera/target';
 import { verifyPhoto } from './api/verify';
+import { explainObject } from './api/explain';
 import { COLOR_RU } from './vision/names';
 import { preloadModels } from './vision/models';
 import { confetti } from './fx/confetti';
@@ -29,6 +30,8 @@ let notice = '';
 let photoUrl = '';
 let lastLabel: string | null = null;
 let lastFound: string | null = null;
+let lastFoundLabel: string | null = null;
+let explainToken = 0;
 let shownFlashes = progress.flashes;
 
 function dispatch(a: Action) {
@@ -49,6 +52,7 @@ const reduceMotion = () => matchMedia('(prefers-reduced-motion: reduce)').matche
 
 function show(html: string, cls = '') {
   stopTyping();
+  explainToken++; // ответ ИИ для прошлого экрана уже не нужен
   setBackground(level?.id ?? null); // у главной и у каждой категории свой фон
   const dir = navDir;
   navDir = 'fwd';
@@ -116,9 +120,10 @@ async function capture() {
     if (photoUrl) URL.revokeObjectURL(photoUrl);
     photoUrl = URL.createObjectURL(photo);
     dispatch({ type: 'photo-taken' });
-    const { match, label, found } = await verifyPhoto(photo, task, { cropped: wasCropped, liveClass: cap.liveClass });
+    const { match, label, found, foundLabel } = await verifyPhoto(photo, task, { cropped: wasCropped, liveClass: cap.liveClass });
     lastLabel = label ?? null;
     lastFound = found ?? null;
+    lastFoundLabel = foundLabel ?? null;
     dispatch({ type: 'verified', match });
     (match ? playSuccess : playTryAgain)();
   } catch {
@@ -140,6 +145,24 @@ const starRow = (n: number) =>
 function sonyaSays(task: Task): string {
   if (task.local?.kind === 'color') return `Это ${COLOR_RU[task.local.color]} цвет!`;
   return lastLabel ? `Это ${lastLabel}!` : 'Ты нашёл нужный предмет!';
+}
+
+// Соня рассказывает про предмет голосом ИИ: в запрос уходит только название, фото никуда не отправляется.
+// Текст появляется под репликой, когда ответ готов; если сервер не ответил — блока просто нет.
+function attachExplain(label: string | null) {
+  const el = root.querySelector<HTMLElement>('#explain');
+  if (!el) return;
+  if (!label) { el.remove(); return; }
+  const token = ++explainToken;
+  el.hidden = false;
+  el.innerHTML = '<span class="dots" aria-hidden="true"><i></i><i></i><i></i></span><span class="sr-only">Соня думает</span>';
+  void explainObject(label).then((text) => {
+    if (token !== explainToken || !el.isConnected) return; // экран уже сменился
+    if (!text) { el.remove(); return; }
+    el.textContent = text;
+    el.classList.add('ready');
+    speak(text, true);
+  });
 }
 
 // «Найди предмет с красным цветом!» -> «предмет с красным цветом»
@@ -344,23 +367,29 @@ function render() {
         const again = progress.found[task!.id] !== undefined;
         const says = sonyaSays(task!);
         show(`${bar}${art('sonya-cheer', 'cheer talking')}${bubble(says)}
+          <div class="explain" id="explain" hidden></div>
           ${starRow(got)}
           ${again ? '' : `<div class="reward">${flashIcon()}+${got}</div>`}
           <button id="next" class="green">Дальше</button>`, 'ok');
         confetti();
         speak(`${says} Молодец!`);
+        attachExplain(task!.local?.kind === 'color' ? `${COLOR_RU[task!.local.color]} цвет` : lastLabel);
       } else if (canSkip(s)) {
         show(`${bar}${art('sonya-sad', 'sad shake talking')}<div class="banner no">Это сложное задание</div>
           ${photoUrl ? `<img class="preview mini" src="${photoUrl}" alt="">` : ''}
-          ${bubble(`${grishaExplains(task!)} Давай попробуем другое!`)}<button id="next">Дальше</button>`);
+          ${bubble(`${grishaExplains(task!)} Давай попробуем другое!`)}
+          <div class="explain" id="explain" hidden></div><button id="next">Дальше</button>`);
         speak(grishaExplains(task!));
+        attachExplain(lastFoundLabel);
       } else {
         const left = MAX_ATTEMPTS - s.attempts;
         show(`${bar}${art('sonya-sad', 'sad shake talking')}<div class="banner no">Пока не то</div>
           ${photoUrl ? `<img class="preview mini" src="${photoUrl}" alt="">` : ''}
           ${bubble(grishaExplains(task!))}
+          <div class="explain" id="explain" hidden></div>
           <p>Осталось попыток: ${left}</p><button id="next">Искать снова</button>`);
         speak(grishaExplains(task!));
+        attachExplain(lastFoundLabel);
       }
       on('next', () => dispatch({ type: 'next' }));
       on('menu', toMap);

@@ -26,10 +26,11 @@ export function playTryAgain() {
 // Озвучка заданий (Web Speech API); чтобы выключить, поставьте false.
 export const VOICE_ENABLED = true;
 
-export function speak(text: string) {
+// queue = true: договорить предыдущую фразу, а не обрывать её.
+export function speak(text: string, queue = false) {
   if (!VOICE_ENABLED) return;
   if (!('speechSynthesis' in window)) return;
-  speechSynthesis.cancel();
+  if (!queue) speechSynthesis.cancel();
   const u = new SpeechSynthesisUtterance(text);
   u.lang = 'ru-RU';
   u.rate = 0.9;

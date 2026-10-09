@@ -6,6 +6,7 @@ export interface VerifyResult {
   reason: string;
   label?: string; // русское название найденного предмета (при верном ответе)
   found?: string; // что заврик увидел на фото (при неверном ответе), например «Это кружка»
+  foundLabel?: string; // название увиденного предмета отдельно («кружка») — для объяснения от ИИ
 }
 
 const API_URL = import.meta.env.VITE_API_URL ?? '/photo-quests/api';

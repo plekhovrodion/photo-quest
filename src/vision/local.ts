@@ -70,7 +70,7 @@ export async function localVerify(
   photo: Blob,
   check: LocalCheck,
   opts: VerifyOpts = {},
-): Promise<{ match: boolean; reason: string; label?: string; found?: string }> {
+): Promise<{ match: boolean; reason: string; label?: string; found?: string; foundLabel?: string }> {
   const canvas = await toCanvas(photo);
   const cache: { preds: Prediction[] | null; shares: Record<ColorName, number> | null } = { preds: null, shares: null };
   const getShares = () => {
@@ -97,11 +97,12 @@ export async function localVerify(
 
   // Неверно: объясняем, что заврик увидел на фото.
   let found: string | undefined;
+  let foundLabel: string | undefined;
   if (check.kind === 'color' || check.kind === 'multicolor') {
     found = colorPhrase(getShares());
   } else {
-    const label = anyLabel(await getPreds());
-    found = label ? `Это ${label}` : colorPhrase(getShares());
+    foundLabel = anyLabel(await getPreds());
+    found = foundLabel ? `Это ${foundLabel}` : colorPhrase(getShares());
   }
-  return { match, reason, found };
+  return { match, reason, found, foundLabel };
 }
