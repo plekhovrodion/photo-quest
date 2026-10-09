@@ -616,10 +616,6 @@ body::before, body::after, .bg-layer { animation: none; }
   h1 { font-size: clamp(36px, 3.6vw, 54px); }
   .bubble { font-size: clamp(30px, 2.8vw, 40px); max-width: 640px; }
 
-  /* Карта заданий: целиком по высоте окна, без прокрутки */
-  #app.screen-map { justify-content: flex-start; }
-  .map { width: min(100%, 760px, calc((100dvh - 210px) * var(--ar, .5))); }
-
   /* Экран задания: слева герой и реплика, справа картинка предмета, кнопка снизу по центру */
   #app.screen-task, .ghost.screen-task { display: grid; grid-template-columns: minmax(0, 520px) minmax(0, 420px); justify-content: center;
     align-content: center; column-gap: clamp(32px, 6vw, 96px); row-gap: 22px; padding: calc(84px + var(--safe-top)) 40px 40px; }
@@ -652,8 +648,8 @@ body::before, body::after, .bg-layer { animation: none; }
 .map-layout { display: contents; }
 .map-side { display: none; }
 @media (min-width: 900px) {
-  .map-layout { display: flex; align-items: center; justify-content: center; gap: clamp(40px, 6vw, 96px); width: 100%; }
-  .map-side { display: flex; flex-direction: column; align-items: center; gap: 16px; width: min(100%, 400px); color: #fff; }
+  .map-layout { display: flex; align-items: flex-start; justify-content: center; gap: clamp(40px, 6vw, 96px); width: 100%; }
+  .map-side { position: sticky; top: 110px; display: flex; flex-direction: column; align-items: center; gap: 16px; width: min(100%, 400px); color: #fff; }
   .map-side > b { font-size: 26px; text-shadow: 0 3px 0 rgba(20, 10, 60, .55); }
   .map-side .task-card { width: min(100%, 300px); height: 300px; display: grid; place-items: center; }
   .map-side .task-card .ico { width: 96px; height: 96px; }
