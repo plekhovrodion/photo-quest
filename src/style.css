@@ -429,10 +429,6 @@ button.cube-btn.locked .cube-label { background: rgba(255, 255, 255, .85); }
 
 
 /* ===== Галочки и круглый прогресс ===== */
-.tick { stroke-dasharray: 1; stroke-dashoffset: 0; animation: tick-draw .45s .45s ease-out backwards; }
-@keyframes tick-draw { from { stroke-dashoffset: 1; } }
-button.stop.done { animation: stop-in .55s calc(var(--i, 0) * 60ms + .25s) var(--spring) backwards, done-pop .5s calc(var(--i, 0) * 60ms + .55s) var(--spring) backwards; }
-@keyframes done-pop { 40% { box-shadow: 0 0 0 10px rgba(22, 163, 74, .35), 0 5px 0 #166534; } }
 button.stop.done .ico { width: 62%; height: 62%; }
 
 .cube-ring { position: absolute; right: calc(var(--du) * 2); top: calc(var(--du) * -2); width: calc(var(--du) * 54); height: calc(var(--du) * 54);
