@@ -4,7 +4,7 @@ import { evaluate, isMaybe, type Ctx } from './evaluate';
 import { matchesLabels, PROB_MIN, type Prediction } from './labels';
 import { COLOR_RU, ruName } from './names';
 import { loadCoco, loadMobilenet } from './models';
-import { rankObjects, clipAccepts, type ClipRank } from './clip';
+import { rankObjects, clipAccepts, clipProb, type ClipRank } from './clip';
 import { CLIP_OBJECTS } from '../data/clip';
 
 const SAMPLE = 96;
@@ -66,6 +66,7 @@ export function fusePredictions(top: Prediction[], liveClass?: string): Predicti
 export interface VerifyOpts {
   cropped?: boolean; // кадр уже вырезан по предмету — цвет считаем по всему кадру
   liveClass?: string; // класс, который живая камера нашла в рамке (COCO), учитывается как ещё один сигнал
+  liveClip?: boolean; // CLIP уже узнал нужный предмет в этом кадре в живой камере
 }
 
 export async function localVerify(
@@ -102,12 +103,12 @@ export async function localVerify(
     if (clipRanks === undefined) clipRanks = await rankObjects(canvas, canvas.width, canvas.height).catch(() => null);
     return clipRanks;
   };
-  const ctx: Ctx = { shares: getShares, predictions: getPreds, clip: getClip };
+  const ctx: Ctx = { shares: getShares, predictions: getPreds, clip: getClip, liveClip: opts.liveClip };
   const match = await evaluate(check, ctx);
   const reason = cache.preds?.[0]?.className ?? 'local';
   if (match) {
     const byPreds = pickLabel(cache.preds, check);
-    const viaClip = check.kind === 'labels' && check.clip && clipRanks && clipAccepts(clipRanks, check.clip);
+    const viaClip = check.kind === 'labels' && check.clip && (opts.liveClip || (clipRanks && clipAccepts(clipRanks, check.clip)));
     // Если предмет узнал только CLIP, называем его по заданию, а не по случайному классу MobileNet.
     return { match, reason, label: viaClip ? CLIP_OBJECTS[check.clip!] : byPreds };
   }
@@ -118,7 +119,10 @@ export async function localVerify(
   if (check.kind === 'color' || check.kind === 'multicolor') {
     found = colorPhrase(getShares());
   } else {
-    foundLabel = anyLabel(await getPreds()) ?? (await getClip())?.find((r) => !r.bg)?.ru;
+    // Что на фото: если CLIP уверен — берём его ответ (он знает предметы игры лучше), иначе первый ответ MobileNet
+    const clipTop = (await getClip())?.find((r) => !r.bg);
+    const sure = clipTop && clipRanks && clipProb(clipRanks, clipTop.en) >= 0.3 ? clipTop.ru : undefined;
+    foundLabel = sure ?? anyLabel(await getPreds()) ?? clipTop?.ru;
     found = foundLabel ? `Это ${foundLabel}` : colorPhrase(getShares());
   }
   return { match, maybe: await isMaybe(check, ctx), reason, found, foundLabel };

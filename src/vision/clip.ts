@@ -1,5 +1,4 @@
 import { CLIP_OBJECTS } from '../data/clip';
-import wasmUrl from '../../node_modules/onnxruntime-web/dist/ort-wasm-simd-threaded.wasm?url';
 
 // CLIP (ViT-B/32, квантованный): сравниваем фото с описаниями всех предметов игры и смотрим, на каком месте нужный.
 // Описания посчитаны заранее (scripts/build-clip.mjs), в браузере считается только картинка.
@@ -23,32 +22,37 @@ let readyP: Promise<Ready> | null = null;
 
 export function loadClip(): Promise<Ready> {
   readyP ??= (async () => {
-    const [ort, textRaw, bytes] = await Promise.all([
-      import('onnxruntime-web/wasm'),
+    const worker = new Worker(new URL('./clipWorker.ts', import.meta.url), { type: 'module' });
+    const waiting = new Map<number, { ok: (v: Float32Array) => void; fail: (e: Error) => void }>();
+    let nextId = 1;
+    const ready = new Promise<void>((ok, fail) => {
+      worker.addEventListener('message', (e: MessageEvent) => {
+        const m = e.data as { type: string; id?: number; emb?: Float32Array; message?: string };
+        if (m.type === 'ready') ok();
+        else if (m.type === 'result') { waiting.get(m.id!)?.ok(m.emb!); waiting.delete(m.id!); }
+        else if (m.type === 'error') {
+          if (m.id !== undefined) { waiting.get(m.id)?.fail(new Error(m.message)); waiting.delete(m.id); } else fail(new Error(m.message));
+        }
+      });
+      worker.addEventListener('error', (e) => fail(new Error(e.message)));
+    });
+    worker.postMessage({ type: 'init', modelUrl: CLIP_URL });
+    const [textRaw] = await Promise.all([
       fetch(TEXT_URL).then((r) => r.json() as Promise<Record<'ens' | 'bg', Record<string, number[]>>>),
-      fetch(CLIP_URL).then((r) => r.arrayBuffer()),
+      ready,
     ]);
-    ort.env.wasm.wasmPaths = { wasm: wasmUrl }; // загрузчик внутри бандла, подгружаем только сам wasm
-    ort.env.wasm.numThreads = 1; // без многопоточности не нужны особые заголовки сервера
-    const session = await ort.InferenceSession.create(new Uint8Array(bytes), { executionProviders: ['wasm'] });
-    const run = async (pixels: Float32Array) => {
-      const out = await session.run({ pixel_values: new ort.Tensor('float32', pixels, [1, 3, SIZE, SIZE]) });
-      return normalize(out.image_embeds.data as Float32Array);
-    };
+    const run = (pixels: Float32Array) =>
+      new Promise<Float32Array>((ok, fail) => {
+        const id = nextId++;
+        waiting.set(id, { ok, fail });
+        worker.postMessage({ type: 'run', id, pixels }, [pixels.buffer]);
+      });
     const table = (o: Record<string, number[]>): Table => Object.entries(o).map(([k, v]) => [k, Float32Array.from(v)] as [string, Float32Array]);
-    await run(new Float32Array(3 * SIZE * SIZE)); // прогрев
     return { run, sets: { ens: table(textRaw.ens) }, bg: table(textRaw.bg) };
   })();
   readyP.catch(() => { readyP = null; });
   return readyP;
 }
-
-const normalize = (v: Float32Array): Float32Array => {
-  let s = 0;
-  for (const x of v) s += x * x;
-  const n = Math.sqrt(s) || 1;
-  return v.map((x) => x / n);
-};
 
 // Вырез кадра -> 224x224, значения по правилам CLIP. 'full' — весь кадр целиком с серыми полями.
 export type CropKind = 'center' | 'full' | 'start' | 'end';

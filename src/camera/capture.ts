@@ -7,6 +7,7 @@ import { colorShares, type ColorName } from '../vision/color';
 import { COLOR_RU, ruName } from '../vision/names';
 import { loadCoco, modelStatus, onModelStatus, preloadModels } from '../vision/models';
 import { matchesLabels } from '../vision/labels';
+import { loadClip, rankObjects, clipProb, CLIP_ACCEPT } from '../vision/clip';
 
 const MAX_SIDE = 1024;
 const QUALITY = 0.8;
@@ -39,7 +40,9 @@ export function pickPhotoFile(): Promise<Blob | null> {
 }
 
 // Снимок, признак «уже вырезан по предмету» и класс, который нашла живая камера (учитывается при проверке).
-export interface Captured { blob: Blob; cropped: boolean; liveClass?: string }
+// liveClip — CLIP узнал нужный предмет в этом кадре ещё в живой камере (то, что ребёнок видел зелёным);
+// skipCrop — кадр уже целиком годится, ручная обрезка не нужна.
+export interface Captured { blob: Blob; cropped: boolean; liveClass?: string; liveClip?: boolean; skipCrop?: boolean }
 
 // Живая камера в браузере нужна getUserMedia, а он работает только в безопасном контексте (https или localhost).
 export function canUseLiveCamera(): boolean {
@@ -203,6 +206,38 @@ function liveCamera(target: Target): Promise<Captured | null> {
     };
     video.addEventListener('loadeddata', detectLoop, { once: true });
 
+    // ---- живое узнавание CLIP: считаем сходство кадра с нужным предметом, лучший недавний кадр запоминаем ----
+    const LIVE_OK = 0.04; // порог «зелёного»: чуть строже, чем при проверке, чтобы зелёный почти всегда значил «засчитают»
+    const BEST_KEEP_MS = 2500;
+    let liveProb = 0, clipReady = false, clipRuns = 0, clipMs = 0, clipErr = '';
+    let best: { prob: number; t: number; canvas: HTMLCanvasElement } | null = null;
+    const liveOk = () => liveProb >= LIVE_OK;
+    if (target.clip) {
+      const clip = target.clip;
+      loadClip().then(() => { clipReady = true; }).catch((e) => { clipErr = String(e).slice(0, 80); });
+      const clipLoop = async () => {
+        if (!alive) return;
+        const t = performance.now();
+        if (clipReady && video.readyState >= 2 && video.videoWidth) {
+          try {
+            const vw = video.videoWidth, vh = video.videoHeight;
+            const snap = document.createElement('canvas');
+            snap.width = vw; snap.height = vh;
+            snap.getContext('2d')!.drawImage(video, 0, 0);
+            const ranks = await rankObjects(snap, vw, vh);
+            const p = clipProb(ranks, clip);
+            liveProb = liveProb * 0.35 + p * 0.65; // сглаживаем, чтобы индикатор не мигал
+            clipRuns++;
+            clipMs = clipMs ? clipMs * 0.7 + (performance.now() - t) * 0.3 : performance.now() - t;
+            const now = performance.now();
+            if (!best || p >= best.prob || now - best.t > BEST_KEEP_MS) best = { prob: p, t: now, canvas: snap };
+          } catch (e) { clipErr = String(e).slice(0, 80); }
+        }
+        if (alive) setTimeout(clipLoop, Math.max(120, Math.min(900, clipMs * 0.6)));
+      };
+      video.addEventListener('loadeddata', clipLoop, { once: true });
+    }
+
     // ---- отрисовка ----
     let lastHintAt = 0;
     const setHint = (locked: boolean, hasBox: boolean, now: number) => {
@@ -210,18 +245,19 @@ function liveCamera(target: Target): Promise<Captured | null> {
       lastHintAt = now;
       hint.textContent = needDetector && !detectorReady
         ? `Загружаю умное зрение… ${modelPct}%`
+        : liveOk() ? 'Нашёл! Нажми «Снять»'
         : locked ? 'Нашёл! Нажми «Снять»'
         : hasBox ? 'Держи ровно…'
-        : startedAt && now - startedAt > LOST_HINT_MS ? 'Не вижу предмета. Держи его в рамке посередине или нажми «Снять» и обрежь сам'
+        : startedAt && now - startedAt > LOST_HINT_MS ? 'Не вижу предмета. Поставь его в рамку посередине'
         : 'Наведи камеру на предмет';
     };
 
-    function brackets(ctx: CanvasRenderingContext2D, w: number, h: number) {
+    function brackets(ctx: CanvasRenderingContext2D, w: number, h: number, ok = false) {
       // прицел: уголки по центру, куда нужно поместить предмет
       const bw = w * 0.42, bh = h * 0.42, x = (w - bw) / 2, y = (h - bh) / 2, l = Math.min(bw, bh) * 0.22;
       ctx.save();
-      ctx.strokeStyle = 'rgba(255,255,255,.55)';
-      ctx.lineWidth = 4;
+      ctx.strokeStyle = ok ? '#22c55e' : 'rgba(255,255,255,.55)';
+      ctx.lineWidth = ok ? 7 : 4;
       ctx.lineCap = 'round';
       ctx.beginPath();
       for (const [px, py, dx, dy] of [[x, y, 1, 1], [x + bw, y, -1, 1], [x, y + bh, 1, -1], [x + bw, y + bh, -1, -1]] as const) {
@@ -244,7 +280,8 @@ function liveCamera(target: Target): Promise<Captured | null> {
         const f = follower.frame(now);
         const lockNeeded = current.matches ? LOCK_MATCH_MS : LOCK_MS;
         const locked = !!f.box && f.stableMs >= lockNeeded && !f.ghost;
-        if (!f.box) brackets(ctx, w, h);
+        if (!f.box || liveOk()) brackets(ctx, w, h, liveOk());
+        shoot.classList.toggle('ready', liveOk());
         if (f.box && video.videoWidth) {
           const kx = w / video.videoWidth, ky = h / video.videoHeight;
           const x = f.box.x * kx, y = f.box.y * ky, bw = f.box.w * kx, bh = f.box.h * ky;
@@ -294,6 +331,7 @@ function liveCamera(target: Target): Promise<Captured | null> {
         `модели: coco ${Math.round(r.models.coco * 100)}%  mobilenet ${Math.round(r.models.mobilenet * 100)}%`,
         `видео ${r.video.w}x${r.video.h}  цели: ${JSON.stringify(target)}`,
         `COCO: ${r.topPreds.map((p) => `${p.cls} ${p.score}`).join(', ') || '—'}`,
+        target.clip ? `CLIP ${target.clip}: ${(liveProb * 100).toFixed(1)}%  (${clipReady ? Math.round(clipMs) + ' мс, ' + clipRuns + ' шт' : 'грузится'})${clipErr ? ' ошибка ' + clipErr : ''}` : '',
         r.colors ? `цвета: ${r.colors}` : ''].filter(Boolean).join('\n');
     }
     overlay.querySelector('.dbg-copy')?.addEventListener('click', () => {
@@ -309,7 +347,12 @@ function liveCamera(target: Target): Promise<Captured | null> {
     shoot.addEventListener('click', () => {
       const vw = video.videoWidth, vh = video.videoHeight;
       if (!vw) return;
-      // если предмет найден — вырезаем его с запасом, иначе берём весь кадр (дальше будет ручная обрезка)
+      // 1) CLIP недавно узнал нужный предмет — берём именно тот кадр: ребёнок видел зелёный, и проверка это учтёт
+      if (best && best.prob >= CLIP_ACCEPT && performance.now() - best.t < BEST_KEEP_MS) {
+        best.canvas.toBlob((b) => done(b ? { blob: b, cropped: false, skipCrop: true, liveClip: true } : null), 'image/jpeg', 0.92);
+        return;
+      }
+      // 2) предмет найден рамкой — вырезаем его с запасом
       const box = follower.current();
       const crop = box ? expandBox(box, MARGIN, { w: vw, h: vh }) : null;
       const c = document.createElement('canvas');
@@ -317,7 +360,8 @@ function liveCamera(target: Target): Promise<Captured | null> {
       c.width = Math.round(r.w);
       c.height = Math.round(r.h);
       c.getContext('2d')!.drawImage(video, r.x, r.y, r.w, r.h, 0, 0, c.width, c.height);
-      c.toBlob((b) => done(b ? { blob: b, cropped: !!crop, liveClass: crop ? current.className : undefined } : null), 'image/jpeg', 0.92);
+      // 3) иначе целый кадр без ручной обрезки: прицел по центру подсказал, куда ставить предмет
+      c.toBlob((b) => done(b ? { blob: b, cropped: !!crop, skipCrop: !crop, liveClass: crop ? current.className : undefined } : null), 'image/jpeg', 0.92);
     });
 
     navigator.mediaDevices

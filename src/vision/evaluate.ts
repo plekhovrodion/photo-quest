@@ -7,6 +7,7 @@ import { clipAccepts, type ClipRank } from './clip';
 export interface Ctx {
   shares(): Record<ColorName, number> | Promise<Record<ColorName, number>>;
   predictions(): Prediction[] | Promise<Prediction[]>;
+  liveClip?: boolean; // CLIP узнал предмет в живой камере: засчитываем без повторной проверки
   clip?(): Promise<ClipRank[] | null>; // CLIP считается только если остальные модели не узнали предмет
 }
 
@@ -19,6 +20,7 @@ export async function evaluate(check: LocalCheck, ctx: Ctx): Promise<boolean> {
     case 'color':
       return hasColor(await ctx.shares(), check.color);
     case 'labels': {
+      if (ctx.liveClip) return true;
       if (matchesLabels(await ctx.predictions(), check.words)) return true;
       if (!check.clip || !ctx.clip) return false;
       const ranks = await ctx.clip();

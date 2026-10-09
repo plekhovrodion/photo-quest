@@ -129,7 +129,7 @@ async function capture() {
   const cap = await takePhoto(targetOf(task));
   if (!cap) return dispatch({ type: 'cancel-camera' });
   // живая камера уже вырезала предмет; иначе даём обрезать вручную или взять весь кадр
-  const framed = cap.cropped ? cap.blob : await cropPhoto(cap.blob);
+  const framed = cap.cropped || cap.skipCrop ? cap.blob : await cropPhoto(cap.blob);
   if (!framed) return dispatch({ type: 'cancel-camera' });
   const wasCropped = cap.cropped || framed !== cap.blob; // вырезано автоматически или вручную
   try {
@@ -137,7 +137,7 @@ async function capture() {
     if (photoUrl) URL.revokeObjectURL(photoUrl);
     photoUrl = URL.createObjectURL(photo);
     dispatch({ type: 'photo-taken' });
-    const verdict = await verifyPhoto(photo, task, { cropped: wasCropped, liveClass: cap.liveClass });
+    const verdict = await verifyPhoto(photo, task, { cropped: wasCropped, liveClass: cap.liveClass, liveClip: cap.liveClip });
     const { found, foundLabel } = verdict;
     let match = verdict.match;
     lastLabel = verdict.label ?? null;

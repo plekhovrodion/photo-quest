@@ -731,3 +731,7 @@ button.cube-btn:active .cube-in { transform: scale(.97); transition: transform .
   width: 56px; min-width: 56px; height: 56px; min-height: 56px; padding: 0; border-radius: 50%; display: grid; place-items: center;
   background: rgba(255, 255, 255, .12); border: 3px solid rgba(255, 255, 255, .85); box-shadow: none; }
 .crop-overlay button.crop-close .ico { width: 28px; height: 28px; vertical-align: 0; }
+
+/* «Снять» оживает, когда предмет узнан */
+.cam-overlay button.cam-shoot.ready { box-shadow: 0 9px 0 #166534, 0 0 0 6px rgba(134, 239, 172, .75); animation: ready-pulse 1s ease-in-out infinite; }
+@keyframes ready-pulse { 50% { transform: scale(1.04); } }
