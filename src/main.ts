@@ -74,7 +74,7 @@ function show(html: string, cls = '') {
   // Старый экран остаётся поверх копией и уезжает в сторону, пока новый въезжает с другой.
   if (!quiet && !reduceMotion() && root.firstElementChild) {
     const ghost = document.createElement('div');
-    ghost.className = `ghost out-${dir}`;
+    ghost.className = `ghost out-${dir} ${root.className.replace(/go-(fwd|back)|quiet/g, '')}`;
     ghost.setAttribute('aria-hidden', 'true');
     ghost.innerHTML = root.innerHTML;
     document.body.appendChild(ghost);
@@ -293,7 +293,7 @@ function renderLevels() {
     </button>`;
   }).join('');
   show(`${hud('', '', '', `<button id="album" class="hud-btn al" aria-label="Мои находки"><span class="hb-ico">${albumIcon()}</span><span class="hb-txt">Альбом</span></button>`)}
-    ${art('jet-1')}<h1>Покажи нам мир!</h1><p>Выбери, что показать Грише и Соне</p>
+    <h1>Покажи нам мир!</h1><p>Выбери, что показать Грише и Соне</p>
     <div class="world" style="aspect-ratio:${W} / ${H.toFixed(0)}">${cubes}</div>`, 'screen-menu');
   root.querySelectorAll<HTMLButtonElement>('.cube-btn').forEach((b) =>
     b.addEventListener('click', () => startLevel(LEVELS[Number(b.dataset.i)])),
@@ -551,16 +551,24 @@ function renderMap(l: Level) {
       style="left:${((p.sx - minX) / W) * 100}%;top:${((p.sy - NODE_H - minY) / H) * 100}%;--i:${i}">${done ? checkIcon() : i + 1}</button>`;
   }).join('');
 
-  const np = pos.find((q) => q.node === (next < 0 ? 0 : next))!;
   const found = l.tasks.filter((t) => progress.found[t.id] !== undefined).length;
+  // Боковая карточка для больших экранов: что искать дальше и кнопка «Играть».
+  const nextTask = next >= 0 ? l.tasks[next] : null;
+  const side = nextTask
+    ? `<aside class="map-side"><b>Дальше ищем</b>${taskCard(nextTask)}<span class="ms-prompt">${esc(nextTask.prompt)}</span>
+        <button id="ms-go" class="primary-xl">${cameraIcon()}Играть</button></aside>`
+    : `<aside class="map-side"><b>Всё найдено!</b><div class="task-card">${checkIcon()}</div><span class="ms-prompt">Можно найти что-то в другом месте</span></aside>`;
   show(`${hud(`<button id="back" class="secondary small" aria-label="Назад">${backIcon()}</button>`)}
     <h1>${l.title}</h1><p>Найдено: ${found} из ${n}</p>
-    <div class="map" style="aspect-ratio:${W.toFixed(1)} / ${H.toFixed(1)};--w:${W.toFixed(0)}">
-      <svg viewBox="0 0 ${W.toFixed(1)} ${H.toFixed(1)}" aria-hidden="true">${tiles}</svg>${nodes}
+    <div class="map-layout">
+      <div class="map" style="aspect-ratio:${W.toFixed(1)} / ${H.toFixed(1)};--w:${W.toFixed(0)};--ar:${(W / H).toFixed(4)}">
+        <svg viewBox="0 0 ${W.toFixed(1)} ${H.toFixed(1)}" aria-hidden="true">${tiles}</svg>${nodes}
+      </div>${side}
     </div>`, 'screen-map');
   root.querySelectorAll<HTMLButtonElement>('.stop').forEach((b) =>
     b.addEventListener('click', () => startTask(l.tasks[Number(b.dataset.i)])),
   );
+  if (nextTask) on('ms-go', () => startTask(nextTask));
   on('back', toMenu);
 }
 
@@ -589,7 +597,7 @@ function render() {
         <div class="say-row">${bubble(task!.prompt)}<button id="say" class="say-btn" aria-label="Повторить задание">${speakerIcon()}</button></div>
         ${taskCard(task!)}${hint}
         ${notice ? `<div class="notice">${notice}</div>` : ''}
-        <button id="shoot" class="primary-xl">${cameraIcon()}Сфотографировать</button>`);
+        <button id="shoot" class="primary-xl">${cameraIcon()}Сфотографировать</button>`, 'screen-task');
       on('shoot', capture);
       on('say', () => speak(task!.prompt));
       on('menu', toMap);
