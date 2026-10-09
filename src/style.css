@@ -100,8 +100,8 @@ button.level:active:not(:disabled) { box-shadow: none; transform: scale(.97); }
 
 /* Карта заданий внутри категории */
 .map { position: relative; width: min(100%, 320px); }
-.map svg { position: absolute; inset: 0; width: 100%; height: 100%; overflow: visible; }
-.map path { fill: none; stroke: #fff; stroke-width: 8; stroke-linecap: round; stroke-dasharray: 2 16; }
+.map > svg { position: absolute; inset: 0; width: 100%; height: 100%; overflow: visible; }
+.map > svg path { fill: none; stroke: #fff; stroke-width: 8; stroke-linecap: round; stroke-dasharray: 2 16; }
 button.stop { position: absolute; transform: translate(-50%, -50%); width: 72px; height: 72px; min-width: 0; min-height: 0;
   padding: 0; border-radius: 50%; font-size: 30px; font-weight: 900; color: var(--ink); background: #fff;
   box-shadow: none; border: 5px solid var(--accent); }
@@ -196,7 +196,7 @@ button.level { animation: pop-in .5s calc(var(--i, 0) * 70ms + .2s) var(--spring
 button.level.owned { animation: pop-in .5s calc(var(--i, 0) * 70ms + .2s) var(--spring) backwards; }
 
 /* Карта заданий: бегущие точки и точки-«выскакиваюшки» */
-.map path { animation: march 1.1s linear infinite; }
+.map > svg path { animation: march 1.1s linear infinite; }
 @keyframes march { to { stroke-dashoffset: -18; } }
 @keyframes stop-in { from { opacity: 0; transform: translate(-50%, -50%) scale(.3) rotate(-30deg); } }
 button.stop { animation: stop-in .55s calc(var(--i, 0) * 60ms + .25s) var(--spring) backwards; }
@@ -253,7 +253,7 @@ button.level small { font-size: 18px; }
 
 /* ===== Изометрическая карта ===== */
 .map { position: relative; width: min(100%, 380px); }
-.map svg { position: absolute; inset: 0; width: 100%; height: 100%; overflow: visible; }
+.map > svg { position: absolute; inset: 0; width: 100%; height: 100%; overflow: visible; }
 .map .tile { animation: tile-drop .6s calc(var(--i, 0) * 45ms + .15s) var(--spring) backwards; }
 @keyframes tile-drop { from { opacity: 0; transform: translateY(-60px); } }
 .map .tile.next { animation: tile-drop .6s calc(var(--i, 0) * 45ms + .15s) var(--spring) backwards, tile-glow 1.8s ease-in-out 1.4s infinite; }
