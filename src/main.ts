@@ -195,8 +195,10 @@ function render() {
       show(`${bar}<div aria-hidden="true" class="mascot">${level.emoji}</div>
         <div class="bubble">${task!.prompt}</div>${hint}
         ${notice ? `<div class="notice">${notice}</div>` : ''}
-        <button id="shoot">📷 Сфотографировать</button>`);
+        <button id="shoot">📷 Сфотографировать</button>
+        <button id="say" class="secondary small">🔊 Повторить</button>`);
       on('shoot', capture);
+      on('say', () => speak(task!.prompt));
       on('menu', toMap);
       if (!notice) speak(task!.prompt);
       notice = '';

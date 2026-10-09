@@ -23,8 +23,8 @@ export function playTryAgain() {
   tone(262, 0.18, 0.3, 'triangle');
 }
 
-// Озвучка заданий временно выключена; чтобы вернуть, поставьте true.
-export const VOICE_ENABLED = false;
+// Озвучка заданий (Web Speech API); чтобы выключить, поставьте false.
+export const VOICE_ENABLED = true;
 
 export function speak(text: string) {
   if (!VOICE_ENABLED) return;
