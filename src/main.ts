@@ -21,7 +21,7 @@ import { CLIP_OBJECTS } from './data/clip';
 import { loadProgress, recordTask, isUnlocked, canUnlock, unlockLevel, priceOf, CURRENCY, LEVEL_BONUS, type Progress } from './progress';
 
 import { createStore } from './storage/store';
-import { flashIcon, cameraIcon, speakerIcon, bulbIcon, lockIcon, starIcon, checkIcon, closeIcon, backIcon, albumIcon, zavrikIcon } from './ui/icons';
+import { flashIcon, cameraIcon, speakerIcon, bulbIcon, lockIcon, starIcon, checkIcon, closeIcon, backIcon, albumIcon } from './ui/icons';
 import { isoPath, project, TW, TH, NODE_H, ROAD_H, WORLD, worldLayout } from './map/iso';
 import { placeSvg } from './map/places';
 
@@ -291,14 +291,13 @@ function renderLevels() {
       <span class="cube-label">${l.title}</span></span></span>
     </button>`;
   }).join('');
-  show(`${hud('', '', '', `<button id="zavrik" class="hud-btn zv" aria-label="Заврики"><span class="hb-ico">${zavrikIcon()}</span><span class="hb-txt">Заврики</span></button><button id="album" class="hud-btn al" aria-label="Мои находки"><span class="hb-ico">${albumIcon()}</span><span class="hb-txt">Альбом</span></button>`)}
+  show(`${hud('', '', '', `<button id="album" class="hud-btn al" aria-label="Мои находки"><span class="hb-ico">${albumIcon()}</span><span class="hb-txt">Альбом</span></button>`)}
     ${art('jet-1')}<h1>Покажи нам мир!</h1><p>Выбери, что показать Грише и Соне</p>
     <div class="world" style="aspect-ratio:${W} / ${H.toFixed(0)}">${cubes}</div>`, 'screen-menu');
   root.querySelectorAll<HTMLButtonElement>('.cube-btn').forEach((b) =>
     b.addEventListener('click', () => startLevel(LEVELS[Number(b.dataset.i)])),
   );
   on('album', openAlbum);
-  on('zavrik', () => { view = 'zavrik'; render(); });
 }
 
 
