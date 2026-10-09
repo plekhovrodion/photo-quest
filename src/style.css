@@ -709,3 +709,25 @@ button.cube-btn:active .cube-in { transform: scale(.97); transition: transform .
   .map .prop.flag { width: 16%; transform: none; }
 }
 .sticker.empty .q .obj3d.sil-color { filter: saturate(.6) brightness(.62); opacity: .7; }
+
+/* Камера и обрезка: действия разного веса и цвета. Главное — зелёное, остальное контурное */
+.cam-overlay button.cam-shoot:not(.level):not(.stop):not(.cube-btn):not(.x),
+.crop-overlay button.crop-done:not(.level):not(.stop):not(.cube-btn):not(.x) {
+  background: #16a34a; color: #fff; min-height: 84px; font-size: 28px; border-radius: 28px;
+  box-shadow: 0 9px 0 #166534, 0 0 0 4px rgba(255, 255, 255, .3); text-shadow: none; display: inline-flex; align-items: center; justify-content: center; gap: 10px; }
+.cam-overlay button.cam-shoot:not(.level):not(.stop):not(.cube-btn):not(.x) .ico { width: 1.15em; height: 1.15em; vertical-align: 0; margin: 0; }
+.cam-overlay button.cam-shoot:not(.level):not(.stop):not(.cube-btn):not(.x):active:not(:disabled),
+.crop-overlay button.crop-done:not(.level):not(.stop):not(.cube-btn):not(.x):active:not(:disabled) { transform: translateY(6px); box-shadow: 0 3px 0 #166534, 0 0 0 4px rgba(255, 255, 255, .3); }
+/* отмена и «весь кадр» — белый контур */
+.cam-overlay button.cam-cancel:not(.level):not(.stop):not(.cube-btn):not(.x),
+.crop-overlay button.crop-all:not(.level):not(.stop):not(.cube-btn):not(.x) {
+  background: transparent; color: #fff; border: 3px solid rgba(255, 255, 255, .85); box-shadow: none; text-shadow: none; min-height: 60px; font-size: 22px; }
+/* выбрать файл — голубой контур, отличается от отмены */
+.cam-overlay button.cam-file:not(.level):not(.stop):not(.cube-btn):not(.x) {
+  background: rgba(14, 165, 233, .18); color: #e0f2fe; border: 3px solid #38bdf8; box-shadow: none; text-shadow: none; min-height: 60px; font-size: 22px; display: inline-flex; align-items: center; justify-content: center; gap: 8px; }
+.cam-overlay button.cam-file .ico { width: 1.1em; height: 1.1em; vertical-align: 0; margin: 0; }
+.cam-overlay button.cam-cancel:active:not(:disabled), .crop-overlay button.crop-all:active:not(:disabled), .cam-overlay button.cam-file:active:not(:disabled) { transform: scale(.97); box-shadow: none; }
+.crop-overlay button.crop-close:not(.level):not(.stop):not(.cube-btn):not(.x) {
+  width: 56px; min-width: 56px; height: 56px; min-height: 56px; padding: 0; border-radius: 50%; display: grid; place-items: center;
+  background: rgba(255, 255, 255, .12); border: 3px solid rgba(255, 255, 255, .85); box-shadow: none; }
+.crop-overlay button.crop-close .ico { width: 28px; height: 28px; vertical-align: 0; }

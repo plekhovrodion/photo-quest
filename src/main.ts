@@ -295,7 +295,7 @@ function renderLevels() {
     </button>`;
   }).join('');
   show(`${hud('', '', '', `<button id="album" class="hud-btn al" aria-label="Мои находки"><span class="hb-ico">${albumIcon()}</span><span class="hb-txt">Альбом</span></button>`)}
-    ${menuDecor()}<h1>Покажи нам мир!</h1><p>Выбери, что показать Грише и Соне</p>
+    ${menuDecor()}
     <div class="world" style="aspect-ratio:${W} / ${H.toFixed(0)}">${cubes}</div>`, 'screen-menu');
   root.querySelectorAll<HTMLButtonElement>('.cube-btn').forEach((b) =>
     b.addEventListener('click', () => startLevel(LEVELS[Number(b.dataset.i)])),
