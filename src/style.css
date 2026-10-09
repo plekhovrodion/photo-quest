@@ -115,3 +115,11 @@ button.stop.done { background: var(--ok); border-color: var(--ok-d); color: #fff
 button.stop.next { animation: pulse 1.6s ease-in-out infinite; }
 @keyframes pulse { 50% { transform: translate(-50%, -50%) scale(1.12); } }
 button.stop:active:not(:disabled) { transform: translate(-50%, -50%) scale(.94); box-shadow: none; }
+
+/* Живая камера на ноутбуках и компьютерах */
+.cam-overlay { position: fixed; inset: 0; z-index: 30; display: flex; flex-direction: column; align-items: center;
+  justify-content: center; gap: 18px; padding: 16px; background: rgba(10, 20, 40, .92); }
+.cam-video { max-width: min(100%, 880px); max-height: 70vh; border-radius: 24px; border: 6px solid #fff;
+  background: #000; transform: scaleX(-1); /* зеркало только в предпросмотре, снимок не отражается */ }
+.cam-msg { color: #fff; max-width: 460px; }
+.cam-actions { display: flex; gap: 14px; flex-wrap: wrap; justify-content: center; }
