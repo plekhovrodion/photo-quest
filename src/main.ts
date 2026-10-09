@@ -13,10 +13,12 @@ import { typeText, stopTyping } from './fx/typewriter';
 import { setBackground } from './fx/background';
 import { playSuccess, playTryAgain, speak } from './audio/sounds';
 import { SLIDES, isOnboarded, markOnboarded } from './onboarding';
+import { album, toSticker, type Sticker } from './album';
+import { CLIP_OBJECTS } from './data/clip';
 import { loadProgress, recordTask, isUnlocked, canUnlock, unlockLevel, priceOf, CURRENCY, LEVEL_BONUS, type Progress } from './progress';
 
 import { createStore } from './storage/store';
-import { flashIcon, cameraIcon, speakerIcon, bulbIcon, lockIcon, starIcon, checkIcon, closeIcon, backIcon } from './ui/icons';
+import { flashIcon, cameraIcon, speakerIcon, bulbIcon, lockIcon, starIcon, checkIcon, closeIcon, backIcon, albumIcon } from './ui/icons';
 import { isoPath, project, TW, TH, NODE_H, ROAD_H, WORLD, worldLayout } from './map/iso';
 import { placeSvg } from './map/places';
 
@@ -28,6 +30,10 @@ let progress: Progress = loadProgress();
 let level: Level | null = null;
 let state: GameState | null = null;
 let notice = '';
+let view: 'album' | null = null;
+const stickers = new Map<string, Sticker>();
+let stickerNew: boolean | null = null; // null — наклейки нет, true — новая, false — фото обновлено
+void album.all().then((all) => all.forEach((x) => stickers.set(x.id, x)));
 let photoUrl = '';
 let lastLabel: string | null = null;
 let lastFound: string | null = null;
@@ -126,6 +132,15 @@ async function capture() {
     lastLabel = label ?? null;
     lastFound = found ?? null;
     lastFoundLabel = foundLabel ?? null;
+    stickerNew = null;
+    if (match) {
+      try {
+        const sticker: Sticker = { id: task.id, blob: await toSticker(photo), ts: Date.now() };
+        stickerNew = !stickers.has(task.id);
+        stickers.set(task.id, sticker);
+        void album.put(sticker);
+      } catch { /* без наклейки игра продолжается */ }
+    }
     dispatch({ type: 'verified', match });
     (match ? playSuccess : playTryAgain)();
   } catch {
@@ -261,13 +276,92 @@ function renderLevels() {
       <span class="cube-label">${l.title}</span></span></span>
     </button>`;
   }).join('');
-  show(`${hud('<button id="howto" class="secondary small" aria-label="Как играть">?</button>')}
+  show(`${hud('<button id="howto" class="secondary small" aria-label="Как играть">?</button>', '', '', `<button id="album" class="secondary small" aria-label="Мои находки">${albumIcon()}</button>`)}
     ${art('jet-1')}<h1>Покажи нам мир!</h1><p>Выбери, что показать Грише и Соне</p>
     <div class="world" style="aspect-ratio:${W} / ${H.toFixed(0)}">${cubes}</div>`, 'screen-menu');
   root.querySelectorAll<HTMLButtonElement>('.cube-btn').forEach((b) =>
     b.addEventListener('click', () => startLevel(LEVELS[Number(b.dataset.i)])),
   );
   on('howto', () => renderOnboarding());
+  on('album', openAlbum);
+}
+
+
+// Название предмета задания в именительном падеже для подписи наклейки.
+function taskName(t: Task): string {
+  if (t.local?.kind === 'color') return `${COLOR_RU[t.local.color]} цвет`;
+  if (t.local?.kind === 'labels' && t.local.clip) return CLIP_OBJECTS[t.local.clip] ?? goalOf(t);
+  return goalOf(t);
+}
+
+const openAlbum = () => { view = 'album'; render(); };
+const closeAlbum = () => { goBack(); view = null; render(); };
+
+let albumUrls = new Map<string, string>();
+
+async function renderAlbum() {
+  const all = await album.all().catch(() => [] as Sticker[]);
+  all.forEach((x) => stickers.set(x.id, x));
+  albumUrls.forEach((u) => URL.revokeObjectURL(u));
+  const urls = new Map<string, string>();
+  albumUrls = urls;
+  const total = LEVELS.reduce((n, l) => n + l.tasks.length, 0);
+  const have = LEVELS.reduce((n, l) => n + l.tasks.filter((t) => stickers.has(t.id)).length, 0);
+  let k = 0;
+  const sections = LEVELS.map((l) => {
+    const cards = l.tasks.map((t) => {
+      const st = stickers.get(t.id);
+      const tilt = (((k++ * 37) % 7) - 3) * 1.1;
+      if (!st) return `<div class="sticker empty" style="--tilt:${tilt}deg"><span class="q">?</span><small>${esc(taskName(t))}</small></div>`;
+      const url = URL.createObjectURL(st.blob);
+      urls.set(t.id, url);
+      return `<button class="sticker" data-t="${t.id}" style="--tilt:${tilt}deg;--i:${k}" aria-label="${esc(taskName(t))}"><img src="${url}" alt=""><small>${esc(taskName(t))}</small></button>`;
+    }).join('');
+    const got = l.tasks.filter((t) => stickers.has(t.id)).length;
+    return `<section class="album-sec"><h2>${l.title}<span>${got}/${l.tasks.length}</span></h2><div class="album-grid">${cards}</div></section>`;
+  }).join('');
+  show(`${hud(`<button id="back" class="secondary small" aria-label="Назад">${backIcon()}</button>`)}
+    <h1>Мои находки</h1><p>Найдено ${have} из ${total}</p>
+    <div class="album">${have === 0 ? '<p class="album-empty">Находи предметы, и они появятся здесь!</p>' : ''}${sections}
+    <p class="album-note">Фото хранятся только на этом устройстве.</p></div>`, 'screen-album');
+  on('back', closeAlbum);
+  root.querySelectorAll<HTMLButtonElement>('.sticker[data-t]').forEach((b) =>
+    b.addEventListener('click', () => {
+      const t = LEVELS.flatMap((l) => l.tasks).find((x) => x.id === b.dataset.t)!;
+      showSticker(t, urls.get(t.id)!);
+    }),
+  );
+}
+
+// Крупная наклейка: фото, название, звёзды; фото можно удалить.
+function showSticker(t: Task, url: string) {
+  if (document.querySelector('.modal-overlay')) return;
+  const stars = progress.found[t.id] ?? 0;
+  const overlay = document.createElement('div');
+  overlay.className = 'modal-overlay';
+  overlay.setAttribute('role', 'dialog');
+  overlay.setAttribute('aria-modal', 'true');
+  overlay.setAttribute('aria-label', taskName(t));
+  overlay.innerHTML = `<div class="modal sticker-modal">
+    <img class="sticker-big" src="${url}" alt="">
+    <h2>${esc(taskName(t))}</h2>
+    ${stars ? starRow(stars) : ''}
+    <button class="st-ok" type="button">Закрыть</button>
+    <button class="st-del secondary" type="button">Удалить фото</button>
+  </div>`;
+  document.body.appendChild(overlay);
+  const close = () => { overlay.remove(); removeEventListener('keydown', onKey); };
+  const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape') close(); };
+  addEventListener('keydown', onKey);
+  overlay.addEventListener('click', (e) => { if (e.target === overlay) close(); });
+  overlay.querySelector('.st-ok')!.addEventListener('click', close);
+  overlay.querySelector('.st-del')!.addEventListener('click', async () => {
+    stickers.delete(t.id);
+    await album.remove(t.id).catch(() => {});
+    close();
+    render();
+  });
+  overlay.querySelector<HTMLElement>('.st-ok')!.focus();
 }
 
 // Окно покупки места: открыть за вспышки или подсказать, сколько не хватает.
@@ -379,6 +473,7 @@ function renderLevelDone() {
 }
 
 function render() {
+  if (view === 'album') return renderAlbum();
   if (!level) return isOnboarded() ? renderLevels() : renderOnboarding();
   if (!state) return renderMap(level);
   const s = state;
@@ -413,6 +508,7 @@ function render() {
           <div class="explain" id="explain" hidden></div>
           ${starRow(got)}
           ${again ? '' : `<div class="reward">${flashIcon()}+${got}</div>`}
+          ${stickerNew === null ? '' : `<div class="sticker-new"><img src="${photoUrl}" alt=""><span>${stickerNew ? 'Новая наклейка в альбоме!' : 'Фото в альбоме обновлено'}</span></div>`}
           <button id="next" class="green">Дальше</button>`, 'ok');
         confetti();
         speak(`${says} Молодец!`);

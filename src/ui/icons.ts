@@ -42,3 +42,9 @@ export const backIcon = () =>
 
 export const lockIcon = () =>
   svg(`<rect x="4.5" y="10.5" width="15" height="11" rx="2.6" fill="currentColor"/><path d="M8 10.5V8a4 4 0 0 1 8 0v2.5" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round"/>`);
+
+// Альбом: стопка фотографий
+export const albumIcon = () =>
+  svg(`<rect x="6.5" y="3.5" width="14" height="14" rx="2.4" fill="none" stroke="currentColor" stroke-width="2.2" transform="rotate(8 13.5 10.5)"/>
+    <rect x="3" y="6.5" width="14" height="14" rx="2.4" fill="currentColor"/>
+    <circle cx="7.6" cy="11.4" r="1.5" fill="#fff"/><path d="M4.5 18.6l4-4 2.4 2.4 2.6-3 2 2.6" fill="none" stroke="#fff" stroke-width="1.8" stroke-linejoin="round" stroke-linecap="round"/>`);

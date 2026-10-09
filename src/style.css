@@ -444,3 +444,28 @@ button.stop.done .ico { width: 62%; height: 62%; }
 .cube-ring.full .ring-track { stroke: rgba(255, 255, 255, .35); }
 .cube-ring.full .ring-arc { stroke: #fff; }
 .cube-ring.full .ico { position: relative; width: 52%; height: 52%; vertical-align: 0; }
+
+
+/* ===== Альбом находок ===== */
+.hud-right { display: flex; align-items: center; gap: 10px; }
+.screen-album .album { width: min(100%, 460px); display: flex; flex-direction: column; gap: 18px; padding-bottom: 28px; }
+.album-sec h2 { display: flex; align-items: center; justify-content: space-between; margin: 0 0 10px; font-size: 24px; color: #fff; }
+.album-sec h2 span { font-size: 18px; background: rgba(255, 255, 255, .22); border-radius: 999px; padding: 3px 12px; }
+.album-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; }
+#app button.sticker { position: relative; display: flex; flex-direction: column; align-items: center; gap: 6px; padding: 7px 7px 8px; border: 0; cursor: pointer;
+  background: #fff; color: var(--ink); border-radius: 18px; box-shadow: 0 5px 0 rgba(10, 5, 40, .3); transform: rotate(var(--tilt, 0deg));
+  min-height: 0; min-width: 0; width: auto; height: auto; font: inherit; font-size: 14px; text-shadow: none; animation: pop-in .45s calc(var(--i, 0) * 40ms) var(--spring) backwards; }
+#app .sticker img { display: block; width: 100%; aspect-ratio: 1; object-fit: cover; border-radius: 12px; background: #e9defa; }
+#app .sticker small { font-size: 14px; font-weight: 800; line-height: 1.1; text-align: center; overflow-wrap: anywhere; }
+@media (hover: hover) { #app button.sticker:hover { transform: rotate(0deg) scale(1.06); transition: transform .2s var(--spring); filter: none; } }
+#app button.sticker:active { transform: scale(.96); box-shadow: 0 2px 0 rgba(10, 5, 40, .3); }
+.sticker.empty { background: rgba(255, 255, 255, .14); box-shadow: none; border: 3px dashed rgba(255, 255, 255, .45); color: rgba(255, 255, 255, .85); cursor: default; padding: 7px; animation: none; }
+.sticker.empty .q { display: grid; place-items: center; width: 100%; aspect-ratio: 1; font-size: 40px; font-weight: 900; opacity: .6; }
+.album-empty, .album-note { margin: 0; text-align: center; font-size: 18px; font-weight: 700; color: #fff; }
+.album-note { font-size: 14px; opacity: .8; }
+.sticker-new { display: flex; align-items: center; gap: 10px; background: #fff; color: var(--ink); border-radius: 18px; padding: 8px 16px 8px 8px;
+  font-weight: 800; font-size: 17px; box-shadow: 0 5px 0 rgba(10, 5, 40, .3); transform: rotate(-2deg); text-shadow: none;
+  animation: sticker-stick .6s .5s var(--spring) backwards; }
+.sticker-new img { width: 56px; height: 56px; object-fit: cover; border-radius: 12px; }
+@keyframes sticker-stick { from { opacity: 0; transform: scale(2.2) rotate(12deg); } }
+.sticker-modal .sticker-big { width: min(80%, 300px); aspect-ratio: 1; object-fit: cover; border-radius: 22px; box-shadow: 0 6px 0 rgba(10, 5, 40, .2); transform: rotate(-2deg); }
