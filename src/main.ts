@@ -15,7 +15,7 @@ import { SLIDES, isOnboarded, markOnboarded } from './onboarding';
 import { loadProgress, recordTask, buy, canBuy, SHOP, CURRENCY, LEVEL_BONUS, type Progress } from './progress';
 
 import { createStore } from './storage/store';
-import { flashIcon, cameraIcon, speakerIcon, bulbIcon, shopIcon, levelIcon, starIcon, checkIcon, closeIcon, backIcon } from './ui/icons';
+import { flashIcon, cameraIcon, speakerIcon, bulbIcon, shopIcon, starIcon, checkIcon, closeIcon, backIcon } from './ui/icons';
 import { isoPath, project, TW, TH, NODE_H, ROAD_H, WORLD, worldLayout } from './map/iso';
 
 type Palette = { top: string; left: string; right: string };
@@ -198,7 +198,6 @@ function renderLevels() {
     return `<button class="cube-btn ${p?.passed ? 'done' : ''}" data-i="${i}" aria-label="${l.title}"
       style="left:${(it.cx / W) * 100}%;top:${(it.top / H) * 100}%;width:${(WORLD.CUBE_W / W) * 100}%;--i:${i};--ph:${(i * 0.7).toFixed(1)}s">
       ${cubeSvg(CUBE_COLORS[i % CUBE_COLORS.length])}
-      <span class="cube-icon" aria-hidden="true">${levelIcon(l.id)}</span>
       ${p?.passed ? `<span class="cube-badge" aria-hidden="true">${checkIcon()}</span>` : ''}
       <span class="cube-label">${l.title}</span>
     </button>`;

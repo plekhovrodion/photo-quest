@@ -4,9 +4,9 @@ const svg = (inner: string, vb = '0 0 24 24', cls = 'ico') =>
 
 const INK = '#1e1b4b';
 
-// Вспышка — внутренняя валюта
+// Вспышка — внутренняя валюта: аккуратная молния со скруглёнными углами, цвет задаёт CSS (currentColor)
 export const flashIcon = () =>
-  svg(`<path d="M13.6 1.5 4.4 13.4h6.1l-1.7 9.1 9.3-12.1h-6.1z" fill="currentColor" stroke="currentColor" stroke-width="1.4" stroke-linejoin="round"/>`, '0 0 24 24', 'ico ico-flash');
+  svg(`<path d="M13.4 2.2c.5-.6 1.5-.1 1.3.7l-1.3 6.6h4.6c.8 0 1.2.9.7 1.5l-8.5 10.9c-.5.6-1.5.1-1.3-.7l1.4-7H5.7c-.8 0-1.2-.9-.7-1.5z" fill="currentColor"/>`, '0 0 24 24', 'ico ico-flash');
 
 export const cameraIcon = () =>
   svg(`<path d="M4 8h3l1.6-2.4h6.8L17 8h3a1.5 1.5 0 0 1 1.5 1.5v9A1.5 1.5 0 0 1 20 20H4a1.5 1.5 0 0 1-1.5-1.5v-9A1.5 1.5 0 0 1 4 8z" fill="currentColor"/>
@@ -27,27 +27,6 @@ export const imageIcon = () =>
 export const shopIcon = () =>
   svg(`<path d="M5 8.5h14l-1.1 11a1.5 1.5 0 0 1-1.5 1.4H7.6a1.5 1.5 0 0 1-1.5-1.4z" fill="currentColor"/>
     <path d="M8.5 10V7.5a3.5 3.5 0 0 1 7 0V10" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"/>`);
-
-// Иконки категорий на верхней грани куба (viewBox 64x64): однотонные, цвет задаёт CSS (currentColor).
-const cat = (inner: string) => svg(inner, '0 0 64 64', 'ico ico-cat');
-const L = 'fill="none" stroke="currentColor" stroke-width="5" stroke-linejoin="round" stroke-linecap="round"';
-const LEVEL_ICONS: Record<string, string> = {
-  // три пересекающихся круга — смешение цветов
-  colors: cat(`<circle cx="24" cy="26" r="15" ${L}/><circle cx="40" cy="26" r="15" ${L}/><circle cx="32" cy="41" r="15" ${L}/>`),
-  // треугольник, квадрат, круг
-  shapes: cat(`<polygon points="32,7 45,29 19,29" ${L}/><rect x="9" y="36" width="20" height="20" rx="3" ${L}/><circle cx="46" cy="46" r="10" ${L}/>`),
-  // блеск — свойства предметов
-  properties: cat(`<path d="M30 5l5.5 17.5L53 28l-17.5 5.5L30 51l-5.5-17.5L7 28l17.5-5.5z" fill="currentColor"/>
-    <path d="M50 38l2.4 7.1 7.1 2.4-7.1 2.4L50 57l-2.4-7.1-7.1-2.4 7.1-2.4z" fill="currentColor"/>`),
-  // карандаш — предметы и их назначение
-  functions: cat(`<path d="M11 53l4-13L42 13a5 5 0 0 1 7 0l2 2a5 5 0 0 1 0 7L24 49z" fill="currentColor"/><path d="M12 53l10-3-7-7z" fill="currentColor" opacity=".55"/>`),
-  // два соединённых элемента — сочетания
-  combos: cat(`<rect x="7" y="9" width="30" height="30" rx="6" ${L}/><rect x="27" y="25" width="30" height="30" rx="6" ${L}/>`),
-  // цифры — счёт
-  counting: cat(`<text x="32" y="42" text-anchor="middle" font-size="28" font-weight="900" fill="currentColor" font-family="'Factor A', system-ui, sans-serif">123</text>`),
-};
-
-export const levelIcon = (id: string): string => LEVEL_ICONS[id] ?? '';
 
 export const starIcon = () =>
   svg(`<path d="M12 2.2l2.9 6.3 6.9.8-5.1 4.7 1.4 6.8L12 17.3 5.9 20.8l1.4-6.8L2.2 9.3l6.9-.8z" fill="currentColor" stroke="currentColor" stroke-width="1.4" stroke-linejoin="round"/>`);
