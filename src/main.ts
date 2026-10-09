@@ -3,6 +3,7 @@ import { LEVELS, PASS_RATIO, type Level } from './data/tasks';
 import { createGame, currentTask, canSkip, reduce, starsFor, MAX_ATTEMPTS, type Action, type GameState } from './game/state';
 import { takePhoto, compressPhoto } from './camera/capture';
 import { verifyPhoto } from './api/verify';
+import { preloadModel } from './vision/local';
 import { confetti } from './fx/confetti';
 import { playSuccess, playTryAgain, speak } from './audio/sounds';
 import { SLIDES, isOnboarded, markOnboarded } from './onboarding';
@@ -31,6 +32,7 @@ function on(id: string, fn: () => void) {
 }
 
 function startLevel(l: Level) {
+  if (l.tasks.some((t) => t.local?.kind === 'labels')) preloadModel();
   level = l;
   state = createGame(l.tasks);
   rewarded = false;

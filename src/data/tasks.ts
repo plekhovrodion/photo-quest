@@ -1,4 +1,14 @@
+import { LOCAL_RULES } from '../vision/rules';
+
 export type Kind = 'color' | 'shape' | 'property' | 'function' | 'combo' | 'count';
+
+// Локальная проверка без сервера: по цвету пикселей или по классам MobileNet.
+export type LocalCheck =
+  | { kind: 'color'; color: import('../vision/color').ColorName }
+  | { kind: 'labels'; words: string[] }
+  | { kind: 'and'; checks: LocalCheck[] }
+  | { kind: 'any' } // мягкая проверка: на фото есть узнаваемый предмет
+  | { kind: 'multicolor'; min: number }; // не меньше min разных цветов
 
 export interface Task {
   id: string;
@@ -6,6 +16,7 @@ export interface Task {
   prompt: string;
   criterion: string;
   hint?: string;
+  local?: LocalCheck;
 }
 
 export interface Level {
@@ -18,13 +29,14 @@ export interface Level {
 // Доля верных заданий, нужная для открытия следующего уровня.
 export const PASS_RATIO = 0.7;
 
-const t = (kind: Kind, id: string, prompt: string, criterion: string, hint?: string): Task => ({
-  id: `${kind}-${id}`, kind, prompt, criterion, hint,
+const t = (kind: Kind, id: string, prompt: string, criterion: string, hint?: string, local?: LocalCheck): Task => ({
+  id: `${kind}-${id}`, kind, prompt, criterion, hint, local,
 });
 
 const color = (id: string, name: string, gen: string, hint: string) =>
   t('color', id, `Найди что-то ${name}!`,
-    `На фото виден предмет ${gen} цвета, и этот цвет — основной цвет предмета.`, hint);
+    `На фото виден предмет ${gen} цвета, и этот цвет — основной цвет предмета.`, hint,
+    { kind: 'color', color: id as import('../vision/color').ColorName });
 
 const shape = (id: string, prompt: string, criterion: string, hint: string) =>
   t('shape', id, prompt, criterion, hint);
@@ -32,8 +44,8 @@ const shape = (id: string, prompt: string, criterion: string, hint: string) =>
 const prop = (id: string, prompt: string, criterion: string, hint: string) =>
   t('property', id, prompt, criterion, hint);
 
-const func = (id: string, prompt: string, criterion: string, hint: string) =>
-  t('function', id, prompt, criterion, hint);
+const func = (id: string, prompt: string, criterion: string, hint: string, words: string[]) =>
+  t('function', id, prompt, criterion, hint, { kind: 'labels', words });
 
 const combo = (id: string, prompt: string, criterion: string, hint: string) =>
   t('combo', id, prompt, criterion, hint);
@@ -86,14 +98,14 @@ export const LEVELS: Level[] = [
   {
     id: 'functions', title: 'Что для чего', emoji: '🔎',
     tasks: [
-      func('write', 'Найди то, чем пишут!', 'На фото виден предмет для письма (ручка, карандаш, фломастер, мел).', 'Он оставляет след на бумаге'),
-      func('eat', 'Найди то, чем едят!', 'На фото виден столовый прибор (ложка, вилка, палочки для еды).', 'Оно лежит на кухне рядом с тарелкой'),
-      func('feet', 'Найди то, что надевают на ноги!', 'На фото виден предмет обуви или носки.', 'Его оставляют у двери'),
-      func('sleep', 'Найди то, на чём спят!', 'На фото виден предмет для сна (кровать, диван, подушка, матрас, одеяло).', 'Оно есть в спальне'),
-      func('read', 'Найди то, что читают!', 'На фото виден предмет для чтения (книга, журнал, газета).', 'Внутри много страниц'),
-      func('draw', 'Найди то, чем рисуют!', 'На фото виден предмет для рисования (карандаш, краски, фломастер, мелки).', 'Он бывает разных цветов'),
-      func('drink', 'Найди то, из чего пьют!', 'На фото виден предмет для питья (чашка, стакан, кружка, бутылка).', 'В него наливают воду или сок'),
-      func('light', 'Найди то, что светится или даёт свет!', 'На фото виден источник света (лампа, люстра, фонарик, экран).', 'Оно помогает видеть в темноте'),
+      func('write', 'Найди то, чем пишут!', 'На фото виден предмет для письма (ручка, карандаш, фломастер, мел).', 'Он оставляет след на бумаге', ['pen','pencil','ballpoint','biro','marker']),
+      func('eat', 'Найди то, чем едят!', 'На фото виден столовый прибор (ложка, вилка, палочки для еды).', 'Оно лежит на кухне рядом с тарелкой', ['spoon','ladle','spatula','fork','knife']),
+      func('feet', 'Найди то, что надевают на ноги!', 'На фото виден предмет обуви или носки.', 'Его оставляют у двери', ['sandal','shoe','loafer','clog','boot','sock','slipper']),
+      func('sleep', 'Найди то, на чём спят!', 'На фото виден предмет для сна (кровать, диван, подушка, матрас, одеяло).', 'Оно есть в спальне', ['bed','crib','cradle','bassinet','pillow','quilt','couch','sofa']),
+      func('read', 'Найди то, что читают!', 'На фото виден предмет для чтения (книга, журнал, газета).', 'Внутри много страниц', ['book','comic','notebook','binder','jacket']),
+      func('draw', 'Найди то, чем рисуют!', 'На фото виден предмет для рисования (карандаш, краски, фломастер, мелки).', 'Он бывает разных цветов', ['pencil','pen','paintbrush','brush','marker','ballpoint']),
+      func('drink', 'Найди то, из чего пьют!', 'На фото виден предмет для питья (чашка, стакан, кружка, бутылка).', 'В него наливают воду или сок', ['cup','mug','glass','bottle','jug','pitcher','goblet','teapot']),
+      func('light', 'Найди то, что светится или даёт свет!', 'На фото виден источник света (лампа, люстра, фонарик, экран).', 'Оно помогает видеть в темноте', ['lamp','lampshade','candle','flashlight','torch','spotlight','lantern']),
     ],
   },
   {
@@ -123,5 +135,8 @@ export const LEVELS: Level[] = [
     ],
   },
 ];
+
+// Проверки для заданий, у которых нет собственной (формы, свойства, сочетания, счёт).
+for (const l of LEVELS) for (const t of l.tasks) t.local ??= LOCAL_RULES[t.id];
 
 export const TASKS: Task[] = LEVELS.flatMap((l) => l.tasks);

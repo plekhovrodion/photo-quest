@@ -1,4 +1,5 @@
 import type { Task } from '../data/tasks';
+import { localVerify } from '../vision/local';
 
 export interface VerifyResult {
   match: boolean;
@@ -20,6 +21,8 @@ export function parseVerifyResponse(data: unknown): VerifyResult {
 }
 
 export async function verifyPhoto(photo: Blob, task: Task): Promise<VerifyResult> {
+  // Цвета и предметы проверяем на устройстве: фото не уходит в сеть.
+  if (task.local) return localVerify(photo, task.local);
   if (import.meta.env.VITE_MOCK === '1') {
     await new Promise((r) => setTimeout(r, 800));
     return { match: Math.random() > 0.4, reason: 'mock' };
