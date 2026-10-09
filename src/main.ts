@@ -12,6 +12,7 @@ import { SLIDES, isOnboarded, markOnboarded } from './onboarding';
 import { loadProgress, recordTask, buy, canBuy, SHOP, CURRENCY, LEVEL_BONUS, type Progress } from './progress';
 
 import { createStore } from './storage/store';
+import { isoPath, project, TW, TH, NODE_H, ROAD_H } from './map/iso';
 
 const root = document.getElementById('app')!;
 const store = createStore();
@@ -35,10 +36,28 @@ const esc = (t: string) => t.replace(/&/g, '&amp;').replace(/</g, '&lt;').replac
 const bubble = (text: string) =>
   `<div class="bubble" data-say="${esc(text)}"><span class="sr-only">${esc(text)}</span><span class="typed" aria-hidden="true"></span></div>`;
 
+// Направление перехода: вперёд (по умолчанию) или назад (кнопки «назад», «закрыть»).
+let navDir: 'fwd' | 'back' = 'fwd';
+const goBack = () => { navDir = 'back'; };
+const reduceMotion = () => matchMedia('(prefers-reduced-motion: reduce)').matches;
+
 function show(html: string, cls = '') {
   stopTyping();
-  root.className = cls;
+  const dir = navDir;
+  navDir = 'fwd';
+  document.querySelectorAll('.ghost').forEach((g) => g.remove());
+  // Старый экран остаётся поверх копией и уезжает в сторону, пока новый въезжает с другой.
+  if (!reduceMotion() && root.firstElementChild) {
+    const ghost = document.createElement('div');
+    ghost.className = `ghost out-${dir}`;
+    ghost.setAttribute('aria-hidden', 'true');
+    ghost.innerHTML = root.innerHTML;
+    document.body.appendChild(ghost);
+    setTimeout(() => ghost.remove(), 520);
+  }
+  root.className = `${cls} go-${dir}`.trim();
   root.innerHTML = html;
+  setTimeout(() => root.classList.remove('go-fwd', 'go-back'), 650);
   const b = root.querySelector<HTMLElement>('.bubble[data-say]');
   const typed = b?.querySelector<HTMLElement>('.typed');
   if (b && typed) typeText(typed, b.dataset.say ?? '', root.querySelector('.char'));
@@ -134,7 +153,7 @@ function renderOnboarding(i = 0) {
   show(`${art(slide.art, 'talking')}<div class="who">${slide.who}</div>${bubble(slide.text)}
     <div class="dots">${dots}</div>
     <button id="onext" class="green">${last ? 'Поехали!' : 'Дальше'}</button>
-    ${last ? '' : '<button id="oskip" class="secondary small">Пропустить</button>'}`);
+    ${last ? '' : '<button id="oskip" class="secondary">Пропустить</button>'}`);
   speak(slide.text);
   const done = () => { markOnboarded(); speechSynthesis?.cancel(); renderLevels(); };
   on('onext', () => (last ? done() : renderOnboarding(i + 1)));
@@ -168,7 +187,7 @@ function renderShop() {
     return `<button class="level ${owned ? 'owned' : ''}" data-id="${it.id}" ${dis ? 'disabled' : ''} style="--i:${SHOP.indexOf(it)}">
       <span class="emoji-s" aria-hidden="true">${it.emoji}</span><span>${it.name}</span><small>${label}</small></button>`;
   }).join('');
-  show(`${hud('<button id="back" class="secondary small">← Назад</button>')}
+  show(`${hud('<button id="back" class="secondary small" aria-label="Назад">←</button>')}
     <h1>Магазин</h1><p>Трать ${CURRENCY.name} на друзей</p><div class="levels">${items}</div>`);
   root.querySelectorAll<HTMLButtonElement>('.level[data-id]').forEach((b) =>
     b.addEventListener('click', () => {
@@ -180,36 +199,68 @@ function renderShop() {
       renderShop();
     }),
   );
-  on('back', renderLevels);
+  on('back', () => { goBack(); renderLevels(); });
 }
 
-const toMenu = () => { state = null; level = null; render(); };
-const toMap = () => { state = null; render(); };
+const toMenu = () => { goBack(); state = null; level = null; render(); };
+const toMap = () => { goBack(); state = null; render(); };
 
-const MAP_W = 320;
-const ROW = 96;
+// Изометрическая карта: плитки-кубики по ромбовой сетке 2:1, путь зигзагом вниз (геометрия в map/iso.ts).
+type Palette = { top: string; left: string; right: string };
+const PAL = {
+  road: { top: '#a78bfa', left: '#6d28d9', right: '#4c1d95' },
+  todo: { top: '#ddd6fe', left: '#8b5cf6', right: '#5b21b6' },
+  next: { top: '#fde68a', left: '#f59e0b', right: '#b45309' },
+  done: { top: '#86efac', left: '#16a34a', right: '#166534' },
+} satisfies Record<string, Palette>;
+
+function tileSvg(sx: number, sy: number, h: number, c: Palette, cls: string, i: number): string {
+  const x0 = sx - TW / 2, x1 = sx + TW / 2, ty = sy - h;
+  return `<g class="tile ${cls}" style="--i:${i}">
+    <polygon points="${x0},${ty} ${sx},${ty + TH / 2} ${sx},${sy + TH / 2} ${x0},${sy}" fill="${c.left}"/>
+    <polygon points="${x1},${ty} ${sx},${ty + TH / 2} ${sx},${sy + TH / 2} ${x1},${sy}" fill="${c.right}"/>
+    <polygon points="${sx},${ty - TH / 2} ${x1},${ty} ${sx},${ty + TH / 2} ${x0},${ty}" fill="${c.top}"/>
+  </g>`;
+}
 
 function renderMap(l: Level) {
   const n = l.tasks.length;
-  const H = n * ROW + 20;
-  const pts = l.tasks.map((_, i) => ({ x: MAP_W / 2 + 90 * Math.sin(i * 1.05), y: 52 + i * ROW }));
-  let d = `M ${pts[0].x.toFixed(1)} ${pts[0].y}`;
-  for (let i = 1; i < n; i++) {
-    const a = pts[i - 1], b = pts[i], my = (a.y + b.y) / 2;
-    d += ` C ${a.x.toFixed(1)} ${my} ${b.x.toFixed(1)} ${my} ${b.x.toFixed(1)} ${b.y}`;
-  }
+  const cells = isoPath(n);
+  const pos = cells.map((c) => ({ ...c, ...project(c.gx, c.gy) }));
+  const PAD = 12;
+  const minX = Math.min(...pos.map((p) => p.sx)) - TW / 2 - PAD;
+  const maxX = Math.max(...pos.map((p) => p.sx)) + TW / 2 + PAD;
+  const minY = Math.min(...pos.map((p) => p.sy)) - NODE_H - TH / 2 - PAD - 70; // место под Соню
+  const maxY = Math.max(...pos.map((p) => p.sy)) + TH / 2 + PAD;
+  const W = maxX - minX, H = maxY - minY;
   const next = l.tasks.findIndex((t) => progress.found[t.id] === undefined);
-  const nodes = l.tasks.map((t, i) => {
-    const got = progress.found[t.id];
-    const cls = got !== undefined ? 'done' : i === next ? 'next' : '';
-    return `<button class="stop ${cls}" data-i="${i}" aria-label="Задание ${i + 1}${got !== undefined ? ', найдено' : ''}"
-      style="left:${(pts[i].x / MAP_W) * 100}%;top:${(pts[i].y / H) * 100}%;--i:${i}">${got !== undefined ? '✓' : i + 1}</button>`;
+  const stateOf = (i: number) => (progress.found[l.tasks[i].id] !== undefined ? 'done' : i === next ? 'next' : 'todo');
+
+  // порядок отрисовки «от дальнего к ближнему», чтобы кубики перекрывали друг друга правильно
+  const order = pos.map((p, idx) => ({ p, idx })).sort((a, b) => a.p.gx + a.p.gy - (b.p.gx + b.p.gy) || a.p.gx - b.p.gx);
+  const tiles = order.map(({ p, idx }) => {
+    const st = p.node === null ? 'road' : stateOf(p.node);
+    return tileSvg(p.sx - minX, p.sy - minY, p.node === null ? ROAD_H : NODE_H, PAL[st], st, idx);
   }).join('');
+
+  const nodes = l.tasks.map((t, i) => {
+    const p = pos.find((q) => q.node === i)!;
+    const st = stateOf(i);
+    const done = st === 'done';
+    return `<button class="stop ${st}" data-i="${i}" aria-label="Задание ${i + 1}${done ? ', найдено' : ''}"
+      style="left:${((p.sx - minX) / W) * 100}%;top:${((p.sy - NODE_H - minY) / H) * 100}%;--i:${i}">${done ? '✓' : i + 1}</button>`;
+  }).join('');
+
+  const np = pos.find((q) => q.node === (next < 0 ? 0 : next))!;
+  const guide = next >= 0
+    ? `<img class="map-char ${np.sx - minX < W / 2 ? 'at-left' : 'at-right'}" src="/art/sonya-walk.svg" alt="" aria-hidden="true"
+        style="left:${((np.sx - minX) / W) * 100}%;top:${((np.sy - NODE_H - minY) / H) * 100}%">` : '';
+
   const found = l.tasks.filter((t) => progress.found[t.id] !== undefined).length;
   show(`${hud('<button id="back" class="secondary small" aria-label="Назад">←</button>')}
-    ${art('sonya-wave', 'small')}<h1>${l.title}</h1><p>Найдено: ${found} из ${n}</p>
-    <div class="map" style="aspect-ratio:${MAP_W} / ${H}">
-      <svg viewBox="0 0 ${MAP_W} ${H}" aria-hidden="true"><path d="${d}"/></svg>${nodes}
+    <h1>${l.title}</h1><p>Найдено: ${found} из ${n}</p>
+    <div class="map" style="aspect-ratio:${W.toFixed(1)} / ${H.toFixed(1)};--w:${W.toFixed(0)}">
+      <svg viewBox="0 0 ${W.toFixed(1)} ${H.toFixed(1)}" aria-hidden="true">${tiles}</svg>${guide}${nodes}
     </div>`, 'screen-map');
   root.querySelectorAll<HTMLButtonElement>('.stop').forEach((b) =>
     b.addEventListener('click', () => startTask(l.tasks[Number(b.dataset.i)])),
@@ -240,7 +291,7 @@ function render() {
         ${bubble(task!.prompt)}${hint}
         ${notice ? `<div class="notice">${notice}</div>` : ''}
         <button id="shoot" class="breathe">📷 Сфотографировать</button>
-        <button id="say" class="secondary small">🔊 Повторить</button>`);
+        <button id="say" class="secondary">🔊 Повторить</button>`);
       on('shoot', capture);
       on('say', () => speak(task!.prompt));
       on('menu', toMap);
