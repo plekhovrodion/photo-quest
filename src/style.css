@@ -13,7 +13,7 @@ html, body { margin: 0; height: 100%; }
 body {
   color: #fff; overflow-x: hidden;
   font-family: 'Factor A', ui-rounded, system-ui, -apple-system, 'Segoe UI', sans-serif;
-  background: #471fb0 url('/art/bg.svg') 30% bottom / cover fixed no-repeat;
+  background: #471fb0;
 }
 
 #app { position: relative; z-index: 1; min-height: 100dvh; display: flex; flex-direction: column;
@@ -288,3 +288,16 @@ button.cube-btn .cube-badge { position: absolute; right: calc(var(--du) * 4); to
 button.cube-btn:active { animation: none; transform: translate(-50%, 6px) scale(.97); transition: transform .08s; }
 button.cube-btn.done .cube-icon { filter: drop-shadow(0 4px 3px rgba(10, 5, 40, .35)) saturate(.9); }
 button.cube-btn:focus-visible { outline: 4px solid #fde68a; outline-offset: 6px; border-radius: 24px; }
+
+
+/* ===== Смена фонов с плавным перекрытием ===== */
+#bg { position: fixed; inset: 0; z-index: -1; overflow: hidden; background: #471fb0; }
+.bg-layer { position: absolute; inset: -3%; background-size: cover; background-repeat: no-repeat; opacity: 0;
+  transition: opacity .9s ease; animation: bg-drift 40s ease-in-out infinite alternate; }
+.bg-layer.on { opacity: 1; }
+@keyframes bg-drift { to { transform: scale(1.06) translateX(-1.5%); } }
+
+/* затемнение фона на экранах категорий, чтобы персонажи на фоне не спорили с интерфейсом */
+#bg::after { content: ''; position: absolute; inset: 0; pointer-events: none; opacity: 0; transition: opacity .9s ease;
+  background: radial-gradient(ellipse at 50% 45%, rgba(30, 10, 95, .62), rgba(30, 10, 95, .4) 75%); }
+#bg.dim::after { opacity: 1; }

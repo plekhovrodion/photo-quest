@@ -7,6 +7,7 @@ import { COLOR_RU } from './vision/names';
 import { preloadModel } from './vision/local';
 import { confetti } from './fx/confetti';
 import { typeText, stopTyping } from './fx/typewriter';
+import { setBackground } from './fx/background';
 import { playSuccess, playTryAgain, speak } from './audio/sounds';
 import { SLIDES, isOnboarded, markOnboarded } from './onboarding';
 import { loadProgress, recordTask, buy, canBuy, SHOP, CURRENCY, LEVEL_BONUS, type Progress } from './progress';
@@ -45,6 +46,7 @@ const reduceMotion = () => matchMedia('(prefers-reduced-motion: reduce)').matche
 
 function show(html: string, cls = '') {
   stopTyping();
+  setBackground(level?.id ?? null); // у главной и у каждой категории свой фон
   const dir = navDir;
   navDir = 'fwd';
   document.querySelectorAll('.ghost').forEach((g) => g.remove());
