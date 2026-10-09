@@ -1,8 +1,8 @@
 import type { LocalCheck } from '../data/tasks';
-import { colorShares } from './color';
+import { colorShares, type ColorName } from './color';
 import { evaluate, type Ctx } from './evaluate';
 import { matchesLabels, PROB_MIN, type Prediction } from './labels';
-import { ruName } from './names';
+import { COLOR_RU, ruName } from './names';
 
 const SAMPLE = 96;
 
@@ -48,19 +48,55 @@ function pickLabel(preds: Prediction[] | null, check: LocalCheck): string | unde
   return (best && ruName(best.className)) ?? undefined;
 }
 
-export async function localVerify(photo: Blob, check: LocalCheck): Promise<{ match: boolean; reason: string; label?: string }> {
+// Какой цвет заметнее всего в центре кадра. Белый, чёрный и серый часто просто фон,
+// поэтому сначала берём самый заметный цветной оттенок, и только если его нет — нейтральный.
+const CHROMATIC: ColorName[] = ['red', 'orange', 'yellow', 'green', 'blue', 'purple', 'pink', 'brown'];
+export function colorPhrase(shares: Record<ColorName, number>): string | undefined {
+  const top = (names: ColorName[]) => names.map((n) => [n, shares[n]] as const).sort((a, b) => b[1] - a[1])[0];
+  const [cn, cs] = top(CHROMATIC);
+  if (cs >= 0.08) return `Здесь в основном ${COLOR_RU[cn]} цвет`;
+  const [nn, ns] = top(['white', 'black', 'gray']);
+  return ns >= 0.15 ? `Здесь в основном ${COLOR_RU[nn]} цвет` : undefined;
+}
+
+// Первый узнанный предмет на фото (для ответа «ты нашёл не то»).
+function anyLabel(preds: Prediction[] | null): string | undefined {
+  for (const p of preds ?? []) {
+    if (p.probability < PROB_MIN) continue;
+    const n = ruName(p.className);
+    if (n) return n;
+  }
+  return undefined;
+}
+
+export async function localVerify(
+  photo: Blob,
+  check: LocalCheck,
+): Promise<{ match: boolean; reason: string; label?: string; found?: string }> {
   const canvas = await toCanvas(photo);
-  const cache: { preds: Prediction[] | null } = { preds: null };
-  const ctx: Ctx = {
-    shares: () => {
+  const cache: { preds: Prediction[] | null; shares: Record<ColorName, number> | null } = { preds: null, shares: null };
+  const getShares = () => {
+    if (!cache.shares) {
       const small = document.createElement('canvas');
       small.width = small.height = SAMPLE;
       const c2d = small.getContext('2d', { willReadFrequently: true })!;
       c2d.drawImage(canvas, 0, 0, SAMPLE, SAMPLE);
-      return colorShares(c2d.getImageData(0, 0, SAMPLE, SAMPLE).data, SAMPLE, SAMPLE);
-    },
-    predictions: async () => (cache.preds ??= await (await loadModel()).classify(canvas, 5)),
+      cache.shares = colorShares(c2d.getImageData(0, 0, SAMPLE, SAMPLE).data, SAMPLE, SAMPLE);
+    }
+    return cache.shares;
   };
-  const match = await evaluate(check, ctx);
-  return { match, reason: cache.preds?.[0]?.className ?? 'local', label: match ? pickLabel(cache.preds, check) : undefined };
+  const getPreds = async () => (cache.preds ??= await (await loadModel()).classify(canvas, 5));
+  const match = await evaluate(check, { shares: getShares, predictions: getPreds });
+  const reason = cache.preds?.[0]?.className ?? 'local';
+  if (match) return { match, reason, label: pickLabel(cache.preds, check) };
+
+  // Неверно: объясняем, что заврик увидел на фото.
+  let found: string | undefined;
+  if (check.kind === 'color' || check.kind === 'multicolor') {
+    found = colorPhrase(getShares());
+  } else {
+    const label = anyLabel(await getPreds());
+    found = label ? `Это ${label}` : colorPhrase(getShares());
+  }
+  return { match, reason, found };
 }

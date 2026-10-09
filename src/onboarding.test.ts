@@ -22,6 +22,6 @@ describe('onboarding', () => {
     expect(() => markOnboarded()).not.toThrow();
   });
   it('у каждого слайда есть текст', () => {
-    expect(SLIDES.every((s) => s.title && s.text && s.art)).toBe(true);
+    expect(SLIDES.every((s) => s.who && s.text && s.art)).toBe(true);
   });
 });

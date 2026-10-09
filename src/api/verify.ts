@@ -4,7 +4,8 @@ import { localVerify } from '../vision/local';
 export interface VerifyResult {
   match: boolean;
   reason: string;
-  label?: string; // русское название найденного предмета, если удалось определить
+  label?: string; // русское название найденного предмета (при верном ответе)
+  found?: string; // что заврик увидел на фото (при неверном ответе), например «Это кружка»
 }
 
 const API_URL = import.meta.env.VITE_API_URL ?? '/photo-quests/api';

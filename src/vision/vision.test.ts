@@ -83,3 +83,19 @@ describe('ruName', () => {
     expect(ruName('banana')).toBeNull();
   });
 });
+
+import { colorPhrase } from './local';
+
+describe('colorPhrase', () => {
+  const shares = (o: Partial<Record<string, number>>) =>
+    ({ red: 0, orange: 0, yellow: 0, green: 0, blue: 0, purple: 0, pink: 0, brown: 0, white: 0, black: 0, gray: 0, ...o }) as any;
+  it('называет цветной предмет, а не белый фон', () => {
+    expect(colorPhrase(shares({ white: 0.7, red: 0.25 }))).toBe('Здесь в основном красный цвет');
+  });
+  it('если цветного нет, называет нейтральный', () => {
+    expect(colorPhrase(shares({ white: 0.9 }))).toBe('Здесь в основном белый цвет');
+  });
+  it('молчит, если ничего не выделяется', () => {
+    expect(colorPhrase(shares({ white: 0.05, gray: 0.05 }))).toBeUndefined();
+  });
+});

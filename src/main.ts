@@ -6,6 +6,7 @@ import { verifyPhoto } from './api/verify';
 import { COLOR_RU } from './vision/names';
 import { preloadModel } from './vision/local';
 import { confetti } from './fx/confetti';
+import { typeText, stopTyping } from './fx/typewriter';
 import { playSuccess, playTryAgain, speak } from './audio/sounds';
 import { SLIDES, isOnboarded, markOnboarded } from './onboarding';
 import { loadProgress, recordTask, buy, canBuy, SHOP, CURRENCY, LEVEL_BONUS, type Progress } from './progress';
@@ -20,15 +21,32 @@ let state: GameState | null = null;
 let notice = '';
 let photoUrl = '';
 let lastLabel: string | null = null;
+let lastFound: string | null = null;
+let shownFlashes = progress.flashes;
 
 function dispatch(a: Action) {
   state = reduce(state!, a);
   render();
 }
 
+const esc = (t: string) => t.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+
+// Реплика заврика: для экранного диктора лежит целиком, на экране печатается по буквам.
+const bubble = (text: string) =>
+  `<div class="bubble" data-say="${esc(text)}"><span class="sr-only">${esc(text)}</span><span class="typed" aria-hidden="true"></span></div>`;
+
 function show(html: string, cls = '') {
+  stopTyping();
   root.className = cls;
   root.innerHTML = html;
+  const b = root.querySelector<HTMLElement>('.bubble[data-say]');
+  const typed = b?.querySelector<HTMLElement>('.typed');
+  if (b && typed) typeText(typed, b.dataset.say ?? '', root.querySelector('.char'));
+  // кошелёк «подпрыгивает», когда число вспышек изменилось
+  if (progress.flashes !== shownFlashes) {
+    root.querySelector('.chip.coin')?.classList.add('bump');
+    shownFlashes = progress.flashes;
+  }
 }
 
 function on(id: string, fn: () => void) {
@@ -67,8 +85,9 @@ async function capture() {
     if (photoUrl) URL.revokeObjectURL(photoUrl);
     photoUrl = URL.createObjectURL(photo);
     dispatch({ type: 'photo-taken' });
-    const { match, label } = await verifyPhoto(photo, task);
+    const { match, label, found } = await verifyPhoto(photo, task);
     lastLabel = label ?? null;
+    lastFound = found ?? null;
     dispatch({ type: 'verified', match });
     (match ? playSuccess : playTryAgain)();
   } catch {
@@ -80,7 +99,7 @@ async function capture() {
 
 
 // Картинки заврёнков Гриши и Сони (Figma «Иллюстрации. Гриша и Соня. Заврики»).
-const art = (name: string, cls = '') => `<img class="char ${cls}" src="/art/${name}.png" alt="" aria-hidden="true">`;
+const art = (name: string, cls = '') => `<img class="char ${cls}" src="/art/${name}.svg" alt="" aria-hidden="true">`;
 
 const starRow = (n: number) =>
   `<div class="stars" role="img" aria-label="Звёзд: ${n} из 3">${[1, 2, 3]
@@ -90,6 +109,15 @@ const starRow = (n: number) =>
 function sonyaSays(task: Task): string {
   if (task.local?.kind === 'color') return `Это ${COLOR_RU[task.local.color]} цвет!`;
   return lastLabel ? `Это ${lastLabel}!` : 'Ты нашёл нужный предмет!';
+}
+
+// «Найди предмет с красным цветом!» -> «предмет с красным цветом»
+const goalOf = (task: Task) => task.prompt.replace(/^Найди\s+/, '').replace(/[!.]$/, '');
+
+// Гриша объясняет, что нашёл ребёнок и что нужно искать.
+function grishaExplains(task: Task): string {
+  const seen = lastFound ? `${lastFound}.` : 'Это не похоже на то, что мы ищем.';
+  return `${seen} Мы ищем: ${goalOf(task)}.`;
 }
 
 const wallet = () => `<span class="chip coin" role="img" aria-label="Вспышек: ${progress.flashes}">${CURRENCY.emoji} ${progress.flashes}</span>`;
@@ -103,11 +131,11 @@ function renderOnboarding(i = 0) {
   const slide = SLIDES[i];
   const last = i === SLIDES.length - 1;
   const dots = SLIDES.map((_, j) => `<span class="dot ${j === i ? 'on' : ''}"></span>`).join('');
-  show(`${art(slide.art)}<h1>${slide.title}</h1><p>${slide.text}</p>
+  show(`${art(slide.art, 'talking')}<div class="who">${slide.who}</div>${bubble(slide.text)}
     <div class="dots">${dots}</div>
     <button id="onext" class="green">${last ? 'Поехали!' : 'Дальше'}</button>
     ${last ? '' : '<button id="oskip" class="secondary small">Пропустить</button>'}`);
-  speak(`${slide.title}. ${slide.text}`);
+  speak(slide.text);
   const done = () => { markOnboarded(); speechSynthesis?.cancel(); renderLevels(); };
   on('onext', () => (last ? done() : renderOnboarding(i + 1)));
   on('oskip', done);
@@ -116,7 +144,7 @@ function renderOnboarding(i = 0) {
 function renderLevels() {
   const cards = LEVELS.map((l, i) => {
     const p = progress.levels[l.id];
-    return `<button class="level ${p?.passed ? 'done' : ''}" data-i="${i}">
+    return `<button class="level ${p?.passed ? 'done' : ''}" data-i="${i}" style="--i:${i}">
       <span class="emoji-s" aria-hidden="true">${p?.passed ? '🏅' : l.emoji}</span>
       <span>${l.title}</span>
     </button>`;
@@ -137,7 +165,7 @@ function renderShop() {
     const owned = progress.owned.includes(it.id);
     const label = owned ? 'Твой!' : `${CURRENCY.emoji} ${it.price}`;
     const dis = owned || !canBuy(progress, it);
-    return `<button class="level ${owned ? 'owned' : ''}" data-id="${it.id}" ${dis ? 'disabled' : ''}>
+    return `<button class="level ${owned ? 'owned' : ''}" data-id="${it.id}" ${dis ? 'disabled' : ''} style="--i:${SHOP.indexOf(it)}">
       <span class="emoji-s" aria-hidden="true">${it.emoji}</span><span>${it.name}</span><small>${label}</small></button>`;
   }).join('');
   show(`${hud('<button id="back" class="secondary small">← Назад</button>')}
@@ -175,7 +203,7 @@ function renderMap(l: Level) {
     const got = progress.found[t.id];
     const cls = got !== undefined ? 'done' : i === next ? 'next' : '';
     return `<button class="stop ${cls}" data-i="${i}" aria-label="Задание ${i + 1}${got !== undefined ? ', найдено' : ''}"
-      style="left:${(pts[i].x / MAP_W) * 100}%;top:${(pts[i].y / H) * 100}%">${got !== undefined ? '✓' : i + 1}</button>`;
+      style="left:${(pts[i].x / MAP_W) * 100}%;top:${(pts[i].y / H) * 100}%;--i:${i}">${got !== undefined ? '✓' : i + 1}</button>`;
   }).join('');
   const found = l.tasks.filter((t) => progress.found[t.id] !== undefined).length;
   show(`${hud('<button id="back" class="secondary small" aria-label="Назад">←</button>')}
@@ -208,10 +236,10 @@ function render() {
     case 'task':
     case 'camera': {
       const hint = s.attempts > 0 && task!.hint ? `<div class="hint">💡 ${task!.hint}</div>` : '';
-      show(`${bar}${art('grisha-happy')}
-        <div class="bubble">${task!.prompt}</div>${hint}
+      show(`${bar}${art('grisha-happy', 'talking')}
+        ${bubble(task!.prompt)}${hint}
         ${notice ? `<div class="notice">${notice}</div>` : ''}
-        <button id="shoot">📷 Сфотографировать</button>
+        <button id="shoot" class="breathe">📷 Сфотографировать</button>
         <button id="say" class="secondary small">🔊 Повторить</button>`);
       on('shoot', capture);
       on('say', () => speak(task!.prompt));
@@ -229,19 +257,24 @@ function render() {
         const got = starsFor(s.attempts);
         const again = progress.found[task!.id] !== undefined;
         const says = sonyaSays(task!);
-        show(`${bar}${art('sonya-wave', 'cheer')}<div class="bubble">${says}</div>
+        show(`${bar}${art('sonya-cheer', 'cheer talking')}${bubble(says)}
           ${starRow(got)}
           ${again ? '' : `<div class="reward">${CURRENCY.emoji} +${got}</div>`}
           <button id="next" class="green">Дальше</button>`, 'ok');
         confetti();
         speak(`${says} Молодец!`);
       } else if (canSkip(s)) {
-        show(`${bar}${art('grisha-think', 'sad')}<div class="banner no">Это сложное задание</div>
-          <p>Давай попробуем другое!</p><button id="next">Дальше</button>`);
+        show(`${bar}${art('sonya-sad', 'sad shake talking')}<div class="banner no">Это сложное задание</div>
+          ${photoUrl ? `<img class="preview mini" src="${photoUrl}" alt="">` : ''}
+          ${bubble(`${grishaExplains(task!)} Давай попробуем другое!`)}<button id="next">Дальше</button>`);
+        speak(grishaExplains(task!));
       } else {
         const left = MAX_ATTEMPTS - s.attempts;
-        show(`${bar}${art('grisha-think', 'sad')}<div class="banner no">Пока не то</div>
-          <p>Попробуй ещё! Осталось попыток: ${left}</p><button id="next">Искать снова</button>`);
+        show(`${bar}${art('sonya-sad', 'sad shake talking')}<div class="banner no">Пока не то</div>
+          ${photoUrl ? `<img class="preview mini" src="${photoUrl}" alt="">` : ''}
+          ${bubble(grishaExplains(task!))}
+          <p>Осталось попыток: ${left}</p><button id="next">Искать снова</button>`);
+        speak(grishaExplains(task!));
       }
       on('next', () => dispatch({ type: 'next' }));
       on('menu', toMap);

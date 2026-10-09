@@ -83,6 +83,10 @@ function liveCamera(): Promise<Blob | null> {
       fileBtn.hidden = false;
     };
 
+    // «Снять» активна только когда пошло видео, иначе кадр будет пустым.
+    shoot.disabled = true;
+    video.addEventListener('loadeddata', () => { shoot.disabled = false; }, { once: true });
+
     overlay.querySelector('.cam-cancel')!.addEventListener('click', () => done(null));
     fileBtn.addEventListener('click', async () => done(await pickPhotoFile()));
     shoot.addEventListener('click', () => {
