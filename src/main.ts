@@ -138,17 +138,10 @@ async function capture() {
     const { found, foundLabel } = verdict;
     let match = verdict.match;
     lastLabel = verdict.label ?? null;
-    // Не уверены: не говорим «не то», а спрашиваем ребёнка. Лишнее «засчитано» лучше ложного отказа.
+    // Почти подошло: не переспрашиваем ребёнка и не отказываем, а засчитываем и называем предмет по заданию.
     if (!match && verdict.maybe) {
-      const answer = await askConfirm(task);
-      if (answer === 'closer') {
-        notice = 'Покажи ещё раз, поближе!';
-        return dispatch({ type: 'check-failed' });
-      }
-      if (answer === 'yes') {
-        match = true;
-        lastLabel = taskName(task);
-      }
+      match = true;
+      lastLabel = taskName(task);
     }
     lastFound = found ?? null;
     lastFoundLabel = foundLabel ?? null;
@@ -308,24 +301,6 @@ function renderLevels() {
   on('zavrik', () => { view = 'zavrik'; render(); });
 }
 
-
-// Экран «не уверен»: фото почти подошло, спрашиваем ребёнка. «Нет» — обычный отказ, «ближе» — снять ещё раз без штрафа.
-function askConfirm(task: Task): Promise<'yes' | 'no' | 'closer'> {
-  return new Promise((resolve) => {
-    const q = `Это правда ${taskName(task)}?`;
-    show(`${hud(`<button id="menu" class="secondary small" aria-label="К заданиям">${closeIcon()}</button>`)}
-      ${art('sonya-wave', 'talking')}${bubble(q)}
-      <img class="preview mini" src="${photoUrl}" alt="">
-      <button id="cf-yes" class="green">Да</button>
-      <button id="cf-no" class="secondary">Нет</button>
-      <button id="cf-closer" class="secondary">${cameraIcon()}Снять ближе</button>`);
-    speak(q, false, 'sonya');
-    on('cf-yes', () => resolve('yes'));
-    on('cf-no', () => resolve('no'));
-    on('cf-closer', () => resolve('closer'));
-    on('menu', toMap);
-  });
-}
 
 // Экран «Заврики»: кормим вспышками, растим, одеваем.
 const ZV_ART: Record<ZavrikId, string> = { grisha: 'jet-2', sonya: 'sonya-wave' };
