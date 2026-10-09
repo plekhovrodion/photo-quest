@@ -215,16 +215,16 @@ button.stop.done { animation: stop-in .55s calc(var(--i, 0) * 60ms + .25s) var(-
 
 /* ===== Единые крупные фиолетовые кнопки ===== */
 :root { --btn: #7c3aed; --btn-d: #4c1d95; --btn2: #9061f9; --btn2-d: #5b21b6; --btn-w: min(100%, 380px); --btn-h: 80px; --icon: 68px; }
-button:not(.level):not(.stop) {
+button:not(.level):not(.stop):not(.cube-btn) {
   width: var(--btn-w); min-width: 0; height: var(--btn-h); min-height: var(--btn-h); padding: 0 28px; flex: none;
   display: inline-flex; align-items: center; justify-content: center; gap: 12px; text-align: center; line-height: 1.1;
   font-size: 30px; font-weight: 800; border-radius: 28px; color: #fff; background: var(--btn);
   box-shadow: 0 9px 0 var(--btn-d), 0 16px 24px rgba(10, 5, 40, .4);
 }
-button.secondary:not(.level):not(.stop) { color: #fff; background: var(--btn2); box-shadow: 0 9px 0 var(--btn2-d), 0 16px 24px rgba(10, 5, 40, .4); }
-button.small:not(.level):not(.stop) { width: var(--icon); min-width: var(--icon); height: var(--icon); min-height: var(--icon); padding: 0; font-size: 30px; border-radius: 22px; }
-button:not(.level):not(.stop):active:not(:disabled) { transform: translateY(7px); box-shadow: 0 2px 0 var(--btn-d), 0 6px 12px rgba(10, 5, 40, .4); }
-button.secondary:not(.level):not(.stop):active:not(:disabled) { box-shadow: 0 2px 0 var(--btn2-d), 0 6px 12px rgba(10, 5, 40, .4); }
+button.secondary:not(.level):not(.stop):not(.cube-btn) { color: #fff; background: var(--btn2); box-shadow: 0 9px 0 var(--btn2-d), 0 16px 24px rgba(10, 5, 40, .4); }
+button.small:not(.level):not(.stop):not(.cube-btn) { width: var(--icon); min-width: var(--icon); height: var(--icon); min-height: var(--icon); padding: 0; font-size: 30px; border-radius: 22px; }
+button:not(.level):not(.stop):not(.cube-btn):active:not(:disabled) { transform: translateY(7px); box-shadow: 0 2px 0 var(--btn-d), 0 6px 12px rgba(10, 5, 40, .4); }
+button.secondary:not(.level):not(.stop):not(.cube-btn):active:not(:disabled) { box-shadow: 0 2px 0 var(--btn2-d), 0 6px 12px rgba(10, 5, 40, .4); }
 button:focus-visible { outline: 4px solid #fde68a; outline-offset: 4px; }
 .chip { height: var(--icon); padding: 0 22px; font-size: 28px; display: inline-flex; align-items: center; gap: 8px; }
 .hud-right { gap: 10px; }
@@ -266,3 +266,25 @@ button.stop.done { background: #16a34a; border-color: #166534; color: #fff; box-
   filter: drop-shadow(0 6px 8px rgba(10, 5, 40, .45)); }
 
 .map-char.at-right { transform: translate(-175%, -100%); }
+
+
+/* ===== Главная: парящие 3D-кубы ===== */
+.world { position: relative; width: min(100%, 420px); container-type: inline-size; }
+button.cube-btn { --du: calc(100cqw / 360); position: absolute; padding: 0; border: 0; background: none; color: var(--ink);
+  transform: translateX(-50%); cursor: pointer; box-shadow: none; text-align: center; width: auto; min-width: 0;
+  animation: cube-in .7s calc(var(--i, 0) * 90ms + .15s) var(--spring) backwards, cube-bob 4s calc(var(--ph, 0s) + 1s) ease-in-out infinite; }
+button.cube-btn svg { display: block; width: 100%; height: auto; overflow: visible; filter: drop-shadow(0 4px 0 rgba(10, 5, 40, .12)); }
+button.cube-btn .cube-icon { position: absolute; left: 50%; top: calc(var(--du) * 3); transform: translateX(-50%) rotate(-2deg);
+  font-size: calc(var(--du) * 54); line-height: 1; filter: drop-shadow(0 4px 3px rgba(10, 5, 40, .35)); pointer-events: none; }
+button.cube-btn .cube-label { position: absolute; left: 50%; top: calc(var(--du) * 122); transform: translateX(-50%); white-space: nowrap;
+  background: #fff; color: var(--ink); font-weight: 900; font-size: calc(var(--du) * 22); line-height: 1; padding: calc(var(--du) * 7) calc(var(--du) * 16);
+  border-radius: 999px; box-shadow: 0 calc(var(--du) * 3) 0 rgba(10, 5, 40, .25); }
+button.cube-btn .cube-badge { position: absolute; right: calc(var(--du) * 4); top: calc(var(--du) * -2); width: calc(var(--du) * 34); height: calc(var(--du) * 34);
+  display: grid; place-items: center; border-radius: 50%; background: #16a34a; color: #fff; font-size: calc(var(--du) * 22); font-weight: 900;
+  border: calc(var(--du) * 3) solid #fff; }
+@keyframes cube-in { from { opacity: 0; transform: translate(-50%, -90px) scale(.6) rotate(-8deg); } }
+@keyframes cube-bob { 50% { transform: translate(-50%, -9px); } }
+@media (hover: hover) { button.cube-btn:hover { animation: none; transform: translate(-50%, -12px) scale(1.04); transition: transform .2s var(--spring); } }
+button.cube-btn:active { animation: none; transform: translate(-50%, 6px) scale(.97); transition: transform .08s; }
+button.cube-btn.done .cube-icon { filter: drop-shadow(0 4px 3px rgba(10, 5, 40, .35)) saturate(.9); }
+button.cube-btn:focus-visible { outline: 4px solid #fde68a; outline-offset: 6px; border-radius: 24px; }

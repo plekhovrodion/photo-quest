@@ -26,3 +26,23 @@ describe('isoPath', () => {
     for (let i = 1; i < ys.length; i++) expect(ys[i]).toBeGreaterThan(ys[i - 1]);
   });
 });
+
+import { worldLayout, WORLD } from './iso';
+
+describe('worldLayout', () => {
+  it('два столбика со сдвигом, кубы не пересекаются', () => {
+    const { items, H } = worldLayout(6);
+    expect(items).toHaveLength(6);
+    expect(items[1].cx).toBeGreaterThan(items[0].cx);
+    expect(items[1].top).toBeGreaterThan(items[0].top);
+    // в одном столбике соседние кубы не наезжают друг на друга по вертикали
+    expect(items[2].top - items[0].top).toBeGreaterThanOrEqual(WORLD.CUBE_H + WORLD.LABEL_H);
+    expect(Math.max(...items.map((p) => p.top)) + WORLD.CUBE_H + WORLD.LABEL_H).toBeLessThanOrEqual(H);
+  });
+  it('кубы помещаются по ширине', () => {
+    for (const p of worldLayout(6).items) {
+      expect(p.cx - WORLD.CUBE_W / 2).toBeGreaterThanOrEqual(0);
+      expect(p.cx + WORLD.CUBE_W / 2).toBeLessThanOrEqual(WORLD.W);
+    }
+  });
+});

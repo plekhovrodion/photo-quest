@@ -12,7 +12,9 @@ import { SLIDES, isOnboarded, markOnboarded } from './onboarding';
 import { loadProgress, recordTask, buy, canBuy, SHOP, CURRENCY, LEVEL_BONUS, type Progress } from './progress';
 
 import { createStore } from './storage/store';
-import { isoPath, project, TW, TH, NODE_H, ROAD_H } from './map/iso';
+import { isoPath, project, TW, TH, NODE_H, ROAD_H, WORLD, worldLayout } from './map/iso';
+
+type Palette = { top: string; left: string; right: string };
 
 const root = document.getElementById('app')!;
 const store = createStore();
@@ -160,19 +162,44 @@ function renderOnboarding(i = 0) {
   on('oskip', done);
 }
 
+// Цвета граней кубов по категориям: верх светлее, левая грань средняя, правая тёмная.
+const CUBE_COLORS: Palette[] = [
+  { top: '#fda4af', left: '#e11d48', right: '#9f1239' }, // цвета
+  { top: '#7dd3fc', left: '#0284c7', right: '#075985' }, // формы
+  { top: '#fcd34d', left: '#d97706', right: '#92400e' }, // свойства
+  { top: '#86efac', left: '#16a34a', right: '#166534' }, // что для чего
+  { top: '#c4b5fd', left: '#7c3aed', right: '#4c1d95' }, // сочетания
+  { top: '#f9a8d4', left: '#db2777', right: '#9d174d' }, // счёт
+];
+
+// Куб 160x80 (ромб) и толщина 40: верхняя грань — ромб, две боковые — параллелограммы; под ним тень.
+function cubeSvg(c: Palette): string {
+  return `<svg viewBox="0 0 160 136" aria-hidden="true">
+    <ellipse cx="80" cy="124" rx="58" ry="10" fill="rgba(10,5,40,.35)"/>
+    <polygon points="0,40 80,80 80,120 0,80" fill="${c.left}"/>
+    <polygon points="160,40 80,80 80,120 160,80" fill="${c.right}"/>
+    <polygon points="80,0 160,40 80,80 0,40" fill="${c.top}"/>
+  </svg>`;
+}
+
 function renderLevels() {
-  const cards = LEVELS.map((l, i) => {
+  const { W, H, items } = worldLayout(LEVELS.length);
+  const cubes = LEVELS.map((l, i) => {
     const p = progress.levels[l.id];
-    return `<button class="level ${p?.passed ? 'done' : ''}" data-i="${i}" style="--i:${i}">
-      <span class="emoji-s" aria-hidden="true">${p?.passed ? '🏅' : l.emoji}</span>
-      <span>${l.title}</span>
+    const it = items[i];
+    return `<button class="cube-btn ${p?.passed ? 'done' : ''}" data-i="${i}" aria-label="${l.title}"
+      style="left:${(it.cx / W) * 100}%;top:${(it.top / H) * 100}%;width:${(WORLD.CUBE_W / W) * 100}%;--i:${i};--ph:${(i * 0.7).toFixed(1)}s">
+      ${cubeSvg(CUBE_COLORS[i % CUBE_COLORS.length])}
+      <span class="cube-icon" aria-hidden="true">${l.emoji}</span>
+      ${p?.passed ? '<span class="cube-badge" aria-hidden="true">✓</span>' : ''}
+      <span class="cube-label">${l.title}</span>
     </button>`;
   }).join('');
   show(`${hud('<button id="howto" class="secondary small" aria-label="Как играть">❓</button>', '', '',
       '<button id="shop" class="secondary small" aria-label="Магазин">🛍</button>')}
-    ${art('ship')}<h1>Покажи нам мир!</h1><p>Гриша и Соня прилетели с далёкой планеты. Помоги им узнать наш мир!</p>
-    <div class="levels">${cards}</div>`, 'screen-menu');
-  root.querySelectorAll<HTMLButtonElement>('.level').forEach((b) =>
+    ${art('ship')}<h1>Покажи нам мир!</h1><p>Выбери, что показать Грише и Соне</p>
+    <div class="world" style="aspect-ratio:${W} / ${H.toFixed(0)}">${cubes}</div>`, 'screen-menu');
+  root.querySelectorAll<HTMLButtonElement>('.cube-btn').forEach((b) =>
     b.addEventListener('click', () => startLevel(LEVELS[Number(b.dataset.i)])),
   );
   on('shop', renderShop);
@@ -206,7 +233,6 @@ const toMenu = () => { goBack(); state = null; level = null; render(); };
 const toMap = () => { goBack(); state = null; render(); };
 
 // Изометрическая карта: плитки-кубики по ромбовой сетке 2:1, путь зигзагом вниз (геометрия в map/iso.ts).
-type Palette = { top: string; left: string; right: string };
 const PAL = {
   road: { top: '#a78bfa', left: '#6d28d9', right: '#4c1d95' },
   todo: { top: '#ddd6fe', left: '#8b5cf6', right: '#5b21b6' },

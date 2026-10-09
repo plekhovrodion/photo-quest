@@ -22,3 +22,18 @@ export function isoPath(n: number): Cell[] {
 }
 
 export const project = (gx: number, gy: number) => ({ sx: ((gx - gy) * TW) / 2, sy: ((gx + gy) * TH) / 2 });
+
+// Главная: категории — парящие кубы в два столбика со сдвигом (единицы — «дизайн-пиксели» ширины 360).
+export const WORLD = { W: 360, CUBE_W: 150, CUBE_H: 126, LABEL_H: 36, ROW: 172, OFFSET: 86 };
+
+export interface WorldItem { cx: number; top: number }
+
+export function worldLayout(n: number): { W: number; H: number; items: WorldItem[] } {
+  const { W, CUBE_H, LABEL_H, ROW, OFFSET } = WORLD;
+  const items: WorldItem[] = Array.from({ length: n }, (_, i) => {
+    const col = i % 2;
+    return { cx: col ? W * 0.73 : W * 0.27, top: Math.floor(i / 2) * ROW + (col ? OFFSET : 0) };
+  });
+  const H = Math.max(...items.map((p) => p.top)) + CUBE_H + LABEL_H + 6;
+  return { W, H, items };
+}
