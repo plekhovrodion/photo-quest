@@ -72,17 +72,18 @@ async function capture() {
 
 const maxStars = (l: Level) => l.tasks.length * 3;
 
-const wallet = () => `<span class="chip coin">${CURRENCY.emoji} ${progress.flashes}</span>`;
+const wallet = () => `<span class="chip coin" role="img" aria-label="Вспышек: ${progress.flashes}">${CURRENCY.emoji} ${progress.flashes}</span>`;
 
-function hud(left: string, mid = '') {
-  return `<div class="hud">${left}<div class="pips">${mid}</div>${wallet()}</div>`;
+function hud(left: string, mid = '', label = '') {
+  const aria = label ? ` role="img" aria-label="${label}"` : ' aria-hidden="true"';
+  return `<div class="hud">${left}<div class="pips"${aria}>${mid}</div>${wallet()}</div>`;
 }
 
 function renderOnboarding(i = 0) {
   const slide = SLIDES[i];
   const last = i === SLIDES.length - 1;
   const dots = SLIDES.map((_, j) => `<span class="dot ${j === i ? 'on' : ''}"></span>`).join('');
-  show(`<div class="mascot">${slide.emoji}</div><div class="bubble">${slide.title}</div><p>${slide.text}</p>
+  show(`<div aria-hidden="true" class="mascot">${slide.emoji}</div><div class="bubble">${slide.title}</div><p>${slide.text}</p>
     <div class="dots">${dots}</div>
     <button id="onext" class="green">${last ? 'Поехали!' : 'Дальше'}</button>
     ${last ? '' : '<button id="oskip" class="secondary small">Пропустить</button>'}`);
@@ -96,13 +97,13 @@ function renderLevels() {
   const cards = LEVELS.map((l, i) => {
     const p = progress.levels[l.id];
     return `<button class="level ${p?.passed ? 'done' : ''}" data-i="${i}">
-      <span class="emoji-s">${p?.passed ? '🏅' : l.emoji}</span>
+      <span class="emoji-s" aria-hidden="true">${p?.passed ? '🏅' : l.emoji}</span>
       <span>${l.title}</span>
       <small>${p ? `${CURRENCY.emoji} ${p.stars}/${maxStars(l)}` : `${l.tasks.length} заданий`}</small>
     </button>`;
   }).join('');
-  show(`${hud('<button id="howto" class="secondary small">❓</button>')}
-    <div class="mascot">📸</div><h1>ФотоКвест</h1><p>Выбери приключение!</p>
+  show(`${hud('<button id="howto" class="secondary small" aria-label="Как играть">❓</button>')}
+    <div aria-hidden="true" class="mascot">📸</div><h1>ФотоКвест</h1><p>Выбери приключение!</p>
     <div class="levels">${cards}</div>
     <button id="shop" class="secondary">🛍 Магазин</button>`);
   root.querySelectorAll<HTMLButtonElement>('.level').forEach((b) =>
@@ -118,7 +119,7 @@ function renderShop() {
     const label = owned ? 'Твой!' : `${CURRENCY.emoji} ${it.price}`;
     const dis = owned || !canBuy(progress, it);
     return `<button class="level ${owned ? 'owned' : ''}" data-id="${it.id}" ${dis ? 'disabled' : ''}>
-      <span class="emoji-s">${it.emoji}</span><span>${it.name}</span><small>${label}</small></button>`;
+      <span class="emoji-s" aria-hidden="true">${it.emoji}</span><span>${it.name}</span><small>${label}</small></button>`;
   }).join('');
   show(`${hud('<button id="back" class="secondary small">← Назад</button>')}
     <h1>Магазин</h1><p>Трать ${CURRENCY.name} на друзей</p><div class="levels">${items}</div>`);
@@ -148,12 +149,13 @@ function render() {
   if (!state || !level) return isOnboarded() ? renderLevels() : renderOnboarding();
   const s = state;
   const task = currentTask(s);
-  const bar = hud('<button id="menu" class="secondary small">✕</button>', pips(s));
+  const bar = hud('<button id="menu" class="secondary small" aria-label="К приключениям">✕</button>', pips(s),
+    `Задание ${Math.min(s.index + 1, s.tasks.length)} из ${s.tasks.length}`);
   switch (s.phase) {
     case 'task':
     case 'camera': {
       const hint = s.attempts > 0 && task!.hint ? `<div class="hint">💡 ${task!.hint}</div>` : '';
-      show(`${bar}<div class="mascot">${level.emoji}</div>
+      show(`${bar}<div aria-hidden="true" class="mascot">${level.emoji}</div>
         <div class="bubble">${task!.prompt}</div>${hint}
         ${notice ? `<div class="notice">${notice}</div>` : ''}
         <button id="shoot">📷 Сфотографировать</button>
@@ -172,17 +174,17 @@ function render() {
     case 'result': {
       if (s.lastMatch) {
         const got = starsFor(s.attempts);
-        show(`${bar}<div class="mascot cheer">🎉</div><div class="banner ok">Верно! Молодец!</div>
+        show(`${bar}<div aria-hidden="true" class="mascot cheer">🎉</div><div class="banner ok">Верно! Молодец!</div>
           <div class="reward">${CURRENCY.emoji} +${got}</div>
           <button id="next" class="green">Дальше</button>`, 'ok');
         confetti();
         speak('Верно! Молодец!');
       } else if (canSkip(s)) {
-        show(`${bar}<div class="mascot sad">🤔</div><div class="banner no">Это сложное задание</div>
+        show(`${bar}<div aria-hidden="true" class="mascot sad">🤔</div><div class="banner no">Это сложное задание</div>
           <p>Давай попробуем другое!</p><button id="next">Дальше</button>`);
       } else {
         const left = MAX_ATTEMPTS - s.attempts;
-        show(`${bar}<div class="mascot sad">🔍</div><div class="banner no">Пока не то</div>
+        show(`${bar}<div aria-hidden="true" class="mascot sad">🔍</div><div class="banner no">Пока не то</div>
           <p>Попробуй ещё! Осталось попыток: ${left}</p><button id="next">Искать снова</button>`);
       }
       on('next', () => dispatch({ type: 'next' }));
@@ -192,7 +194,7 @@ function render() {
     case 'finish': {
       const { passed, firstPass } = finishLevel();
       const next = LEVELS[LEVELS.indexOf(level) + 1];
-      show(`${hud('', pips(s))}<div class="mascot cheer">${passed ? '🏆' : '💪'}</div>
+      show(`${hud('', pips(s))}<div aria-hidden="true" class="mascot cheer">${passed ? '🏆' : '💪'}</div>
         <h1>${passed ? 'Уровень пройден!' : 'Почти получилось!'}</h1>
         <p>Найдено: ${s.score} из ${s.tasks.length}</p>
         <div class="reward">${CURRENCY.emoji} +${s.stars}${firstPass ? ` + бонус ${LEVEL_BONUS}` : ''}</div>
