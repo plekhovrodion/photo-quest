@@ -650,3 +650,8 @@ body::before, body::after, .bg-layer { animation: none; }
   .map button.stop { width: 20.6cqw; height: 20.6cqw; font-size: 9.4cqw; border-width: 1.5cqw; }
   .map button.stop .ico { width: 62%; height: 62%; }
 }
+
+/* Реплика строго по центру под заврика, динамик справа в своей колонке */
+.say-row { display: grid; grid-template-columns: 70px minmax(0, 1fr) 70px; align-items: center; gap: 0; }
+.say-row .bubble { grid-column: 2; }
+#app button.say-btn { grid-column: 3; justify-self: end; }
