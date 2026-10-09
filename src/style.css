@@ -322,3 +322,32 @@ button.stop .ico { width: 1em; height: 1em; vertical-align: 0; }
 button.cube-btn .cube-badge .ico { width: 70%; height: 70%; vertical-align: 0; }
 button.small .ico { width: 1.1em; height: 1.1em; vertical-align: 0; }
 button.level { overflow-wrap: anywhere; hyphens: auto; line-height: 1.1; }
+
+/* ===== Розовые кнопки (хорошо видны на фиолетовом фоне) ===== */
+:root { --btn: #db2777; --btn-d: #831843; --btn2: #ec4899; --btn2-d: #9d174d; }
+button.stop { border-color: var(--btn2); box-shadow: 0 5px 0 var(--btn2-d); }
+button.stop.next { border-color: #f59e0b; box-shadow: 0 5px 0 #b45309; }
+
+/* ===== Однотонные иконки ===== */
+.ico-flash { filter: none; }
+button.cube-btn .cube-icon { color: #3b0764; }
+button.cube-btn .cube-icon .ico-cat { filter: none; }
+.hint .ico { color: #92400e; }
+
+/* ===== Обрезка снимка ===== */
+.crop-overlay { position: fixed; inset: 0; z-index: 40; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 14px;
+  padding: calc(14px + var(--safe-top)) 16px 20px; background: rgba(20, 8, 60, .94); animation: fade-in .3s ease; touch-action: none; }
+.crop-close { position: absolute; top: calc(12px + var(--safe-top)); left: 12px; }
+.crop-title { color: #fff; font-size: 24px; font-weight: 800; margin: 0; text-align: center; padding: 0 76px; }
+.crop-stage { position: relative; max-width: 100%; user-select: none; -webkit-user-select: none; }
+.crop-img { display: block; max-width: min(100vw - 32px, 720px); max-height: calc(100dvh - 330px); width: auto; height: auto;
+  border-radius: 18px; pointer-events: none; }
+.crop-box { position: absolute; border: 4px solid #fff; border-radius: 10px; cursor: move; touch-action: none;
+  box-shadow: 0 0 0 9999px rgba(20, 8, 60, .62); }
+.crop-box .h { position: absolute; width: 38px; height: 38px; background: #ec4899; border: 4px solid #fff; border-radius: 50%; touch-action: none; }
+.crop-box .nw { left: -21px; top: -21px; cursor: nwse-resize; } .crop-box .ne { right: -21px; top: -21px; cursor: nesw-resize; }
+.crop-box .sw { left: -21px; bottom: -21px; cursor: nesw-resize; } .crop-box .se { right: -21px; bottom: -21px; cursor: nwse-resize; }
+.crop-actions { display: flex; flex-direction: column; gap: 16px; align-items: center; width: 100%; }
+/* тень рамки обрезки не должна затемнять заголовок и кнопки */
+.crop-title, .crop-actions { position: relative; z-index: 3; }
+.crop-close { z-index: 4; }

@@ -2,6 +2,7 @@ import './style.css';
 import { LEVELS, type Level, type Task } from './data/tasks';
 import { createGame, currentTask, canSkip, reduce, starsFor, MAX_ATTEMPTS, type Action, type GameState } from './game/state';
 import { takePhoto, compressPhoto } from './camera/capture';
+import { cropPhoto } from './camera/crop';
 import { verifyPhoto } from './api/verify';
 import { COLOR_RU } from './vision/names';
 import { preloadModel } from './vision/local';
@@ -104,8 +105,10 @@ async function capture() {
   dispatch({ type: 'start-camera' });
   const raw = await takePhoto();
   if (!raw) return dispatch({ type: 'cancel-camera' });
+  const framed = await cropPhoto(raw); // можно обрезать до предмета или взять весь кадр
+  if (!framed) return dispatch({ type: 'cancel-camera' });
   try {
-    const photo = await compressPhoto(raw);
+    const photo = await compressPhoto(framed);
     if (photoUrl) URL.revokeObjectURL(photoUrl);
     photoUrl = URL.createObjectURL(photo);
     dispatch({ type: 'photo-taken' });
