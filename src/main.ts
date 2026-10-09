@@ -76,9 +76,9 @@ const maxStars = (l: Level) => l.tasks.length * 3;
 
 const wallet = () => `<span class="chip coin" role="img" aria-label="Вспышек: ${progress.flashes}">${CURRENCY.emoji} ${progress.flashes}</span>`;
 
-function hud(left: string, mid = '', label = '') {
+function hud(left: string, mid = '', label = '', right = '') {
   const aria = label ? ` role="img" aria-label="${label}"` : ' aria-hidden="true"';
-  return `<div class="hud">${left}<div class="pips"${aria}>${mid}</div>${wallet()}</div>`;
+  return `<div class="hud">${left}<div class="pips"${aria}>${mid}</div><div class="hud-right">${right}${wallet()}</div></div>`;
 }
 
 function renderOnboarding(i = 0) {
@@ -101,13 +101,12 @@ function renderLevels() {
     return `<button class="level ${p?.passed ? 'done' : ''}" data-i="${i}">
       <span class="emoji-s" aria-hidden="true">${p?.passed ? '🏅' : l.emoji}</span>
       <span>${l.title}</span>
-      <small>${p ? `${CURRENCY.emoji} ${p.stars}/${maxStars(l)}` : `${l.tasks.length} заданий`}</small>
     </button>`;
   }).join('');
-  show(`${hud('<button id="howto" class="secondary small" aria-label="Как играть">❓</button>')}
+  show(`${hud('<button id="howto" class="secondary small" aria-label="Как играть">❓</button>', '', '',
+      '<button id="shop" class="secondary small" aria-label="Магазин">🛍</button>')}
     <div aria-hidden="true" class="mascot">📸</div><h1>ФотоКвест</h1><p>Выбери приключение!</p>
-    <div class="levels">${cards}</div>
-    <button id="shop" class="secondary">🛍 Магазин</button>`);
+    <div class="levels">${cards}</div>`);
   root.querySelectorAll<HTMLButtonElement>('.level').forEach((b) =>
     b.addEventListener('click', () => startLevel(LEVELS[Number(b.dataset.i)])),
   );
@@ -160,10 +159,8 @@ function render() {
       show(`${bar}<div aria-hidden="true" class="mascot">${level.emoji}</div>
         <div class="bubble">${task!.prompt}</div>${hint}
         ${notice ? `<div class="notice">${notice}</div>` : ''}
-        <button id="shoot">📷 Сфотографировать</button>
-        <button id="say" class="secondary small">🔊 Повторить</button>`);
+        <button id="shoot">📷 Сфотографировать</button>`);
       on('shoot', capture);
-      on('say', () => speak(task!.prompt));
       on('menu', toMenu);
       if (!notice) speak(task!.prompt);
       notice = '';
