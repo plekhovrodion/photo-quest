@@ -13,6 +13,7 @@ import { SLIDES, isOnboarded, markOnboarded } from './onboarding';
 import { loadProgress, recordTask, buy, canBuy, SHOP, CURRENCY, LEVEL_BONUS, type Progress } from './progress';
 
 import { createStore } from './storage/store';
+import { flashIcon, cameraIcon, speakerIcon, bulbIcon, shopIcon, levelIcon, starIcon, checkIcon, closeIcon, backIcon } from './ui/icons';
 import { isoPath, project, TW, TH, NODE_H, ROAD_H, WORLD, worldLayout } from './map/iso';
 
 type Palette = { top: string; left: string; right: string };
@@ -126,7 +127,7 @@ const art = (name: string, cls = '') => `<img class="char ${cls}" src="/art/${na
 
 const starRow = (n: number) =>
   `<div class="stars" role="img" aria-label="Звёзд: ${n} из 3">${[1, 2, 3]
-    .map((i) => `<span class="star ${i <= n ? 'on' : ''}" style="--d:${i * 0.25}s">★</span>`).join('')}</div>`;
+    .map((i) => `<span class="star ${i <= n ? 'on' : ''}" style="--d:${i * 0.25}s">${starIcon()}</span>`).join('')}</div>`;
 
 // Соня называет найденное: цвет для заданий на цвет, иначе предмет, который узнала модель.
 function sonyaSays(task: Task): string {
@@ -143,7 +144,7 @@ function grishaExplains(task: Task): string {
   return `${seen} Мы ищем: ${goalOf(task)}.`;
 }
 
-const wallet = () => `<span class="chip coin" role="img" aria-label="Вспышек: ${progress.flashes}">${CURRENCY.emoji} ${progress.flashes}</span>`;
+const wallet = () => `<span class="chip coin" role="img" aria-label="Вспышек: ${progress.flashes}">${flashIcon()}${progress.flashes}</span>`;
 
 function hud(left: string, mid = '', label = '', right = '') {
   const aria = label ? ` role="img" aria-label="${label}"` : ' aria-hidden="true"';
@@ -192,13 +193,13 @@ function renderLevels() {
     return `<button class="cube-btn ${p?.passed ? 'done' : ''}" data-i="${i}" aria-label="${l.title}"
       style="left:${(it.cx / W) * 100}%;top:${(it.top / H) * 100}%;width:${(WORLD.CUBE_W / W) * 100}%;--i:${i};--ph:${(i * 0.7).toFixed(1)}s">
       ${cubeSvg(CUBE_COLORS[i % CUBE_COLORS.length])}
-      <span class="cube-icon" aria-hidden="true">${l.emoji}</span>
-      ${p?.passed ? '<span class="cube-badge" aria-hidden="true">✓</span>' : ''}
+      <span class="cube-icon" aria-hidden="true">${levelIcon(l.id)}</span>
+      ${p?.passed ? `<span class="cube-badge" aria-hidden="true">${checkIcon()}</span>` : ''}
       <span class="cube-label">${l.title}</span>
     </button>`;
   }).join('');
-  show(`${hud('<button id="howto" class="secondary small" aria-label="Как играть">❓</button>', '', '',
-      '<button id="shop" class="secondary small" aria-label="Магазин">🛍</button>')}
+  show(`${hud('<button id="howto" class="secondary small" aria-label="Как играть">?</button>', '', '',
+      `<button id="shop" class="secondary small" aria-label="Магазин">${shopIcon()}</button>`)}
     ${art('ship')}<h1>Покажи нам мир!</h1><p>Выбери, что показать Грише и Соне</p>
     <div class="world" style="aspect-ratio:${W} / ${H.toFixed(0)}">${cubes}</div>`, 'screen-menu');
   root.querySelectorAll<HTMLButtonElement>('.cube-btn').forEach((b) =>
@@ -211,12 +212,12 @@ function renderLevels() {
 function renderShop() {
   const items = SHOP.map((it) => {
     const owned = progress.owned.includes(it.id);
-    const label = owned ? 'Твой!' : `${CURRENCY.emoji} ${it.price}`;
+    const label = owned ? 'Твой!' : `${flashIcon()}${it.price}`;
     const dis = owned || !canBuy(progress, it);
     return `<button class="level ${owned ? 'owned' : ''}" data-id="${it.id}" ${dis ? 'disabled' : ''} style="--i:${SHOP.indexOf(it)}">
-      <span class="emoji-s" aria-hidden="true">${it.emoji}</span><span>${it.name}</span><small>${label}</small></button>`;
+      <img class="shop-art" src="/art/${it.art}.svg" alt="" aria-hidden="true"><span>${it.name}</span><small class="price">${label}</small></button>`;
   }).join('');
-  show(`${hud('<button id="back" class="secondary small" aria-label="Назад">←</button>')}
+  show(`${hud(`<button id="back" class="secondary small" aria-label="Назад">${backIcon()}</button>`)}
     <h1>Магазин</h1><p>Трать ${CURRENCY.name} на друзей</p><div class="levels">${items}</div>`);
   root.querySelectorAll<HTMLButtonElement>('.level[data-id]').forEach((b) =>
     b.addEventListener('click', () => {
@@ -276,7 +277,7 @@ function renderMap(l: Level) {
     const st = stateOf(i);
     const done = st === 'done';
     return `<button class="stop ${st}" data-i="${i}" aria-label="Задание ${i + 1}${done ? ', найдено' : ''}"
-      style="left:${((p.sx - minX) / W) * 100}%;top:${((p.sy - NODE_H - minY) / H) * 100}%;--i:${i}">${done ? '✓' : i + 1}</button>`;
+      style="left:${((p.sx - minX) / W) * 100}%;top:${((p.sy - NODE_H - minY) / H) * 100}%;--i:${i}">${done ? checkIcon() : i + 1}</button>`;
   }).join('');
 
   const np = pos.find((q) => q.node === (next < 0 ? 0 : next))!;
@@ -285,7 +286,7 @@ function renderMap(l: Level) {
         style="left:${((np.sx - minX) / W) * 100}%;top:${((np.sy - NODE_H - minY) / H) * 100}%">` : '';
 
   const found = l.tasks.filter((t) => progress.found[t.id] !== undefined).length;
-  show(`${hud('<button id="back" class="secondary small" aria-label="Назад">←</button>')}
+  show(`${hud(`<button id="back" class="secondary small" aria-label="Назад">${backIcon()}</button>`)}
     <h1>${l.title}</h1><p>Найдено: ${found} из ${n}</p>
     <div class="map" style="aspect-ratio:${W.toFixed(1)} / ${H.toFixed(1)};--w:${W.toFixed(0)}">
       <svg viewBox="0 0 ${W.toFixed(1)} ${H.toFixed(1)}" aria-hidden="true">${tiles}</svg>${guide}${nodes}
@@ -299,7 +300,7 @@ function renderMap(l: Level) {
 function renderLevelDone() {
   show(`${hud('')}<div class="duo">${art('grisha-cheer', 'cheer')}${art('sonya-cheer', 'cheer')}</div><h1>Все найдено!</h1>
     <p>Ты справился со всей категорией «${level!.title}»</p>
-    <div class="reward">${CURRENCY.emoji} бонус +${LEVEL_BONUS}</div>
+    <div class="reward">${flashIcon()}бонус +${LEVEL_BONUS}</div>
     <button id="map" class="green">К заданиям</button>`);
   confetti(2200);
   on('map', toMap);
@@ -310,16 +311,16 @@ function render() {
   if (!state) return renderMap(level);
   const s = state;
   const task = currentTask(s);
-  const bar = hud('<button id="menu" class="secondary small" aria-label="К заданиям">✕</button>');
+  const bar = hud(`<button id="menu" class="secondary small" aria-label="К заданиям">${closeIcon()}</button>`);
   switch (s.phase) {
     case 'task':
     case 'camera': {
-      const hint = s.attempts > 0 && task!.hint ? `<div class="hint">💡 ${task!.hint}</div>` : '';
+      const hint = s.attempts > 0 && task!.hint ? `<div class="hint">${bulbIcon()}<span>${task!.hint}</span></div>` : '';
       show(`${bar}${art('grisha-happy', 'talking')}
         ${bubble(task!.prompt)}${hint}
         ${notice ? `<div class="notice">${notice}</div>` : ''}
-        <button id="shoot" class="breathe">📷 Сфотографировать</button>
-        <button id="say" class="secondary">🔊 Повторить</button>`);
+        <button id="shoot" class="breathe">${cameraIcon()}Сфотографировать</button>
+        <button id="say" class="secondary">${speakerIcon()}Повторить</button>`);
       on('shoot', capture);
       on('say', () => speak(task!.prompt));
       on('menu', toMap);
@@ -338,7 +339,7 @@ function render() {
         const says = sonyaSays(task!);
         show(`${bar}${art('sonya-cheer', 'cheer talking')}${bubble(says)}
           ${starRow(got)}
-          ${again ? '' : `<div class="reward">${CURRENCY.emoji} +${got}</div>`}
+          ${again ? '' : `<div class="reward">${flashIcon()}+${got}</div>`}
           <button id="next" class="green">Дальше</button>`, 'ok');
         confetti();
         speak(`${says} Молодец!`);

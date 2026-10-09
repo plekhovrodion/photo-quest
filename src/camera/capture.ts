@@ -1,3 +1,5 @@
+import { cameraIcon, imageIcon } from '../ui/icons';
+
 const MAX_SIDE = 1024;
 const QUALITY = 0.8;
 
@@ -54,8 +56,8 @@ function liveCamera(): Promise<Blob | null> {
       <video class="cam-video" autoplay playsinline muted></video>
       <p class="cam-msg" hidden></p>
       <div class="cam-actions">
-        <button class="cam-shoot" type="button">📸 Снять</button>
-        <button class="cam-file secondary" type="button" hidden>🖼 Выбрать файл</button>
+        <button class="cam-shoot" type="button">${cameraIcon()}Снять</button>
+        <button class="cam-file secondary" type="button" hidden>${imageIcon()}Выбрать файл</button>
         <button class="cam-cancel secondary" type="button">Отмена</button>
       </div>`;
     document.body.appendChild(overlay);

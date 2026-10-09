@@ -3,7 +3,7 @@ export interface LevelProgress {
   passed: boolean;
 }
 
-// Внутренняя валюта — «вспышки» ⚡ (как вспышка фотоаппарата).
+// Внутренняя валюта — «вспышки» (как вспышка фотоаппарата); значок рисуется в ui/icons.ts.
 export interface Progress {
   levels: Record<string, LevelProgress>;
   found: Record<string, number>; // id задания -> звёзды, с которыми оно найдено
@@ -13,23 +13,23 @@ export interface Progress {
 
 export interface ShopItem {
   id: string;
-  emoji: string;
+  art: string; // картинка друга-заврика в /art
   name: string;
   price: number;
 }
 
-export const CURRENCY = { emoji: '⚡', name: 'вспышки' };
+export const CURRENCY = { name: 'вспышки' };
 export const LEVEL_BONUS = 5;
 
 export const SHOP: ShopItem[] = [
-  { id: 'cat', emoji: '🐱', name: 'Котёнок', price: 10 },
-  { id: 'dog', emoji: '🐶', name: 'Щенок', price: 10 },
-  { id: 'rocket', emoji: '🚀', name: 'Ракета', price: 20 },
-  { id: 'unicorn', emoji: '🦄', name: 'Единорог', price: 30 },
-  { id: 'dino', emoji: '🦖', name: 'Динозавр', price: 40 },
-  { id: 'robot', emoji: '🤖', name: 'Робот', price: 50 },
-  { id: 'rainbow', emoji: '🌈', name: 'Радуга', price: 60 },
-  { id: 'crown', emoji: '👑', name: 'Корона', price: 100 },
+  { id: 'grisha', art: 'grisha-happy', name: 'Гриша', price: 10 },
+  { id: 'sonya', art: 'sonya-wave', name: 'Соня', price: 10 },
+  { id: 'walker', art: 'sonya-walk', name: 'Соня в пути', price: 20 },
+  { id: 'sonya-cheer', art: 'sonya-cheer', name: 'Весёлая Соня', price: 30 },
+  { id: 'grisha-cheer', art: 'grisha-cheer', name: 'Весёлый Гриша', price: 40 },
+  { id: 'jet-sonya', art: 'jet-1', name: 'Реактивная Соня', price: 50 },
+  { id: 'jet-grisha', art: 'jet-2', name: 'Реактивный Гриша', price: 60 },
+  { id: 'ship', art: 'ship', name: 'Космический корабль', price: 100 },
 ];
 
 const KEY = 'photoquest.progress.v2';

@@ -301,3 +301,24 @@ button.cube-btn:focus-visible { outline: 4px solid #fde68a; outline-offset: 6px;
 #bg::after { content: ''; position: absolute; inset: 0; pointer-events: none; opacity: 0; transition: opacity .9s ease;
   background: radial-gradient(ellipse at 50% 45%, rgba(30, 10, 95, .62), rgba(30, 10, 95, .4) 75%); }
 #bg.dim::after { opacity: 1; }
+
+
+/* ===== Иконки вместо эмодзи ===== */
+.ico { width: 1.15em; height: 1.15em; flex: none; display: inline-block; vertical-align: -.2em; }
+.ico-flash { filter: drop-shadow(0 2px 0 rgba(180, 83, 9, .35)); }
+button .ico { width: 1.2em; height: 1.2em; }
+.chip .ico, .reward .ico { width: 1.15em; height: 1.15em; margin-right: .1em; }
+.hint { display: flex; align-items: center; gap: 10px; text-align: left; }
+.hint .ico { width: 34px; height: 34px; }
+button.cube-btn .cube-icon { width: calc(var(--du) * 66); height: calc(var(--du) * 66); font-size: 0; top: calc(var(--du) * -2); }
+button.cube-btn .cube-icon .ico-cat { width: 100%; height: 100%; display: block; filter: drop-shadow(0 4px 3px rgba(10, 5, 40, .35)); }
+.shop-art { height: 92px; width: auto; max-width: 100%; object-fit: contain; display: block; margin: 0 auto 4px; }
+button.level .price { display: inline-flex; align-items: center; gap: 4px; }
+button.level small .ico { width: 1.1em; height: 1.1em; }
+
+.star .ico { width: 1em; height: 1em; vertical-align: 0; display: block; }
+.star { display: inline-flex; }
+button.stop .ico { width: 1em; height: 1em; vertical-align: 0; }
+button.cube-btn .cube-badge .ico { width: 70%; height: 70%; vertical-align: 0; }
+button.small .ico { width: 1.1em; height: 1.1em; vertical-align: 0; }
+button.level { overflow-wrap: anywhere; hyphens: auto; line-height: 1.1; }
