@@ -99,9 +99,12 @@ export function loadMobilenet(): Promise<MobilenetModel> {
 }
 
 // Запускаем загрузку обеих моделей в фоне (при старте игры и при входе в категорию).
-export function preloadModels(): void {
-  // CLIP тяжелее (~90 МБ), поэтому грузится после лёгких моделей и необязателен: без него игра работает на MobileNet и COCO.
-  Promise.all([loadMobilenet(), loadCoco()]).then(() => import('./clip')).then((m) => m.loadClip()).catch(() => {});
+export function preloadModels(withClip = true): void {
+  // CLIP тяжелее (~90 МБ) и запускается на основном потоке, поэтому грузится после лёгких моделей и только когда игрок уже в игре.
+  // Он необязателен: без него проверка работает на MobileNet и COCO.
+  const light = Promise.all([loadMobilenet(), loadCoco()]);
+  if (withClip) light.then(() => import('./clip')).then((m) => m.loadClip()).catch(() => {});
+  else light.catch(() => {});
 }
 
 export const modelsReady = (): boolean => status.coco >= 1 && status.mobilenet >= 1;

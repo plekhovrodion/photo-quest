@@ -655,3 +655,15 @@ body::before, body::after, .bg-layer { animation: none; }
 .say-row { display: grid; grid-template-columns: 70px minmax(0, 1fr) 70px; align-items: center; gap: 0; }
 .say-row .bubble { grid-column: 2; }
 #app button.say-btn { grid-column: 3; justify-self: end; }
+
+/* Переходы между экранами без «улёта»: старый экран гаснет на месте, новый мягко поднимается */
+#app.go-fwd, #app.go-back { animation: screen-in .3s ease-out both; }
+@keyframes screen-in { from { opacity: 0; transform: translateY(12px); } }
+.ghost.out-fwd, .ghost.out-back { animation: screen-out .2s ease-out forwards !important; }
+@keyframes screen-out { to { opacity: 0; } }
+
+/* Места на главной: нажатие чувствуется, но кнопка не убегает из-под курсора */
+button.cube-btn { touch-action: manipulation; -webkit-tap-highlight-color: transparent; }
+button.cube-btn .cube-in { transition: transform .15s ease-out; }
+@media (hover: hover) { button.cube-btn:hover .cube-in { transform: scale(1.04); } }
+button.cube-btn:active .cube-in { transform: scale(.97); transition: transform .06s; }

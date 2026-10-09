@@ -100,14 +100,14 @@ function on(id: string, fn: () => void) {
 
 function startLevel(l: Level) {
   if (!isUnlocked(progress, l.id)) return showUnlock(l);
-  preloadModels();
+  setTimeout(() => preloadModels(), 900); // тяжёлые модели грузим после перехода, чтобы экран открывался сразу
   level = l;
   state = null;
   render();
 }
 
 function startTask(task: Task) {
-  preloadModels();
+  setTimeout(() => preloadModels(), 900);
   state = createGame([task]);
   render();
 }
@@ -655,4 +655,4 @@ store.load().then((p) => {
 });
 
 // Готовим умное зрение заранее, пока ребёнок смотрит главный экран: к камере модели уже загружены.
-setTimeout(preloadModels, 600);
+setTimeout(() => preloadModels(false), 2500); // на главной грузим только лёгкие модели
