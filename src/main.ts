@@ -4,13 +4,14 @@ import { createGame, currentTask, canSkip, reduce, MAX_ATTEMPTS, type Action, ty
 import { takePhoto, compressPhoto } from './camera/capture';
 import { verifyPhoto } from './api/verify';
 import { playSuccess, playTryAgain, speak } from './audio/sounds';
-import { loadProgress, saveProgress, recordResult, isUnlocked, isPassed, type Progress } from './progress';
+import { loadProgress, saveProgress, recordResult, isPassed, buy, canBuy, SHOP, CURRENCY, LEVEL_BONUS, type Progress } from './progress';
 
 const root = document.getElementById('app')!;
 let progress: Progress = loadProgress();
 let level: Level | null = null;
 let state: GameState | null = null;
 let notice = '';
+let rewarded = false;
 let photoUrl = '';
 
 function dispatch(a: Action) {
@@ -30,15 +31,21 @@ function on(id: string, fn: () => void) {
 function startLevel(l: Level) {
   level = l;
   state = createGame(l.tasks);
+  rewarded = false;
   render();
 }
 
+// Начисляет награду один раз за прохождение, даже если экран перерисуется.
 function finishLevel() {
   const s = state!;
   const passed = isPassed(s.score, s.tasks.length);
-  progress = recordResult(progress, level!.id, s.stars, passed);
-  saveProgress(progress);
-  return passed;
+  const firstPass = passed && !progress.levels[level!.id]?.passed;
+  if (!rewarded) {
+    progress = recordResult(progress, level!.id, s.stars, passed);
+    saveProgress(progress);
+    rewarded = true;
+  }
+  return { passed, firstPass };
 }
 
 async function capture() {
@@ -63,27 +70,54 @@ async function capture() {
 
 const maxStars = (l: Level) => l.tasks.length * 3;
 
+function wallet() {
+  return `<div class="wallet">${CURRENCY.emoji} ${progress.flashes}</div>`;
+}
+
 function renderLevels() {
   const cards = LEVELS.map((l, i) => {
-    const open = isUnlocked(progress, i);
-    const p = progress[l.id];
-    return `<button class="level ${open ? '' : 'locked'}" data-i="${i}" ${open ? '' : 'disabled'}>
-      <span class="emoji-s">${open ? l.emoji : '🔒'}</span>
+    const p = progress.levels[l.id];
+    return `<button class="level" data-i="${i}">
+      <span class="emoji-s">${l.emoji}</span>
       <span>${l.title}</span>
-      <small>${p ? `⭐ ${p.stars}/${maxStars(l)}${p.passed ? ' ✓' : ''}` : `${l.tasks.length} заданий`}</small>
+      <small>${p ? `${CURRENCY.emoji} ${p.stars}/${maxStars(l)}${p.passed ? ' ✓' : ''}` : `${l.tasks.length} заданий`}</small>
     </button>`;
   }).join('');
-  show(`<h1>ФотоКвест</h1><p>Выбери уровень</p><div class="levels">${cards}</div>`);
+  show(`${wallet()}<h1>ФотоКвест</h1><p>Выбери любой уровень</p><div class="levels">${cards}</div>
+    <button id="shop" class="secondary">🛍 Магазин</button>`);
   root.querySelectorAll<HTMLButtonElement>('.level').forEach((b) =>
     b.addEventListener('click', () => startLevel(LEVELS[Number(b.dataset.i)])),
   );
+  on('shop', renderShop);
+}
+
+function renderShop() {
+  const items = SHOP.map((it) => {
+    const owned = progress.owned.includes(it.id);
+    const label = owned ? 'Твой!' : `${CURRENCY.emoji} ${it.price}`;
+    const dis = owned || !canBuy(progress, it);
+    return `<button class="level ${owned ? 'owned' : ''}" data-id="${it.id}" ${dis ? 'disabled' : ''}>
+      <span class="emoji-s">${it.emoji}</span><span>${it.name}</span><small>${label}</small></button>`;
+  }).join('');
+  show(`${wallet()}<h1>Магазин</h1><p>Трать ${CURRENCY.name} на друзей</p><div class="levels">${items}</div>
+    <button id="back" class="secondary">Назад</button>`);
+  root.querySelectorAll<HTMLButtonElement>('.level[data-id]').forEach((b) =>
+    b.addEventListener('click', () => {
+      const item = SHOP.find((x) => x.id === b.dataset.id)!;
+      progress = buy(progress, item);
+      saveProgress(progress);
+      playSuccess();
+      renderShop();
+    }),
+  );
+  on('back', renderLevels);
 }
 
 function render() {
   if (!state || !level) return renderLevels();
   const s = state;
   const task = currentTask(s);
-  const progressBar = `<div class="progress">${level.emoji} ${level.title} · задание ${Math.min(s.index + 1, s.tasks.length)} из ${s.tasks.length} · ⭐ ${s.stars}</div>`;
+  const progressBar = `<div class="progress">${level.emoji} ${level.title} · задание ${Math.min(s.index + 1, s.tasks.length)} из ${s.tasks.length} · ${CURRENCY.emoji} ${s.stars}</div>`;
   switch (s.phase) {
     case 'task':
     case 'camera': {
@@ -117,14 +151,15 @@ function render() {
       break;
     }
     case 'finish': {
-      const passed = finishLevel();
+      const { passed, firstPass } = finishLevel();
       const idx = LEVELS.indexOf(level);
       const next = LEVELS[idx + 1];
       show(`<div class="emoji">${passed ? '🏆' : '💪'}</div>
         <h1>${passed ? 'Уровень пройден!' : 'Почти получилось!'}</h1>
-        <p>Найдено: ${s.score} из ${s.tasks.length} · ⭐ ${s.stars}</p>
-        ${!passed ? `<p>Нужно найти хотя бы ${Math.ceil(s.tasks.length * PASS_RATIO)}, чтобы открыть дальше.</p>` : ''}
-        ${passed && next ? '<button id="nextlevel">Следующий уровень</button>' : ''}
+        <p>Найдено: ${s.score} из ${s.tasks.length}</p>
+        <p>${CURRENCY.emoji} +${s.stars}${firstPass ? ` и бонус +${LEVEL_BONUS} за уровень!` : ''}</p>
+        ${!passed ? `<p>Нужно найти хотя бы ${Math.ceil(s.tasks.length * PASS_RATIO)}, чтобы получить бонус за уровень.</p>` : ''}
+        ${next ? `<button id="nextlevel" class="${passed ? '' : 'secondary'}">Следующий уровень</button>` : ''}
         <button id="again" class="${passed && next ? 'secondary' : ''}">Сыграть ещё раз</button>
         <button id="menu" class="secondary">К уровням</button>`);
       speak(passed ? 'Уровень пройден!' : 'Почти получилось!');
