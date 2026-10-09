@@ -15,7 +15,7 @@ import { playSuccess, playTryAgain, speak } from './audio/sounds';
 import { SLIDES, isOnboarded, markOnboarded } from './onboarding';
 import { feed, setLook, stageOf, fedOf, lookOf, ZAVRIKS, ZAVRIK_NAME, HUES, HATS, BADGES, UNLOCK_STAGE, MAX_STAGE, zavrikOfArt, type ZavrikId } from './zavrik';
 import { hatSvg, badgeSvg } from './ui/accessories';
-import { pictoSvg } from './ui/pictos';
+import { objectSvg, colorBallSvg, fitObject } from './map/objects';
 import { album, toSticker, type Sticker } from './album';
 import { CLIP_OBJECTS } from './data/clip';
 import { loadProgress, recordTask, isUnlocked, canUnlock, unlockLevel, priceOf, CURRENCY, LEVEL_BONUS, type Progress } from './progress';
@@ -83,6 +83,7 @@ function show(html: string, cls = '') {
   root.className = quiet ? `${cls} quiet` : `${cls} go-${dir}`.trim();
   root.innerHTML = html;
   setTimeout(() => root.classList.remove('go-fwd', 'go-back'), 650);
+  root.querySelectorAll<SVGSVGElement>('svg.obj3d').forEach(fitObject);
   const b = root.querySelector<HTMLElement>('.bubble[data-say]');
   const typed = b?.querySelector<HTMLElement>('.typed');
   if (b && typed) typeText(typed, b.dataset.say ?? '', root.querySelector('.char'));
@@ -382,8 +383,8 @@ const COLOR_CSS: Record<string, string> = {
   purple: '#9333ea', pink: '#ec4899', brown: '#92400e', white: '#ffffff', black: '#111827', gray: '#9ca3af',
 };
 function taskCard(t: Task): string {
-  if (t.local?.kind === 'color') return `<div class="task-card"><span class="swatch" style="--c:${COLOR_CSS[t.local.color]}"></span></div>`;
-  const pic = pictoSvg(t.id.replace(/^object-/, ''));
+  if (t.local?.kind === 'color') return `<div class="task-card">${colorBallSvg(COLOR_CSS[t.local.color])}</div>`;
+  const pic = objectSvg(t.id.replace(/^object-/, ''));
   return pic ? `<div class="task-card">${pic}</div>` : '';
 }
 

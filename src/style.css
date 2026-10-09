@@ -584,3 +584,7 @@ button.cube-btn .cube-float { animation: none; }
 .spinner + p { animation: none; }
 body::before, body::after, .bg-layer { animation: none; }
 .screen-menu > .char { margin-top: 74px; height: clamp(120px, 19vh, 180px); }
+
+/* 3D-картинка задания */
+.task-card { width: 190px; height: 190px; background: radial-gradient(circle at 50% 40%, rgba(255, 255, 255, .3), rgba(255, 255, 255, .08) 75%); }
+.task-card .obj3d { width: 88%; height: 88%; overflow: visible; filter: drop-shadow(0 4px 0 rgba(10, 5, 40, .12)); }

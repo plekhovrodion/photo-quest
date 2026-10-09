@@ -1,12 +1,12 @@
 // Мини-диорамы «мест» для главного экрана: изометрические комнаты и дворики из простых фигур.
 // Маленький движок: коробки, цилиндры, шары, конусы и крыши рисуются в порядке «от дальнего к ближнему».
-const U = 20; // размер клетки: полуширина ромба
+export const U = 20; // размер клетки: полуширина ромба
 const CX = 100, CY = 70; // положение дальнего угла площадки на холсте 200x180
 
 type Pt = readonly [number, number];
-const P = (gx: number, gy: number, z = 0): Pt => [CX + (gx - gy) * U, CY + ((gx + gy) * U) / 2 - z];
-const fmt = (p: Pt) => `${p[0].toFixed(1)},${p[1].toFixed(1)}`;
-const poly = (pts: Pt[], fill: string, extra = '') => `<polygon points="${pts.map(fmt).join(' ')}" fill="${fill}"${extra ? ' ' + extra : ''}/>`;
+export const P = (gx: number, gy: number, z = 0): Pt => [CX + (gx - gy) * U, CY + ((gx + gy) * U) / 2 - z];
+export const fmt = (p: Pt) => `${p[0].toFixed(1)},${p[1].toFixed(1)}`;
+export const poly = (pts: Pt[], fill: string, extra = '') => `<polygon points="${pts.map(fmt).join(' ')}" fill="${fill}"${extra ? ' ' + extra : ''}/>`;
 
 const clamp = (n: number) => Math.max(0, Math.min(255, Math.round(n)));
 export function mix(hex: string, to: string, t: number): string {
@@ -17,10 +17,10 @@ export function mix(hex: string, to: string, t: number): string {
 // Три грани одного цвета: верх светлее, левая — основной, правая темнее.
 export const tones = (c: string) => ({ t: mix(c, '#ffffff', 0.32), l: c, r: mix(c, '#000000', 0.26) });
 
-interface Item { k: number; svg: string }
-const depth = (x: number, y: number, z: number) => x + y + z / 100;
+export interface Item { k: number; svg: string }
+export const depth = (x: number, y: number, z: number) => x + y + z / 100;
 
-const box = (x: number, y: number, w: number, d: number, h: number, c: string, z = 0, k?: number): Item => {
+export const box = (x: number, y: number, w: number, d: number, h: number, c: string, z = 0, k?: number): Item => {
   const T = tones(c), z1 = z + h;
   return {
     k: k ?? depth(x + w / 2, y + d / 2, z),
@@ -31,7 +31,7 @@ const box = (x: number, y: number, w: number, d: number, h: number, c: string, z
   };
 };
 
-const cyl = (x: number, y: number, r: number, h: number, c: string, z = 0, k?: number): Item => {
+export const cyl = (x: number, y: number, r: number, h: number, c: string, z = 0, k?: number): Item => {
   const T = tones(c), R = r * U * 1.4, [bx, by] = P(x, y, z), [, ty] = P(x, y, z + h);
   return {
     k: k ?? depth(x, y, z) + 0.2,
@@ -42,7 +42,7 @@ const cyl = (x: number, y: number, r: number, h: number, c: string, z = 0, k?: n
   };
 };
 
-const ball = (x: number, y: number, r: number, c: string, z = 0, k?: number): Item => {
+export const ball = (x: number, y: number, r: number, c: string, z = 0, k?: number): Item => {
   const [bx, by] = P(x, y, z + r);
   return {
     k: k ?? depth(x, y, z) + 0.3,
@@ -51,7 +51,7 @@ const ball = (x: number, y: number, r: number, c: string, z = 0, k?: number): It
   };
 };
 
-const cone = (x: number, y: number, r: number, h: number, c: string, z = 0, k?: number): Item => {
+export const cone = (x: number, y: number, r: number, h: number, c: string, z = 0, k?: number): Item => {
   const T = tones(c), R = r * U * 1.4, [bx, by] = P(x, y, z), [, ty] = P(x, y, z + h);
   return {
     k: k ?? depth(x, y, z) + 0.2,
@@ -61,7 +61,7 @@ const cone = (x: number, y: number, r: number, h: number, c: string, z = 0, k?: 
 };
 
 // Двускатная крыша: конёк вдоль оси gy.
-const roof = (x: number, y: number, w: number, d: number, h: number, c: string, z: number, k?: number): Item => {
+export const roof = (x: number, y: number, w: number, d: number, h: number, c: string, z: number, k?: number): Item => {
   const T = tones(c), mx = x + w / 2;
   return {
     k: k ?? depth(x + w / 2, y + d / 2, z) + 0.5,
@@ -72,9 +72,9 @@ const roof = (x: number, y: number, w: number, d: number, h: number, c: string, 
 };
 
 // Плоские детали на гранях: окно, дверь, картина.
-const faceL = (x0: number, x1: number, y: number, z0: number, z1: number, c: string, k: number): Item =>
+export const faceL = (x0: number, x1: number, y: number, z0: number, z1: number, c: string, k: number): Item =>
   ({ k, svg: poly([P(x0, y, z0), P(x1, y, z0), P(x1, y, z1), P(x0, y, z1)], c) });
-const faceR = (x: number, y0: number, y1: number, z0: number, z1: number, c: string, k: number): Item =>
+export const faceR = (x: number, y0: number, y1: number, z0: number, z1: number, c: string, k: number): Item =>
   ({ k, svg: poly([P(x, y0, z0), P(x, y1, z0), P(x, y1, z1), P(x, y0, z1)], c) });
 
 function platform(top: string): string {
