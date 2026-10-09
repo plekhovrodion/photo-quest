@@ -1,5 +1,3 @@
-import { PASS_RATIO } from './data/tasks';
-
 export interface LevelProgress {
   stars: number;
   passed: boolean;
@@ -8,6 +6,7 @@ export interface LevelProgress {
 // Внутренняя валюта — «вспышки» ⚡ (как вспышка фотоаппарата).
 export interface Progress {
   levels: Record<string, LevelProgress>;
+  found: Record<string, number>; // id задания -> звёзды, с которыми оно найдено
   flashes: number;
   owned: string[];
 }
@@ -34,7 +33,7 @@ export const SHOP: ShopItem[] = [
 ];
 
 const KEY = 'photoquest.progress.v2';
-const empty = (): Progress => ({ levels: {}, flashes: 0, owned: [] });
+const empty = (): Progress => ({ levels: {}, found: {}, flashes: 0, owned: [] });
 
 export function loadProgress(): Progress {
   try {
@@ -53,19 +52,26 @@ export function saveProgress(p: Progress): void {
   }
 }
 
-export const isPassed = (found: number, total: number): boolean => found / total >= PASS_RATIO;
-
-// Фиксирует результат прохождения и начисляет вспышки.
-// Бонус LEVEL_BONUS даётся один раз — за первое прохождение уровня.
-export function recordResult(p: Progress, levelId: string, earned: number, passed: boolean): Progress {
-  const prev = p.levels[levelId];
-  const bonus = passed && !prev?.passed ? LEVEL_BONUS : 0;
+// Награда даётся один раз за каждое найденное задание, чтобы вспышки нельзя было фармить повтором.
+// Бонус LEVEL_BONUS — один раз, когда найдены все задания категории.
+export function recordTask(
+  p: Progress,
+  level: { id: string; tasks: { id: string }[] },
+  taskId: string,
+  earned: number,
+): { progress: Progress; levelDone: boolean } {
+  if (p.found[taskId] !== undefined) return { progress: p, levelDone: false };
+  const found = { ...p.found, [taskId]: earned };
+  const all = level.tasks.every((t) => found[t.id] !== undefined);
+  const levelDone = all && !p.levels[level.id]?.passed;
+  const stars = level.tasks.reduce((n, t) => n + (found[t.id] ?? 0), 0);
   return {
-    ...p,
-    flashes: p.flashes + earned + bonus,
-    levels: {
-      ...p.levels,
-      [levelId]: { stars: Math.max(prev?.stars ?? 0, earned), passed: (prev?.passed ?? false) || passed },
+    levelDone,
+    progress: {
+      ...p,
+      found,
+      flashes: p.flashes + earned + (levelDone ? LEVEL_BONUS : 0),
+      levels: all ? { ...p.levels, [level.id]: { stars, passed: true } } : p.levels,
     },
   };
 }

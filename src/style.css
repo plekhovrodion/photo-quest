@@ -103,3 +103,15 @@ button.level small { font-size: 15px; font-weight: 700; color: #3d4a6b; }
 
 .hud-right { display: flex; align-items: center; gap: 8px; }
 button.level:active:not(:disabled) { box-shadow: none; transform: scale(.97); }
+
+/* Карта заданий внутри категории */
+.map { position: relative; width: min(100%, 320px); }
+.map svg { position: absolute; inset: 0; width: 100%; height: 100%; overflow: visible; }
+.map path { fill: none; stroke: #fff; stroke-width: 8; stroke-linecap: round; stroke-dasharray: 2 16; }
+button.stop { position: absolute; transform: translate(-50%, -50%); width: 72px; height: 72px; min-width: 0; min-height: 0;
+  padding: 0; border-radius: 50%; font-size: 30px; font-weight: 900; color: var(--ink); background: #fff;
+  box-shadow: none; border: 5px solid var(--accent); }
+button.stop.done { background: var(--ok); border-color: var(--ok-d); color: #fff; }
+button.stop.next { animation: pulse 1.6s ease-in-out infinite; }
+@keyframes pulse { 50% { transform: translate(-50%, -50%) scale(1.12); } }
+button.stop:active:not(:disabled) { transform: translate(-50%, -50%) scale(.94); box-shadow: none; }
