@@ -1,3 +1,4 @@
+import { playRecorded, onRecordedFail } from './voice';
 let ctx: AudioContext | null = null;
 
 function tone(freq: number, start: number, dur: number, type: OscillatorType = 'sine') {
@@ -29,10 +30,19 @@ export const VOICE_ENABLED = true;
 // queue = true: договорить предыдущую фразу, а не обрывать её.
 export function speak(text: string, queue = false) {
   if (!VOICE_ENABLED) return;
+  if (!queue) {
+    if ('speechSynthesis' in window) speechSynthesis.cancel();
+    if (playRecorded(text)) return;
+  }
+  speakBrowser(text, queue);
+}
+
+function speakBrowser(text: string, queue: boolean) {
   if (!('speechSynthesis' in window)) return;
-  if (!queue) speechSynthesis.cancel();
   const u = new SpeechSynthesisUtterance(text);
   u.lang = 'ru-RU';
   u.rate = 0.9;
   speechSynthesis.speak(u);
 }
+
+onRecordedFail((t) => speakBrowser(t, false));
