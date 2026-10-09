@@ -11,6 +11,8 @@ export interface Progress {
   found: Record<string, number>; // id задания -> звёзды, с которыми оно найдено
   flashes: number;
   owned: string[]; // id мест (категорий), открытых за вспышки
+  fed?: Record<string, number>; // сколько вспышек скормлено заврикам (id заврика -> число)
+  look?: Record<string, { hue: number; hat: string | null; badge: string | null }>; // внешний вид заврика
 }
 
 export const CURRENCY = { name: 'вспышки' };
@@ -79,10 +81,10 @@ export function recordTask(
 }
 
 // Вспышки выводятся из найденного и купленного, поэтому при слиянии двух устройств не теряются траты.
-export function computeFlashes(p: Pick<Progress, 'found' | 'levels' | 'owned'>): number {
+export function computeFlashes(p: Pick<Progress, 'found' | 'levels' | 'owned' | 'fed'>): number {
   const earned = Object.values(p.found).reduce((n, v) => n + v, 0);
   const bonuses = Object.values(p.levels).filter((l) => l.passed).length * LEVEL_BONUS;
-  const spent = p.owned.reduce((n, id) => n + priceOf(id), 0);
+  const spent = p.owned.reduce((n, id) => n + priceOf(id), 0) + Object.values(p.fed ?? {}).reduce((n, v) => n + v, 0);
   return Math.max(0, earned + bonuses - spent);
 }
 
@@ -96,5 +98,8 @@ export function mergeProgress(a: Progress, b: Progress): Progress {
     levels[id] = { stars: Math.max(prev?.stars ?? 0, lp.stars), passed: (prev?.passed ?? false) || lp.passed };
   }
   const owned = [...new Set([...a.owned, ...b.owned])];
-  return { found, levels, owned, flashes: computeFlashes({ found, levels, owned }) };
+  const fed: Record<string, number> = { ...(a.fed ?? {}) };
+  for (const [id, n] of Object.entries(b.fed ?? {})) fed[id] = Math.max(fed[id] ?? 0, n);
+  const look = { ...(b.look ?? {}), ...(a.look ?? {}) }; // внешний вид: приоритет у текущего устройства
+  return { found, levels, owned, fed, look, flashes: computeFlashes({ found, levels, owned, fed }) };
 }

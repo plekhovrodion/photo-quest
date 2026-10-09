@@ -13,12 +13,14 @@ import { typeText, stopTyping } from './fx/typewriter';
 import { setBackground } from './fx/background';
 import { playSuccess, playTryAgain, speak } from './audio/sounds';
 import { SLIDES, isOnboarded, markOnboarded } from './onboarding';
+import { feed, setLook, stageOf, fedOf, lookOf, ZAVRIKS, ZAVRIK_NAME, HUES, HATS, BADGES, UNLOCK_STAGE, MAX_STAGE, zavrikOfArt, type ZavrikId } from './zavrik';
+import { hatSvg, badgeSvg } from './ui/accessories';
 import { album, toSticker, type Sticker } from './album';
 import { CLIP_OBJECTS } from './data/clip';
 import { loadProgress, recordTask, isUnlocked, canUnlock, unlockLevel, priceOf, CURRENCY, LEVEL_BONUS, type Progress } from './progress';
 
 import { createStore } from './storage/store';
-import { flashIcon, cameraIcon, speakerIcon, bulbIcon, lockIcon, starIcon, checkIcon, closeIcon, backIcon, albumIcon } from './ui/icons';
+import { flashIcon, cameraIcon, speakerIcon, bulbIcon, lockIcon, starIcon, checkIcon, closeIcon, backIcon, albumIcon, zavrikIcon } from './ui/icons';
 import { isoPath, project, TW, TH, NODE_H, ROAD_H, WORLD, worldLayout } from './map/iso';
 import { placeSvg } from './map/places';
 
@@ -30,7 +32,8 @@ let progress: Progress = loadProgress();
 let level: Level | null = null;
 let state: GameState | null = null;
 let notice = '';
-let view: 'album' | null = null;
+let view: 'album' | 'zavrik' | null = null;
+let zv: ZavrikId = 'sonya';
 const stickers = new Map<string, Sticker>();
 let stickerNew: boolean | null = null; // null — наклейки нет, true — новая, false — фото обновлено
 void album.all().then((all) => all.forEach((x) => stickers.set(x.id, x)));
@@ -57,15 +60,18 @@ let navDir: 'fwd' | 'back' = 'fwd';
 const goBack = () => { navDir = 'back'; };
 const reduceMotion = () => matchMedia('(prefers-reduced-motion: reduce)').matches;
 
+let quietNext = false;
 function show(html: string, cls = '') {
   stopTyping();
   explainToken++; // ответ ИИ для прошлого экрана уже не нужен
   setBackground(level?.id ?? null); // у главной и у каждой категории свой фон
   const dir = navDir;
   navDir = 'fwd';
+  const quiet = quietNext; // перерисовка внутри экрана без перелистывания
+  quietNext = false;
   document.querySelectorAll('.ghost').forEach((g) => g.remove());
   // Старый экран остаётся поверх копией и уезжает в сторону, пока новый въезжает с другой.
-  if (!reduceMotion() && root.firstElementChild) {
+  if (!quiet && !reduceMotion() && root.firstElementChild) {
     const ghost = document.createElement('div');
     ghost.className = `ghost out-${dir}`;
     ghost.setAttribute('aria-hidden', 'true');
@@ -73,7 +79,7 @@ function show(html: string, cls = '') {
     document.body.appendChild(ghost);
     setTimeout(() => ghost.remove(), 520);
   }
-  root.className = `${cls} go-${dir}`.trim();
+  root.className = quiet ? `${cls} quiet` : `${cls} go-${dir}`.trim();
   root.innerHTML = html;
   setTimeout(() => root.classList.remove('go-fwd', 'go-back'), 650);
   const b = root.querySelector<HTMLElement>('.bubble[data-say]');
@@ -166,7 +172,8 @@ async function capture() {
 
 
 // Картинки заврёнков Гриши и Сони (Figma «Иллюстрации. Гриша и Соня. Заврики»).
-const art = (name: string, cls = '') => `<img class="char ${cls}" src="/art/${name}.svg" alt="" aria-hidden="true">`;
+const art = (name: string, cls = '') =>
+  `<img class="char ${cls}" src="/art/${name}.svg" alt="" aria-hidden="true" style="--hue:${lookOf(progress, zavrikOfArt(name)).hue}deg">`;
 
 const starRow = (n: number) =>
   `<div class="stars" role="img" aria-label="Звёзд: ${n} из 3">${[1, 2, 3]
@@ -224,7 +231,7 @@ function showFlashInfo() {
       <li>Вспышки — награда за каждый найденный предмет.</li>
       <li>Нашёл с первой попытки — 3 вспышки, со второй — 2, с третьей — 1.</li>
       <li>Нашёл всё в категории — ещё ${LEVEL_BONUS} вспышек в подарок.</li>
-      <li>На вспышки открываются новые места: кухня, комната, школа и другие.</li>
+      <li>Вспышками можно кормить Гришу и Соню: они растут, меняют цвет и получают шапки и значки.</li>
     </ul>
     <button class="fh-ok secondary" type="button">Понятно</button>
   </div>`;
@@ -290,7 +297,7 @@ function renderLevels() {
       <span class="cube-label">${l.title}</span></span></span>
     </button>`;
   }).join('');
-  show(`${hud('<button id="howto" class="secondary small" aria-label="Как играть">?</button>', '', '', `<button id="album" class="secondary small" aria-label="Мои находки">${albumIcon()}</button>`)}
+  show(`${hud('<button id="howto" class="secondary small" aria-label="Как играть">?</button>', '', '', `<button id="zavrik" class="secondary small" aria-label="Заврики">${zavrikIcon()}</button><button id="album" class="secondary small" aria-label="Мои находки">${albumIcon()}</button>`)}
     ${art('jet-1')}<h1>Покажи нам мир!</h1><p>Выбери, что показать Грише и Соне</p>
     <div class="world" style="aspect-ratio:${W} / ${H.toFixed(0)}">${cubes}</div>`, 'screen-menu');
   root.querySelectorAll<HTMLButtonElement>('.cube-btn').forEach((b) =>
@@ -298,6 +305,7 @@ function renderLevels() {
   );
   on('howto', () => renderOnboarding());
   on('album', openAlbum);
+  on('zavrik', () => { view = 'zavrik'; render(); });
 }
 
 
@@ -316,6 +324,81 @@ function askConfirm(task: Task): Promise<'yes' | 'no' | 'closer'> {
     on('cf-no', () => resolve('no'));
     on('cf-closer', () => resolve('closer'));
     on('menu', toMap);
+  });
+}
+
+// Экран «Заврики»: кормим вспышками, растим, одеваем.
+const ZV_ART: Record<ZavrikId, string> = { grisha: 'jet-2', sonya: 'sonya-wave' };
+const STAGE_TITLE = ['Малыш', 'Подросток', 'Смельчак', 'Герой', 'Легенда'];
+
+function renderZavrik(quiet = false) {
+  quietNext = quiet;
+  const id = zv;
+  const fed = fedOf(progress, id);
+  const st = stageOf(fed);
+  const look = lookOf(progress, id);
+  const pct = st.need ? Math.round((st.into / st.need) * 100) : 100;
+  const tabs = ZAVRIKS.map((z) => `<button class="zv-tab ${z === id ? 'on' : ''}" data-z="${z}" aria-pressed="${z === id}">${ZAVRIK_NAME[z]}<small>ур. ${stageOf(fedOf(progress, z)).stage}</small></button>`).join('');
+  const lock = (need: number) => `<span class="zv-lock">${lockIcon()}ур. ${need}</span>`;
+  const chip = (kind: string, val: string, on: boolean, ok: boolean, inner: string, label: string) =>
+    `<button class="zv-chip ${on ? 'on' : ''}" data-k="${kind}" data-v="${val}" ${ok ? '' : 'disabled'} aria-label="${label}${ok ? '' : ', закрыто'}" aria-pressed="${on}">${inner}</button>`;
+  const hues = HUES.map((h) => chip('hue', String(h), look.hue === h, st.stage >= UNLOCK_STAGE.color,
+    `<span class="zv-dot" style="filter:hue-rotate(${h}deg)"></span>`, 'Цвет')).join('');
+  const hats = [chip('hat', '', look.hat === null, true, '—', 'Без шапки'), ...HATS.map((h) =>
+    chip('hat', h.id, look.hat === h.id, st.stage >= h.stage, hatSvg(h.id, 'zv-mini'), h.name))].join('');
+  const badges = [chip('badge', '', look.badge === null, true, '—', 'Без значка'), ...BADGES.map((b) =>
+    chip('badge', b.id, look.badge === b.id, st.stage >= b.stage, badgeSvg(b.id, 'zv-mini'), b.name))].join('');
+  const next = st.need ? `${st.into} из ${st.need}` : 'самый большой';
+  show(`${hud(`<button id="back" class="secondary small" aria-label="Назад">${backIcon()}</button>`)}
+    <h1>Заврики</h1>
+    <div class="zv-tabs">${tabs}</div>
+    <div class="zv-stage s${st.stage}" style="--hue:${look.hue}deg;aspect-ratio:${id === 'grisha' ? '118 / 222' : '117 / 190'}">
+      <img class="zv-char" src="/art/${ZV_ART[id]}.svg" alt="${ZAVRIK_NAME[id]}">
+      ${look.hat ? hatSvg(look.hat, `acc-hat hat-${id}`) : ''}${look.badge ? badgeSvg(look.badge, `acc-badge badge-${id}`) : ''}
+    </div>
+    <div class="zv-info"><b>${ZAVRIK_NAME[id]}: ${STAGE_TITLE[st.stage - 1]}, уровень ${st.stage}</b>
+      <div class="zv-bar" role="progressbar" aria-valuenow="${pct}" aria-valuemin="0" aria-valuemax="100"><i style="width:${pct}%"></i></div>
+      <small>${st.need ? `До следующего уровня: ${next}` : 'Выросли до самого большого уровня!'}</small></div>
+    <button id="feed" class="breathe" ${progress.flashes < 1 ? 'disabled' : ''}>${flashIcon()}Покормить за 1 вспышку</button>
+    <div class="zv-wardrobe">
+      <div class="zv-row"><span>Цвет ${st.stage >= UNLOCK_STAGE.color ? '' : lock(UNLOCK_STAGE.color)}</span><div>${hues}</div></div>
+      <div class="zv-row"><span>Шапка ${st.stage >= UNLOCK_STAGE.hat ? '' : lock(UNLOCK_STAGE.hat)}</span><div>${hats}</div></div>
+      <div class="zv-row"><span>Значок ${st.stage >= UNLOCK_STAGE.badge ? '' : lock(UNLOCK_STAGE.badge)}</span><div>${badges}</div></div>
+    </div>`, 'screen-zavrik');
+  on('back', () => { goBack(); view = null; render(); });
+  root.querySelectorAll<HTMLButtonElement>('.zv-tab').forEach((b) =>
+    b.addEventListener('click', () => { zv = b.dataset.z as ZavrikId; renderZavrik(true); }));
+  root.querySelectorAll<HTMLButtonElement>('.zv-chip:not([disabled])').forEach((b) =>
+    b.addEventListener('click', () => {
+      const v = b.dataset.v!;
+      const patch = b.dataset.k === 'hue' ? { hue: Number(v) } : b.dataset.k === 'hat' ? { hat: v || null } : { badge: v || null };
+      progress = setLook(progress, id, patch);
+      void store.save(progress);
+      renderZavrik(true);
+    }));
+  on('feed', () => {
+    const res = feed(progress, id);
+    if (res.progress === progress) return;
+    progress = res.progress;
+    void store.save(progress);
+    playSuccess();
+    if (res.levelUp) { confetti(1600); speak(`${ZAVRIK_NAME[id]} вырос! Уровень ${res.levelUp}!`, false, 'sonya'); }
+    renderZavrik(true);
+    const stage = root.querySelector('.zv-stage');
+    stage?.classList.add('chomp');
+    const spark = document.createElement('span');
+    spark.className = 'zv-spark';
+    spark.innerHTML = flashIcon();
+    stage?.appendChild(spark);
+    if (res.levelUp) {
+      const t = document.createElement('div');
+      t.className = 'zv-up';
+      const unlock = res.levelUp === UNLOCK_STAGE.color ? 'Теперь можно менять цвет!' : res.levelUp === UNLOCK_STAGE.hat ? 'Открылись шапки!'
+        : res.levelUp === UNLOCK_STAGE.badge ? 'Открылись значки!' : res.levelUp === MAX_STAGE ? 'Открылась корона!' : '';
+      t.textContent = `Уровень ${res.levelUp}! ${unlock}`;
+      root.appendChild(t);
+      setTimeout(() => t.remove(), 3200);
+    }
   });
 }
 
@@ -506,6 +589,7 @@ function renderLevelDone() {
 
 function render() {
   if (view === 'album') return renderAlbum();
+  if (view === 'zavrik') return renderZavrik();
   if (!level) return isOnboarded() ? renderLevels() : renderOnboarding();
   if (!state) return renderMap(level);
   const s = state;
