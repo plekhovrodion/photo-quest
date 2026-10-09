@@ -23,8 +23,8 @@ export function isoPath(n: number): Cell[] {
 
 export const project = (gx: number, gy: number) => ({ sx: ((gx - gy) * TW) / 2, sy: ((gx + gy) * TH) / 2 });
 
-// Главная: категории — парящие кубы в два столбика со сдвигом (единицы — «дизайн-пиксели» ширины 360).
-export const WORLD = { W: 360, CUBE_W: 150, CUBE_H: 126, LABEL_H: 36, ROW: 172, OFFSET: 86 };
+// Главная: категории — «места» (изометрические диорамы) в два столбика со сдвигом (единицы — «дизайн-пиксели» ширины 360).
+export const WORLD = { W: 360, CUBE_W: 165, CUBE_H: 150, LABEL_H: 36, ROW: 196, OFFSET: 98 };
 
 export interface WorldItem { cx: number; top: number }
 

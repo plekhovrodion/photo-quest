@@ -18,6 +18,7 @@ import { loadProgress, recordTask, buy, canBuy, SHOP, CURRENCY, LEVEL_BONUS, typ
 import { createStore } from './storage/store';
 import { flashIcon, cameraIcon, speakerIcon, bulbIcon, shopIcon, starIcon, checkIcon, closeIcon, backIcon } from './ui/icons';
 import { isoPath, project, TW, TH, NODE_H, ROAD_H, WORLD, worldLayout } from './map/iso';
+import { placeSvg } from './map/places';
 
 type Palette = { top: string; left: string; right: string };
 
@@ -174,7 +175,45 @@ function grishaExplains(task: Task): string {
   return `${seen} Мы ищем: ${goalOf(task)}.`;
 }
 
-const wallet = () => `<span class="chip coin" role="img" aria-label="Вспышек: ${progress.flashes}">${flashIcon()}${progress.flashes}</span>`;
+const wallet = () =>
+  `<span class="chip coin" role="button" tabindex="0" aria-label="Вспышек: ${progress.flashes}. Нажми, чтобы узнать, что это такое">${flashIcon()}${progress.flashes}</span>`;
+
+// Окно «Что такое вспышки?»: открывается по нажатию на счётчик на любом экране.
+function showFlashInfo() {
+  if (document.querySelector('.modal-overlay')) return;
+  const canShop = /screen-(menu|map)/.test(root.className);
+  const overlay = document.createElement('div');
+  overlay.className = 'modal-overlay';
+  overlay.setAttribute('role', 'dialog');
+  overlay.setAttribute('aria-modal', 'true');
+  overlay.setAttribute('aria-labelledby', 'fh-title');
+  overlay.innerHTML = `<div class="modal">
+    ${art('sonya-cheer', 'small')}
+    <h2 id="fh-title">Что такое вспышки?</h2>
+    <p class="fh-balance">${flashIcon()}У тебя ${progress.flashes}</p>
+    <ul class="fh-list">
+      <li>Вспышки — награда за каждый найденный предмет.</li>
+      <li>Нашёл с первой попытки — 3 вспышки, со второй — 2, с третьей — 1.</li>
+      <li>Нашёл всё в категории — ещё ${LEVEL_BONUS} вспышек в подарок.</li>
+      <li>Вспышки можно потратить в магазине на новых друзей.</li>
+    </ul>
+    ${canShop ? '<button class="fh-shop" type="button">В магазин</button>' : ''}
+    <button class="fh-ok secondary" type="button">Понятно</button>
+  </div>`;
+  document.body.appendChild(overlay);
+  const close = () => { overlay.remove(); removeEventListener('keydown', onKey); };
+  const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape') close(); };
+  addEventListener('keydown', onKey);
+  overlay.addEventListener('click', (e) => { if (e.target === overlay) close(); });
+  overlay.querySelector('.fh-ok')!.addEventListener('click', close);
+  overlay.querySelector('.fh-shop')?.addEventListener('click', () => { close(); level = null; state = null; renderShop(); });
+  overlay.querySelector<HTMLElement>('.fh-ok')!.focus();
+}
+document.addEventListener('click', (e) => { if ((e.target as Element).closest('.chip.coin')) showFlashInfo(); });
+document.addEventListener('keydown', (e) => {
+  const t = e.target as Element;
+  if ((e.key === 'Enter' || e.key === ' ') && t.matches?.('.chip.coin')) { e.preventDefault(); showFlashInfo(); }
+});
 
 function hud(left: string, mid = '', label = '', right = '') {
   const aria = label ? ` role="img" aria-label="${label}"` : ' aria-hidden="true"';
@@ -195,28 +234,6 @@ function renderOnboarding(i = 0) {
   on('oskip', done);
 }
 
-// Цвета граней кубов по категориям: верх светлее, левая грань средняя, правая тёмная.
-const CUBE_COLORS: Palette[] = [
-  { top: '#fda4af', left: '#e11d48', right: '#9f1239' }, // цвета
-  { top: '#fcd34d', left: '#d97706', right: '#92400e' }, // кухня
-  { top: '#7dd3fc', left: '#0284c7', right: '#075985' }, // комната
-  { top: '#c4b5fd', left: '#7c3aed', right: '#4c1d95' }, // школа
-  { top: '#99f6e4', left: '#0d9488', right: '#115e59' }, // ванная
-  { top: '#f9a8d4', left: '#db2777', right: '#9d174d' }, // прихожая
-  { top: '#fdba74', left: '#ea580c', right: '#9a3412' }, // еда
-  { top: '#86efac', left: '#16a34a', right: '#166534' }, // двор и лес
-];
-
-// Куб 160x80 (ромб) и толщина 40: верхняя грань — ромб, две боковые — параллелограммы; под ним тень.
-function cubeSvg(c: Palette): string {
-  return `<svg viewBox="0 0 160 136" aria-hidden="true">
-    <ellipse cx="80" cy="124" rx="58" ry="10" fill="rgba(10,5,40,.35)"/>
-    <polygon points="0,40 80,80 80,120 0,80" fill="${c.left}"/>
-    <polygon points="160,40 80,80 80,120 160,80" fill="${c.right}"/>
-    <polygon points="80,0 160,40 80,80 0,40" fill="${c.top}"/>
-  </svg>`;
-}
-
 function renderLevels() {
   const { W, H, items } = worldLayout(LEVELS.length);
   const cubes = LEVELS.map((l, i) => {
@@ -224,7 +241,7 @@ function renderLevels() {
     const it = items[i];
     return `<button class="cube-btn ${p?.passed ? 'done' : ''}" data-i="${i}" aria-label="${l.title}"
       style="left:${(it.cx / W) * 100}%;top:${(it.top / H) * 100}%;width:${(WORLD.CUBE_W / W) * 100}%;--i:${i};--ph:${(i * 0.7).toFixed(1)}s">
-      ${cubeSvg(CUBE_COLORS[i % CUBE_COLORS.length])}
+      ${placeSvg(l.id)}
       ${p?.passed ? `<span class="cube-badge" aria-hidden="true">${checkIcon()}</span>` : ''}
       <span class="cube-label">${l.title}</span>
     </button>`;
