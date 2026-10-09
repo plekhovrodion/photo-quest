@@ -33,6 +33,13 @@ const RU: Record<string, string> = {
   stopwatch: 'секундомер', scale: 'весы', speedometer: 'спидометр', glove: 'перчатка', mitten: 'варежка', toy: 'игрушка',
   doll: 'кукла', duck: 'утка', speaker: 'колонка', record: 'пластинка', shelf: 'полка', stool: 'табуретка',
   bench: 'скамейка', frame: 'рамка', drawer: 'комод', wardrobe: 'шкаф', menu: 'меню', packet: 'пакет',
+  // предметы уровней «по местам»
+  'frying pan': 'сковорода', toilet: 'унитаз', washbasin: 'раковина', 'hand blower': 'фен', butterfly: 'бабочка',
+  mushroom: 'гриб', agaric: 'гриб', bolete: 'гриб', daisy: 'цветок', ruler: 'линейка', rule: 'линейка',
+  eraser: 'ластик', 'pencil box': 'пенал', 'pencil case': 'пенал', strawberry: 'клубника', broccoli: 'брокколи',
+  cheeseburger: 'чизбургер', hotdog: 'хот-дог', hamburger: 'гамбургер', purse: 'сумка', 'plastic bag': 'пакет',
+  cab: 'машина', 'beach wagon': 'машина', bike: 'велосипед', bunting: 'птица', 'park bench': 'скамейка',
+  'bath towel': 'полотенце', 'paper towel': 'бумажное полотенце', knapsack: 'рюкзак', 
   // классы детектора COCO-SSD, которых нет выше
   'sports ball': 'мяч', 'teddy bear': 'плюшевый мишка', 'cell phone': 'телефон', 'wine glass': 'бокал',
   'dining table': 'стол', 'potted plant': 'комнатное растение', 'hair drier': 'фен', 'traffic light': 'светофор',

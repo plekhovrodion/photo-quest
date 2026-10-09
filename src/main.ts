@@ -198,11 +198,13 @@ function renderOnboarding(i = 0) {
 // Цвета граней кубов по категориям: верх светлее, левая грань средняя, правая тёмная.
 const CUBE_COLORS: Palette[] = [
   { top: '#fda4af', left: '#e11d48', right: '#9f1239' }, // цвета
-  { top: '#7dd3fc', left: '#0284c7', right: '#075985' }, // формы
-  { top: '#fcd34d', left: '#d97706', right: '#92400e' }, // свойства
-  { top: '#86efac', left: '#16a34a', right: '#166534' }, // что для чего
-  { top: '#c4b5fd', left: '#7c3aed', right: '#4c1d95' }, // сочетания
-  { top: '#f9a8d4', left: '#db2777', right: '#9d174d' }, // счёт
+  { top: '#fcd34d', left: '#d97706', right: '#92400e' }, // кухня
+  { top: '#7dd3fc', left: '#0284c7', right: '#075985' }, // комната
+  { top: '#c4b5fd', left: '#7c3aed', right: '#4c1d95' }, // школа
+  { top: '#99f6e4', left: '#0d9488', right: '#115e59' }, // ванная
+  { top: '#f9a8d4', left: '#db2777', right: '#9d174d' }, // прихожая
+  { top: '#fdba74', left: '#ea580c', right: '#9a3412' }, // еда
+  { top: '#86efac', left: '#16a34a', right: '#166534' }, // двор и лес
 ];
 
 // Куб 160x80 (ромб) и толщина 40: верхняя грань — ромб, две боковые — параллелограммы; под ним тень.

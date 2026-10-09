@@ -3,7 +3,7 @@ import { colorShares, type ColorName } from './color';
 import { evaluate, type Ctx } from './evaluate';
 import { matchesLabels, PROB_MIN, type Prediction } from './labels';
 import { COLOR_RU, ruName } from './names';
-import { loadMobilenet } from './models';
+import { loadCoco, loadMobilenet } from './models';
 
 const SAMPLE = 96;
 
@@ -83,11 +83,15 @@ export async function localVerify(
     }
     return cache.shares;
   };
-  // Сигналы: MobileNet по снимку (top-10) и класс, найденный живой камерой.
+  // Сигналы: MobileNet по снимку (top-10), детектор COCO по тому же снимку (80 классов, знает вилку, ножницы,
+  // зубную щётку, птицу, морковку) и класс, найденный живой камерой.
   const getPreds = async () => {
     if (!cache.preds) {
-      const top = await (await loadMobilenet()).classify(canvas, 10);
-      cache.preds = fusePredictions(top, opts.liveClass);
+      const [top, dets] = await Promise.all([
+        loadMobilenet().then((m) => m.classify(canvas, 10)),
+        loadCoco().then((m) => m.detect(canvas, 6, 0.3)).catch(() => []),
+      ]);
+      cache.preds = fusePredictions([...top, ...dets.map((d) => ({ className: d.class, probability: d.score }))], opts.liveClass);
     }
     return cache.preds;
   };
