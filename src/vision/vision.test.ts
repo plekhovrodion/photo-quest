@@ -68,3 +68,18 @@ describe('покрытие заданий', () => {
     expect(missing).toEqual([]);
   });
 });
+
+import { ruName } from './names';
+
+describe('ruName', () => {
+  it('переводит классы ImageNet', () => {
+    expect(ruName('coffee mug')).toBe('кружка');
+    expect(ruName('ballpoint, ballpoint pen, ballpen, Biro')).toBe('шариковая ручка');
+    expect(ruName('book jacket, dust cover, dust jacket')).toBe('книга');
+    expect(ruName('ping-pong ball')).toBe('мяч');
+  });
+  it('не срабатывает на часть слова и на неизвестное', () => {
+    expect(ruName('open')).toBeNull();
+    expect(ruName('banana')).toBeNull();
+  });
+});

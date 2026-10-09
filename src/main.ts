@@ -3,6 +3,7 @@ import { LEVELS, type Level, type Task } from './data/tasks';
 import { createGame, currentTask, canSkip, reduce, starsFor, MAX_ATTEMPTS, type Action, type GameState } from './game/state';
 import { takePhoto, compressPhoto } from './camera/capture';
 import { verifyPhoto } from './api/verify';
+import { COLOR_RU } from './vision/names';
 import { preloadModel } from './vision/local';
 import { confetti } from './fx/confetti';
 import { playSuccess, playTryAgain, speak } from './audio/sounds';
@@ -18,6 +19,7 @@ let level: Level | null = null;
 let state: GameState | null = null;
 let notice = '';
 let photoUrl = '';
+let lastLabel: string | null = null;
 
 function dispatch(a: Action) {
   state = reduce(state!, a);
@@ -65,7 +67,8 @@ async function capture() {
     if (photoUrl) URL.revokeObjectURL(photoUrl);
     photoUrl = URL.createObjectURL(photo);
     dispatch({ type: 'photo-taken' });
-    const { match } = await verifyPhoto(photo, task);
+    const { match, label } = await verifyPhoto(photo, task);
+    lastLabel = label ?? null;
     dispatch({ type: 'verified', match });
     (match ? playSuccess : playTryAgain)();
   } catch {
@@ -75,6 +78,19 @@ async function capture() {
   }
 }
 
+
+// Картинки заврёнков Гриши и Сони (Figma «Иллюстрации. Гриша и Соня. Заврики»).
+const art = (name: string, cls = '') => `<img class="char ${cls}" src="/art/${name}.png" alt="" aria-hidden="true">`;
+
+const starRow = (n: number) =>
+  `<div class="stars" role="img" aria-label="Звёзд: ${n} из 3">${[1, 2, 3]
+    .map((i) => `<span class="star ${i <= n ? 'on' : ''}" style="--d:${i * 0.25}s">★</span>`).join('')}</div>`;
+
+// Соня называет найденное: цвет для заданий на цвет, иначе предмет, который узнала модель.
+function sonyaSays(task: Task): string {
+  if (task.local?.kind === 'color') return `Это ${COLOR_RU[task.local.color]} цвет!`;
+  return lastLabel ? `Это ${lastLabel}!` : 'Ты нашёл нужный предмет!';
+}
 
 const wallet = () => `<span class="chip coin" role="img" aria-label="Вспышек: ${progress.flashes}">${CURRENCY.emoji} ${progress.flashes}</span>`;
 
@@ -87,7 +103,7 @@ function renderOnboarding(i = 0) {
   const slide = SLIDES[i];
   const last = i === SLIDES.length - 1;
   const dots = SLIDES.map((_, j) => `<span class="dot ${j === i ? 'on' : ''}"></span>`).join('');
-  show(`<div aria-hidden="true" class="mascot">${slide.emoji}</div><div class="bubble">${slide.title}</div><p>${slide.text}</p>
+  show(`${art(slide.art)}<h1>${slide.title}</h1><p>${slide.text}</p>
     <div class="dots">${dots}</div>
     <button id="onext" class="green">${last ? 'Поехали!' : 'Дальше'}</button>
     ${last ? '' : '<button id="oskip" class="secondary small">Пропустить</button>'}`);
@@ -107,7 +123,7 @@ function renderLevels() {
   }).join('');
   show(`${hud('<button id="howto" class="secondary small" aria-label="Как играть">❓</button>', '', '',
       '<button id="shop" class="secondary small" aria-label="Магазин">🛍</button>')}
-    <div aria-hidden="true" class="mascot">📸</div><h1>ФотоКвест</h1><p>Выбери приключение!</p>
+    ${art('ship')}<h1>Покажи нам мир!</h1><p>Гриша и Соня прилетели с далёкой планеты. Помоги им узнать наш мир!</p>
     <div class="levels">${cards}</div>`, 'screen-menu');
   root.querySelectorAll<HTMLButtonElement>('.level').forEach((b) =>
     b.addEventListener('click', () => startLevel(LEVELS[Number(b.dataset.i)])),
@@ -163,7 +179,7 @@ function renderMap(l: Level) {
   }).join('');
   const found = l.tasks.filter((t) => progress.found[t.id] !== undefined).length;
   show(`${hud('<button id="back" class="secondary small" aria-label="Назад">←</button>')}
-    <div aria-hidden="true" class="mascot">${l.emoji}</div><h1>${l.title}</h1><p>Найдено: ${found} из ${n}</p>
+    ${art('sonya-wave', 'small')}<h1>${l.title}</h1><p>Найдено: ${found} из ${n}</p>
     <div class="map" style="aspect-ratio:${MAP_W} / ${H}">
       <svg viewBox="0 0 ${MAP_W} ${H}" aria-hidden="true"><path d="${d}"/></svg>${nodes}
     </div>`, 'screen-map');
@@ -174,7 +190,7 @@ function renderMap(l: Level) {
 }
 
 function renderLevelDone() {
-  show(`${hud('')}<div aria-hidden="true" class="mascot cheer">🏆</div><h1>Все найдено!</h1>
+  show(`${hud('')}<div class="duo">${art('grisha-cheer', 'cheer')}${art('sonya-cheer', 'cheer')}</div><h1>Все найдено!</h1>
     <p>Ты справился со всей категорией «${level!.title}»</p>
     <div class="reward">${CURRENCY.emoji} бонус +${LEVEL_BONUS}</div>
     <button id="map" class="green">К заданиям</button>`);
@@ -192,7 +208,7 @@ function render() {
     case 'task':
     case 'camera': {
       const hint = s.attempts > 0 && task!.hint ? `<div class="hint">💡 ${task!.hint}</div>` : '';
-      show(`${bar}<div aria-hidden="true" class="mascot">${level.emoji}</div>
+      show(`${bar}${art('grisha-happy')}
         <div class="bubble">${task!.prompt}</div>${hint}
         ${notice ? `<div class="notice">${notice}</div>` : ''}
         <button id="shoot">📷 Сфотографировать</button>
@@ -212,17 +228,19 @@ function render() {
       if (s.lastMatch) {
         const got = starsFor(s.attempts);
         const again = progress.found[task!.id] !== undefined;
-        show(`${bar}<div aria-hidden="true" class="mascot cheer">🎉</div><div class="banner ok">Верно! Молодец!</div>
+        const says = sonyaSays(task!);
+        show(`${bar}${art('sonya-wave', 'cheer')}<div class="bubble">${says}</div>
+          ${starRow(got)}
           ${again ? '' : `<div class="reward">${CURRENCY.emoji} +${got}</div>`}
           <button id="next" class="green">Дальше</button>`, 'ok');
         confetti();
-        speak('Верно! Молодец!');
+        speak(`${says} Молодец!`);
       } else if (canSkip(s)) {
-        show(`${bar}<div aria-hidden="true" class="mascot sad">🤔</div><div class="banner no">Это сложное задание</div>
+        show(`${bar}${art('grisha-think', 'sad')}<div class="banner no">Это сложное задание</div>
           <p>Давай попробуем другое!</p><button id="next">Дальше</button>`);
       } else {
         const left = MAX_ATTEMPTS - s.attempts;
-        show(`${bar}<div aria-hidden="true" class="mascot sad">🔍</div><div class="banner no">Пока не то</div>
+        show(`${bar}${art('grisha-think', 'sad')}<div class="banner no">Пока не то</div>
           <p>Попробуй ещё! Осталось попыток: ${left}</p><button id="next">Искать снова</button>`);
       }
       on('next', () => dispatch({ type: 'next' }));

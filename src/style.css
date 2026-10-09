@@ -11,23 +11,17 @@
 * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
 html, body { margin: 0; height: 100%; }
 body {
-  color: var(--ink); overflow-x: hidden;
+  color: #fff; overflow-x: hidden;
   font-family: 'Factor A', ui-rounded, system-ui, -apple-system, 'Segoe UI', sans-serif;
-  background: linear-gradient(180deg, var(--sky1) 0%, var(--sky2) 50%, #ffe27a 100%) fixed;
+  background: #2a2477 url('/art/alien-world.webp') center / cover fixed no-repeat;
 }
-body::before, body::after { /* облака */
-  content: '☁️'; position: fixed; font-size: 90px; opacity: .85; pointer-events: none; z-index: 0;
-  top: 12%; left: -120px; animation: drift 40s linear infinite;
-}
-body::after { top: 32%; font-size: 60px; animation-duration: 55s; animation-delay: -20s; }
-@keyframes drift { to { transform: translateX(calc(100vw + 240px)); } }
 
 #app { position: relative; z-index: 1; min-height: 100dvh; display: flex; flex-direction: column;
   align-items: center; justify-content: center; gap: 18px; padding: calc(72px + var(--safe-top)) 16px 28px; text-align: center; }
 #app > * { animation: slide-in .35s ease both; }
 @keyframes slide-in { from { opacity: 0; transform: translateY(16px) scale(.97); } }
 
-h1 { font-size: clamp(28px, 7vw, 48px); margin: 0; line-height: 1.1; text-shadow: 0 3px 0 rgba(255,255,255,.7); }
+h1 { font-size: clamp(28px, 7vw, 48px); margin: 0; line-height: 1.1; text-shadow: 0 3px 0 rgba(20, 10, 60, .55); }
 p { font-size: 20px; margin: 0; font-weight: 600; max-width: 520px; }
 
 /* Кнопки — «выпуклые», как в играх */
@@ -123,3 +117,17 @@ button.stop:active:not(:disabled) { transform: translate(-50%, -50%) scale(.94);
   background: #000; transform: scaleX(-1); /* зеркало только в предпросмотре, снимок не отражается */ }
 .cam-msg { color: #fff; max-width: 460px; }
 .cam-actions { display: flex; gap: 14px; flex-wrap: wrap; justify-content: center; }
+
+/* Тема «инопланетный мир»: светлый текст на тёмном фоне, светлые панели с тёмным текстом */
+p { text-shadow: 0 2px 0 rgba(20, 10, 60, .5); }
+.bubble, .hint, .notice, .chip, .reward, .hud button.secondary { color: var(--ink); text-shadow: none; }
+.char { display: block; height: clamp(150px, 26vh, 250px); width: auto; filter: drop-shadow(0 8px 14px rgba(10, 5, 40, .45));
+  animation: bob 2.6s ease-in-out infinite; }
+.char.small { height: clamp(100px, 16vh, 140px); }
+.char.cheer { animation: cheer .7s ease both; }
+.char.sad { animation: none; filter: grayscale(.25) drop-shadow(0 8px 14px rgba(10, 5, 40, .45)); }
+.duo { display: flex; gap: 8px; align-items: flex-end; justify-content: center; }
+.duo .char { height: clamp(130px, 22vh, 210px); }
+.stars { display: flex; gap: 10px; justify-content: center; }
+.star { font-size: 60px; line-height: 1; color: rgba(255, 255, 255, .3); }
+.star.on { color: var(--gold); text-shadow: 0 4px 0 #c78f00; animation: pop .55s var(--d, 0s) cubic-bezier(.2, 1.6, .4, 1) both; }

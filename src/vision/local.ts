@@ -1,7 +1,8 @@
 import type { LocalCheck } from '../data/tasks';
 import { colorShares } from './color';
 import { evaluate, type Ctx } from './evaluate';
-import type { Prediction } from './labels';
+import { matchesLabels, PROB_MIN, type Prediction } from './labels';
+import { ruName } from './names';
 
 const SAMPLE = 96;
 
@@ -31,7 +32,23 @@ export function preloadModel(): void {
   loadModel().catch(() => {});
 }
 
-export async function localVerify(photo: Blob, check: LocalCheck): Promise<{ match: boolean; reason: string }> {
+// Все слова-метки, участвующие в проверке (для выбора подписи найденного предмета).
+function wordsOf(check: LocalCheck): string[] {
+  if (check.kind === 'labels') return check.words;
+  if (check.kind === 'and') return check.checks.flatMap(wordsOf);
+  return [];
+}
+
+// Русское название найденного предмета: берём лучший класс, подходящий под задание, иначе самый уверенный.
+function pickLabel(preds: Prediction[] | null, check: LocalCheck): string | undefined {
+  if (!preds?.length) return undefined;
+  const words = wordsOf(check);
+  const confident = preds.filter((p) => p.probability >= PROB_MIN);
+  const best = confident.find((p) => words.length && matchesLabels([p], words)) ?? confident[0];
+  return (best && ruName(best.className)) ?? undefined;
+}
+
+export async function localVerify(photo: Blob, check: LocalCheck): Promise<{ match: boolean; reason: string; label?: string }> {
   const canvas = await toCanvas(photo);
   const cache: { preds: Prediction[] | null } = { preds: null };
   const ctx: Ctx = {
@@ -45,5 +62,5 @@ export async function localVerify(photo: Blob, check: LocalCheck): Promise<{ mat
     predictions: async () => (cache.preds ??= await (await loadModel()).classify(canvas, 5)),
   };
   const match = await evaluate(check, ctx);
-  return { match, reason: cache.preds?.[0]?.className ?? 'local' };
+  return { match, reason: cache.preds?.[0]?.className ?? 'local', label: match ? pickLabel(cache.preds, check) : undefined };
 }
