@@ -3,6 +3,7 @@ import { localVerify, type VerifyOpts } from '../vision/local';
 
 export interface VerifyResult {
   match: boolean;
+  maybe?: boolean; // не уверены: нужно спросить ребёнка, а не отказывать
   reason: string;
   label?: string; // русское название найденного предмета (при верном ответе)
   found?: string; // что заврик увидел на фото (при неверном ответе), например «Это кружка»

@@ -1,6 +1,6 @@
 import type { LocalCheck } from '../data/tasks';
 import { colorShares, type ColorName } from './color';
-import { evaluate, type Ctx } from './evaluate';
+import { evaluate, isMaybe, type Ctx } from './evaluate';
 import { matchesLabels, PROB_MIN, type Prediction } from './labels';
 import { COLOR_RU, ruName } from './names';
 import { loadCoco, loadMobilenet } from './models';
@@ -72,7 +72,7 @@ export async function localVerify(
   photo: Blob,
   check: LocalCheck,
   opts: VerifyOpts = {},
-): Promise<{ match: boolean; reason: string; label?: string; found?: string; foundLabel?: string }> {
+): Promise<{ match: boolean; maybe?: boolean; reason: string; label?: string; found?: string; foundLabel?: string }> {
   const canvas = await toCanvas(photo);
   const cache: { preds: Prediction[] | null; shares: Record<ColorName, number> | null } = { preds: null, shares: null };
   const getShares = () => {
@@ -102,7 +102,8 @@ export async function localVerify(
     if (clipRanks === undefined) clipRanks = await rankObjects(canvas, canvas.width, canvas.height).catch(() => null);
     return clipRanks;
   };
-  const match = await evaluate(check, { shares: getShares, predictions: getPreds, clip: getClip });
+  const ctx: Ctx = { shares: getShares, predictions: getPreds, clip: getClip };
+  const match = await evaluate(check, ctx);
   const reason = cache.preds?.[0]?.className ?? 'local';
   if (match) {
     const byPreds = pickLabel(cache.preds, check);
@@ -120,5 +121,5 @@ export async function localVerify(
     foundLabel = anyLabel(await getPreds()) ?? (await getClip())?.[0]?.ru;
     found = foundLabel ? `Это ${foundLabel}` : colorPhrase(getShares());
   }
-  return { match, reason, found, foundLabel };
+  return { match, maybe: await isMaybe(check, ctx), reason, found, foundLabel };
 }

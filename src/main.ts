@@ -128,8 +128,22 @@ async function capture() {
     if (photoUrl) URL.revokeObjectURL(photoUrl);
     photoUrl = URL.createObjectURL(photo);
     dispatch({ type: 'photo-taken' });
-    const { match, label, found, foundLabel } = await verifyPhoto(photo, task, { cropped: wasCropped, liveClass: cap.liveClass });
-    lastLabel = label ?? null;
+    const verdict = await verifyPhoto(photo, task, { cropped: wasCropped, liveClass: cap.liveClass });
+    const { found, foundLabel } = verdict;
+    let match = verdict.match;
+    lastLabel = verdict.label ?? null;
+    // Не уверены: не говорим «не то», а спрашиваем ребёнка. Лишнее «засчитано» лучше ложного отказа.
+    if (!match && verdict.maybe) {
+      const answer = await askConfirm(task);
+      if (answer === 'closer') {
+        notice = 'Покажи ещё раз, поближе!';
+        return dispatch({ type: 'check-failed' });
+      }
+      if (answer === 'yes') {
+        match = true;
+        lastLabel = taskName(task);
+      }
+    }
     lastFound = found ?? null;
     lastFoundLabel = foundLabel ?? null;
     stickerNew = null;
@@ -286,6 +300,24 @@ function renderLevels() {
   on('album', openAlbum);
 }
 
+
+// Экран «не уверен»: фото почти подошло, спрашиваем ребёнка. «Нет» — обычный отказ, «ближе» — снять ещё раз без штрафа.
+function askConfirm(task: Task): Promise<'yes' | 'no' | 'closer'> {
+  return new Promise((resolve) => {
+    const q = `Это правда ${taskName(task)}?`;
+    show(`${hud(`<button id="menu" class="secondary small" aria-label="К заданиям">${closeIcon()}</button>`)}
+      ${art('sonya-wave', 'talking')}${bubble(q)}
+      <img class="preview mini" src="${photoUrl}" alt="">
+      <button id="cf-yes" class="green">Да</button>
+      <button id="cf-no" class="secondary">Нет</button>
+      <button id="cf-closer" class="secondary">${cameraIcon()}Снять ближе</button>`);
+    speak(q);
+    on('cf-yes', () => resolve('yes'));
+    on('cf-no', () => resolve('no'));
+    on('cf-closer', () => resolve('closer'));
+    on('menu', toMap);
+  });
+}
 
 // Название предмета задания в именительном падеже для подписи наклейки.
 function taskName(t: Task): string {

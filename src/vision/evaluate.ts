@@ -36,4 +36,27 @@ export async function evaluate(check: LocalCheck, ctx: Ctx): Promise<boolean> {
   }
 }
 
+// «Не уверен»: фото почти подошло. Тогда игра не отказывает, а спрашивает ребёнка.
+export const PROB_MAYBE = 0.015; // MobileNet/COCO видят нужный класс, но совсем слабо
+export const CLIP_MAYBE_TOP = 6; // нужный предмет в первой шестёрке CLIP, но не в первых двух
+export const COLOR_MAYBE = COLOR_SHARE_MIN / 2;
+
+export async function isMaybe(check: LocalCheck, ctx: Ctx): Promise<boolean> {
+  switch (check.kind) {
+    case 'color':
+      return (await ctx.shares())[check.color] >= COLOR_MAYBE;
+    case 'labels': {
+      const weak = (await ctx.predictions()).some(
+        (p) => p.probability >= PROB_MAYBE && check.words.some((w) => new RegExp(`\\b${w}\\b`, 'i').test(p.className)),
+      );
+      if (weak) return true;
+      if (!check.clip || !ctx.clip) return false;
+      const ranks = await ctx.clip();
+      return !!ranks && clipHas(ranks, check.clip, CLIP_MAYBE_TOP);
+    }
+    default:
+      return false;
+  }
+}
+
 export { COLOR_SHARE_MIN };
