@@ -1,8 +1,8 @@
 // Записанная озвучка: фраза -> файл в public/voice. Нет файла — говорит голос браузера.
 // Новые записи: положить mp3 в public/voice и добавить строку сюда (коды из voice-level1.txt).
 export const RECORDED: Record<string, string> = {
-  'Найди предмет с оранжевым цветом!': 'task-orange',
-  'Найди предмет с фиолетовым цветом!': 'task-purple',
+  'Найди предмет с красным цветом!': 'task-red',
+  'Найди предмет с синим цветом!': 'task-blue',
 };
 
 let current: HTMLAudioElement | null = null;
