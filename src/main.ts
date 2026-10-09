@@ -552,23 +552,14 @@ function renderMap(l: Level) {
   }).join('');
 
   const found = l.tasks.filter((t) => progress.found[t.id] !== undefined).length;
-  // Боковая карточка для больших экранов: что искать дальше и кнопка «Играть».
-  const nextTask = next >= 0 ? l.tasks[next] : null;
-  const side = nextTask
-    ? `<aside class="map-side"><b>Дальше ищем</b>${taskCard(nextTask)}<span class="ms-prompt">${esc(nextTask.prompt)}</span>
-        <button id="ms-go" class="primary-xl">${cameraIcon()}Играть</button></aside>`
-    : `<aside class="map-side"><b>Всё найдено!</b><div class="task-card">${checkIcon()}</div><span class="ms-prompt">Можно найти что-то в другом месте</span></aside>`;
   show(`${hud(`<button id="back" class="secondary small" aria-label="Назад">${backIcon()}</button>`)}
     <h1>${l.title}</h1><p>Найдено: ${found} из ${n}</p>
-    <div class="map-layout">
-      <div class="map" style="aspect-ratio:${W.toFixed(1)} / ${H.toFixed(1)};--w:${W.toFixed(0)};--ar:${(W / H).toFixed(4)}">
-        <svg viewBox="0 0 ${W.toFixed(1)} ${H.toFixed(1)}" aria-hidden="true">${tiles}</svg>${nodes}
-      </div>${side}
+    <div class="map" style="aspect-ratio:${W.toFixed(1)} / ${H.toFixed(1)};--w:${W.toFixed(0)}">
+      <svg viewBox="0 0 ${W.toFixed(1)} ${H.toFixed(1)}" aria-hidden="true">${tiles}</svg>${nodes}
     </div>`, 'screen-map');
   root.querySelectorAll<HTMLButtonElement>('.stop').forEach((b) =>
     b.addEventListener('click', () => startTask(l.tasks[Number(b.dataset.i)])),
   );
-  if (nextTask) on('ms-go', () => startTask(nextTask));
   on('back', toMenu);
 }
 
