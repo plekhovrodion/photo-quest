@@ -351,3 +351,13 @@ button.cube-btn .cube-icon .ico-cat { filter: none; }
 /* тень рамки обрезки не должна затемнять заголовок и кнопки */
 .crop-title, .crop-actions { position: relative; z-index: 3; }
 .crop-close { z-index: 4; }
+
+
+/* ===== Живая камера с поиском предмета ===== */
+.cam-stage { position: relative; display: inline-block; max-width: 100%; line-height: 0; }
+.cam-stage .cam-video { transform: none; max-height: calc(100dvh - 360px); }
+.cam-boxes { position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none; }
+.cam-hint { color: #fff; font-size: 24px; font-weight: 800; text-align: center; min-height: 1.4em; margin: 0; text-shadow: 0 2px 0 rgba(20, 10, 60, .55); }
+/* общий стиль кнопок не должен перебивать атрибут hidden */
+button[hidden] { display: none !important; }
+.cam-actions { width: min(100%, 380px); }

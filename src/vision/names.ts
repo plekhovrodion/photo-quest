@@ -33,6 +33,14 @@ const RU: Record<string, string> = {
   stopwatch: 'секундомер', scale: 'весы', speedometer: 'спидометр', glove: 'перчатка', mitten: 'варежка', toy: 'игрушка',
   doll: 'кукла', duck: 'утка', speaker: 'колонка', record: 'пластинка', shelf: 'полка', stool: 'табуретка',
   bench: 'скамейка', frame: 'рамка', drawer: 'комод', wardrobe: 'шкаф', menu: 'меню', packet: 'пакет',
+  // классы детектора COCO-SSD, которых нет выше
+  'sports ball': 'мяч', 'teddy bear': 'плюшевый мишка', 'cell phone': 'телефон', 'wine glass': 'бокал',
+  'dining table': 'стол', 'potted plant': 'комнатное растение', 'hair drier': 'фен', 'traffic light': 'светофор',
+  scissors: 'ножницы', toothbrush: 'зубная щётка', mouse: 'компьютерная мышка', banana: 'банан', apple: 'яблоко',
+  sandwich: 'бутерброд', carrot: 'морковка', donut: 'пончик', cake: 'торт', backpack: 'рюкзак', umbrella: 'зонт',
+  handbag: 'сумка', suitcase: 'чемодан', frisbee: 'фрисби', skateboard: 'скейтборд', kite: 'воздушный змей',
+  tv: 'телевизор', toaster: 'тостер', sink: 'раковина', airplane: 'самолёт', bicycle: 'велосипед',
+  car: 'машина', bus: 'автобус', train: 'поезд', boat: 'лодка', bird: 'птица', horse: 'лошадь', cow: 'корова', bear: 'медведь',
 };
 
 const KEYS = Object.keys(RU).sort((a, b) => b.length - a.length);

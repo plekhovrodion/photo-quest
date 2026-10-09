@@ -80,7 +80,7 @@ describe('ruName', () => {
   });
   it('не срабатывает на часть слова и на неизвестное', () => {
     expect(ruName('open')).toBeNull();
-    expect(ruName('banana')).toBeNull();
+    expect(ruName('zucchini')).toBeNull();
   });
 });
 
