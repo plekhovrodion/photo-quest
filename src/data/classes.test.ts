@@ -24,7 +24,7 @@ describe('предметы заданий и классы моделей', () =>
   });
 
   it('в уровне разные задания не путаются на одном классе (кроме известных пар)', () => {
-    const allowed = new Set(['studio couch, day bed']); // «диван» и «кровать» делят этот класс
+    const allowed = new Set(['studio couch, day bed', 'tow truck, tow car, wrecker']); // «диван»/«кровать» и «машина»/«грузовик» делят эти классы
     for (const level of LEVELS) {
       const tasks = level.tasks.filter((t) => t.local?.kind === 'labels');
       const owner = new Map<string, string>();

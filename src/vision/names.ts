@@ -26,7 +26,7 @@ const RU: Record<string, string> = {
   couch: 'диван', sofa: 'диван', bed: 'кровать', bookcase: 'книжный шкаф', oven: 'духовка', microwave: 'микроволновка',
   cabinet: 'шкаф', ice: 'лёд', lolly: 'фруктовый лёд', popsicle: 'фруктовый лёд', freezer: 'морозилка',
   iceberg: 'айсберг', pen: 'ручка', pencil: 'карандаш', ballpoint: 'шариковая ручка', biro: 'ручка', marker: 'маркер',
-  fork: 'вилка', spatula: 'лопатка', shoe: 'ботинок', sandal: 'сандалия', loafer: 'туфля', clog: 'сабо', boot: 'сапог',
+  hydrant: 'пожарный гидрант', truck: 'грузовик', fork: 'вилка', spatula: 'лопатка', shoe: 'ботинок', sandal: 'сандалия', loafer: 'туфля', clog: 'сабо', boot: 'сапог',
   slipper: 'тапочек', crib: 'детская кроватка', cradle: 'колыбель', bassinet: 'люлька', comic: 'комикс', book: 'книга',
   paintbrush: 'кисточка', brush: 'кисточка', lampshade: 'абажур', flashlight: 'фонарик', torch: 'фонарик',
   spotlight: 'прожектор', lantern: 'фонарь', calendar: 'календарь', calculator: 'калькулятор', keyboard: 'клавиатура',
