@@ -1,0 +1,27 @@
+kind: "defaults"
+schema_version: "v1"
+spec:
+  defaults.production:
+    # заполнить из app.yml => spec.name
+    env.APP_NAME: "photo-quest-ui"
+    env.FEEDBACK_API_URL: "https://uchi.ru/content_feedback"
+    # Пейвол: пусто, пока продукт photo_quest не заведён в content-paywall; потом "/content-paywall/?name=photo_quest"
+    env.CONTENT_PAYWALL_URL: ""
+    services.main.mem_mb: "100"
+    services.main.amount: "3"
+    services.main.max_parallel: "1"
+    # заполнить из app.yml => spec.name
+    targets.self: "sys-photo-quest-ui-main-main-main"
+    targets.uchiru-auth: "sys-uchiru-main-auth-main"
+
+  defaults.stage:
+    # заполнить из app.yml => spec.name
+    env.APP_NAME: "${{ values.NAMESPACE_PREFIX }}_photo-quest-ui"
+    env.FEEDBACK_API_URL: "https://content-cat-team.stage-uchi.ru/content_feedback"
+    env.CONTENT_PAYWALL_URL: ""
+    services.main.mem_mb: "40"
+    services.main.amount: "1"
+    services.main.max_parallel: "1"
+    # заполнить из app.yml => spec.name
+    targets.self: "sys-${{ values.NAMESPACE_PREFIX }}-photo-quest-ui-main-main"
+    targets.uchiru-auth: "sys-${{ values.NAMESPACE_PREFIX }}-uchiru-login-main-main"

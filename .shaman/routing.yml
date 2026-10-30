@@ -1,0 +1,38 @@
+---
+kind: "routing_rule"
+schema_version: "v3"
+spec:
+  match:
+    host: "uchi.ru"
+    host.stage: "${{ values.STAGE_SUBDOMAIN }}.${{ values.STAGE_HOST }}"
+    # URL до продукта, например /math_race
+    prefix: "/photo_quest"
+  middlewares:
+    auth:
+      - backend:
+          service: "${{ values.targets.uchiru-auth }}"
+        # название math_race берется из uchiru-login app/policies/,
+        # например для math_race_policy.rb получаем math_race_authorized
+        path: "/authentication/frontend_authorized"
+        upstream_headers:
+          - "Uchi-User-Type"
+          - "Uchi-Account-Id"
+    error_handler:
+      - on_code:
+          - 401
+        redirect: /?next=$request_uri
+  proxy:
+    backend:
+      service: "${{ values.targets.self }}"
+---
+kind: "routing_rule"
+schema_version: "v3"
+spec:
+  match:
+    host: "uchi.ru"
+    host.stage: "${{ values.STAGE_SUBDOMAIN }}.${{ values.STAGE_HOST }}"
+    # URL до продукта, например /math_race
+    prefix: "/photo_quest/assets"
+  proxy:
+    backend:
+      service: "${{ values.targets.self }}"

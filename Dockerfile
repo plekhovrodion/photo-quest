@@ -1,14 +1,28 @@
-FROM node:22-alpine AS build
-WORKDIR /app
-COPY package.json package-lock.json ./
-RUN npm ci
-COPY . .
-# Адрес API прогресса задаётся при сборке (пусто — прогресс только в браузере)
-ARG VITE_PROGRESS_API=""
-ENV VITE_PROGRESS_API=$VITE_PROGRESS_API
-RUN npm run build
+ARG BASE_IMAGE
 
-FROM nginx:1.27-alpine
-COPY nginx.conf /etc/nginx/conf.d/default.conf
-COPY --from=build /app/dist /usr/share/nginx/html
-EXPOSE 80
+# Основа образа для сборки приложения
+FROM node:24.18.0-alpine AS build
+
+# Тут описываем шаги сборки, pnpm install, pnpm build и так далее
+# Как лучше и почему читать тут - https://docs.docker.com/develop/develop-images/dockerfile_best-practices/
+
+ARG BASE_PATH
+ARG https_proxy
+ARG no_proxy
+
+WORKDIR /app
+
+COPY package.json package-lock.json /app/
+RUN npm ci
+
+COPY . /app
+
+RUN NODE_ENV=production npm run build
+
+# Основа образа для запуска приложения
+FROM ${BASE_IMAGE}
+ARG BASE_PATH
+# Устанавливаем переменную окружения
+ENV BASE_PATH=${BASE_PATH}
+# Копируем результат сборки в образ для запуска
+COPY --from=build /app/dist /var/www

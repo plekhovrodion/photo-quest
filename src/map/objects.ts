@@ -33,7 +33,7 @@ const coneDown = (x: number, y: number, r: number, h: number, c: string, z = 0, 
   };
 };
 
-const SILVER = '#cbd5e1', WHITE = '#f8fafc', DARK = '#1e293b', WOOD = '#b45309', GREEN = '#22c55e';
+const SILVER = '#cbd5e1', WHITE = '#f8fafc', DARK = '#1e293b', GREEN = '#22c55e';
 
 // Четыре ножки-бруска под сиденье/стол.
 const legs = (x: number, y: number, w: number, d: number, h: number, c: string, t = 0.2): Item[] => [

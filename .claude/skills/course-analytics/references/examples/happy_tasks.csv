@@ -1,0 +1,55 @@
+Статус,Дата выкатки на прод,Тест аналитика,Описание,Источник,event_source / ссылка,event_type,event_info,page,user_type (авторизованный пользователь),user_agent
+,,,увидели плашку,page_events,"event_source: ""/""",display,text_tasks_video,"Отдельная page для ленда, отдельная для всего курса.
+Например,
+для ленда page = 'uchi.ru/course_name/land'
+для курса: 'uchi.ru/course_name/game', 'uchi.ru/course_name/game/...'
+(для отдельных страниц в курсе к основной page через слэш добавляется часть ссылки)",student,user_agent
+,,,кликнули на плашку,page_events,"event_source: ""/""",click,text_tasks_video,,student,user_agent
+,,+,посетили ленд/курс,pageviews,ссылка на ленд/курс,,,,student,user_agent
+,,,лоадер (пользователь увидел экран загрузки),page_events,text_tasks_video,loader,,,student,user_agent
+,,,посетили курс,page_events,text_tasks_video,enter_course,,,student,user_agent
+,,+,"открыли питомца (пользователь нажал на ""коробку"")",page_events,text_tasks_video,open_pet,"ФОРМАТ JSON
+pet: вид питомца",,student,user_agent
+,,+,действие с питомцем + итоговое кол-во очков,page_events,text_tasks_video,pet_activity,"ФОРМАТ JSON
+pet: вид питомца
+activity: какое действие
+score: суммарное кол-во очков",,student,user_agent
+,,+,начали уровень,page_events,text_tasks_video,start_level,"ФОРМАТ JSON
+level: n (номер уровня) (класс-локация-урок)",,student,user_agent
+,,+,начали смотреть видео,page_events,text_tasks_video,start_video,"ФОРМАТ JSON
+level: n (номер уровня)
+video_id: id видео",,student,user_agent
+,,+,закончили смотреть видео (отправляется в конце видео),page_events,text_tasks_video,end_video,"ФОРМАТ JSON
+level: n (номер уровня)
+video_id: id видео
+spent_time: сколько реально потратил времени ученик на просмотр видео",,student,user_agent
+,,+,открыл задание,page_events,text_tasks_video,start_task,"ФОРМАТ JSON
+level: n (номер уровня)
+task_id: n (id задания)
+task_type: nnn (тип задания, если в курсе разные типы заданий)
+task_difficulty: n (сложность задания, если есть)",,student,user_agent
+,,+,выполнил задание,page_events,text_tasks_video,end_task,"ФОРМАТ JSON
+level: n (номер уровня)
+task_id: n (id задания)
+task_type: ... (тип задания, если в курсе разные типы заданий. Например, theory/task)
+success: 1/0 (успешность решения)
+student_answer: ... (ответ)
+right_answer: ... (правильный ответ)
+reward: n (награда за задачу)
+attempts: n (количество попыток)
+spent_time: n (время решения задания)
+task_difficulty: n (сложность задания, если есть)",,student,user_agent
+,,+,пользователь увидел экран наград для уровня,page_events,text_tasks_video,end_level,"ФОРМАТ JSON
+level: n (номер уровня)",,student,user_agent
+,,+,"нажали кнопку ""Купить игру""",page_events,text_tasks_video,click_buy,"ФОРМАТ JSON
+place: paywall (нажал на пейволе) / main (нажал на главной)",,student,user_agent
+,,+,увидели пейвол,page_events,text_tasks_video,paywall_seen,,,student,user_agent
+,,+,увидели сорри-пейдж-1,page_events,text_tasks_video,sorry_page_1,,,student,user_agent
+,,+,увидели сорри-пейдж-2,page_events,text_tasks_video,sorry_page_2,,,student,user_agent
+,,+,ввели 3 символа карты на фейкдоре,page_events,text_tasks_video,input_card_fake,"ФОРМАТ JSON
+product: 'text_tasks_video'
+inputvalue: 3 введённые цифры",,student,user_agent
+,,+,нажали на сердечко (кнопку обратной связи на главном экране),page_events,text_tasks_video,click_feedback,,,student,user_agent
+,,,купили курс,payments,,"product = ""text_tasks_video""",,,student,user_agent
+,,,"вышли из курса (нажал на ""Выход"")",page_events,text_tasks_video,exit_course,,,student,user_agent
+,,,закрыли пейвол,page_events,text_tasks_video,close_paywall,,,student,user_agent

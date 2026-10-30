@@ -1,0 +1,18 @@
+stages:
+  - build
+
+variables:
+  # Внутренние @uchi-конфиги вендорены в vendor/ (pnpm-workspace), поэтому
+  # NPM_TOKEN для сборки больше не нужен. Если появятся другие build-secrets —
+  # перечисляйте их здесь в формате <name>=<ci-var>.
+  BUILD_SECRETS: ""
+
+  # [TODO] добавить свой base path (без кавычек) для продукта
+  BUILD_ARGS: |
+    BASE_IMAGE=$BASE_IMAGE_UBUNTU24_SPA
+    BASE_PATH=/photo_quest
+
+include:
+  - project: uchiru/ci/shared
+    ref: master
+    file: stages/build-and-push.yml

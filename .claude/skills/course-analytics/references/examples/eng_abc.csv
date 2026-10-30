@@ -1,0 +1,109 @@
+Дата раскатки,Статус,Экран,Описание,Источник,event_source,Название события (event_type),Дополнительные поля (event_info),Значения дополнительных полей (event_info),user_type,device type
+,,Учи,увидели плашку,page_events,"event_source: ""/""",display,english_ai,"- deviceType: тип устройства пользователя (ПК - desktop, Планшеты - tablet, смартфоны - mobile, другие - other)
+
+- source: название экрана, с которого перешел пользователь (core | main | [название домика] | paywall | other)
+
+- coreId: уникальный идентификатор сессии пользователя
+
+- taskId: порядковый номер задания
+
+- mechanicName: название механики задания
+
+- sessionTime: продолжительность сессии
+
+- place: land (нажал на ленде) / paywall (нажал на пейволе) / main (нажал на главной) / other (если есть)
+
+- studentAnswer: ответ пользователя
+
+- rightAnswer: правильный ответ
+
+- isCorrect: корректность данного ответа (true | false)
+
+- congrat: дошел ученик до конграта или нет
+
+- resultCoins: сколько монеток заработал пользователь после завершения кор-сессии
+
+- resultFriendship: сколько опыта заработал пользователь после завершения кор-сессии
+
+- houseName: название домика питомца, соответствует наименованию самого питомца
+
+- itemName: наименование товара в категории в магазине
+
+- itemPrice: стоимость товара в категории в магазине
+
+- itemCategory: категория товара в магазине
+
+- itemAvailable: доступность товара в магазине к покупке пользователем (true - если хватает монеток на балансе | false - если не хватает)
+
+- userCoins: сколько монеток было у пользователя до покупки
+
+- questName: название предмета, который хочет пет
+
+- questCongrat: награда за квест питомца ({coins: n, friendship: n})
+
+- wordsAvailable: кол-во доступных слов у питомца
+
+- levelFriendship: уровень дружбы у питомца
+
+- objectName: название интерактивного предмета в доме у питомца
+
+- videoId: порядковый номер видео
+
+- coreSessionId: порядковый номер кор-сессии
+
+- coreSessionType: тип кор-сессии (educational - образовательная, game - игровая)
+
+- isMicrophoneAllowed: разрешил ли пользователь доступ к микрофону (true | false)
+
+- isMicrophoneAvailable: доступен ли микрофон на устройстве (true | false)
+
+- housePrice: стоимость домика питомца",student,user_agent
+,,Учи,кликнули на плашку,page_events,"event_source: ""/""",click,english_ai,,student,user_agent
+,,Прелоадер,посетили курс,page_events,english_ai,enter_course,{ deviceType },,student,user_agent
+,,Плей,"начали курс (нажал на кнопку ""Плей"" видеоролика)",page_events,english_ai,start_game,,,student,user_agent
+,,Интро,показали интровидео,page_events,english_ai,display_intro,,,student,user_agent
+,,Главная,перешли на главную,page_events,english_ai,enter_main,{ source },,student,user_agent
+,,Главная,показали домик пета,page_events,english_ai,display_pet_house,{ houseName },,student,user_agent
+,,Главная,кликнули на домик пета,page_events,english_ai,click_pet_house,{ houseName },,student,user_agent
+,,Домик пета,посетили дом пета,page_events,english_ai,enter_pet_house,"{ houseName, wordsAvailable, levelFriendship }",,student,user_agent
+,,Домик пета,"показали кнопку ""начать кор-сессию""",page_events,english_ai,display_core_session,,,student,user_agent
+,,Саундчек,"показали страницу, что микрофон не подключен",page_events,english_ai,display_problem_soundcheck,"{ houseName, coreId }",,student,user_agent
+,,Саундчек,показали саундчек,page_events,english_ai,display_soundcheck,"{ houseName, coreId }",,student,user_agent
+,,Саундчек,"показали страницу, что использование микрофона отклонили",page_events,english_ai,display_off_soundcheck,"{ houseName, coreId }",,student,user_agent
+,,Видео,показали видео,page_events,english_ai,display_video,"{ houseName, coreId, videoId }",,student,user_agent
+,,Видео,"кликнули на кнопку ""Replay""",page_events,english_ai,click_replay_video,"{ houseName, coreId, videoId }",,student,user_agent
+,,Видео,"кликнули на кнопку ""Next""",page_events,english_ai,click_next,"{ houseName, coreId, videoId }",,student,user_agent
+,,Кор-сессия,начали кор-сессию,page_events,english_ai,enter_core_session,"{ houseName, coreId, coreSessionId, isMicrophoneAllowed, isMicrophoneAvailable }",,student,user_agent
+,,Кор-сессия,начали задание,page_events,english_ai,start_task,"{ houseName, coreId, taskId, mechanicName, coreSessionId, coreSessionType }",,student,user_agent
+,,Кор-сессия,показали хинт,page_events,english_ai,display_push_and_talk,"{ houseName, coreId, taskId, mechanicName, coreSessionId, coreSessionType }",,student,user_agent
+,,Кор-сессия,завершили задание,page_events,english_ai,end_task,"{ houseName, coreId, taskId, mechanicName, isCorrect, studentAnswer, rightAnswer, sessionTime, coreSessionId, coreSessionType }",,student,user_agent
+,,Кор-сессия,закончили кор-сессию,page_events,english_ai,exit_core_session,"{ houseName, coreId, coreSessionId, congrat, resultCoins, resultFriendship, sessionTime, isMicrophoneAllowed, isMicrophoneAvailable }",,student,user_agent
+,,Домик пета,показали хотелку с радио,page_events,english_ai,display_radio,,,student,user_agent
+,,Домик пета,"показали кнопку ""магазин""",page_events,english_ai,display_shop,,,student,user_agent
+,,Домик пета,"кликнули на кнопку ""магазин""",page_events,english_ai,click_shop_button,{ houseName },,student,user_agent
+,,Домик пета,показали товар радио в магазине,page_events,english_ai,display_shop_item,,,student,user_agent
+,,Домик пета,"кликнули на кнопку ""купить товар""",page_events,english_ai,click_buy_item,"{ houseName, itemName, itemCategory, itemPrice, userCoins }",,student,user_agent
+,,Домик пета,"показали кнопку ""квест от питомца""",page_events,english_ai,display_pet_quest,"{ houseName, questName }",,student,user_agent
+,,Домик пета,"кликнули на кнопку ""квест от питомца""",page_events,english_ai,click_pet_quest,"{ houseName, questName }",,student,user_agent
+,,Экран квестов и уровня дружбы,показали квесты питомца,page_events,english_ai,display_pet_quest_and_friendship,,,student,user_agent
+,,Экран квестов и уровня дружбы,посетили квест от питомца,page_events,english_ai,enter_pet_quest,"{ houseName, questName }",,student,user_agent
+,,Экран квестов и уровня дружбы,"кликнули на кнопку ""забрать награду"" квеста",page_events,english_ai,click_get_congrat,"{ houseName, questName, questCongrat }",,student,user_agent
+,,Экран квестов и уровня дружбы,показали уровень дружбы питомца,page_events,english_ai,display_pet_friendship,,,student,user_agent
+,,Экран квестов и уровня дружбы,кликнули на уровень дружбы питомца,page_events,english_ai,click_pet_friendship,{ houseName },,student,user_agent
+,,Экран уровня дружбы,посетили уровень дружбы/словарик,page_events,english_ai,enter_pet_dict,{ houseName },,student,user_agent
+,,Экран уровня дружбы,"показали кнопку ""выйти из словарика""",page_events,english_ai,display_left_pet_dict,,,student,user_agent
+,,Пейвол,увидели пейвол,page_events,english_ai,paywall_seen,{ source },,student,user_agent
+,,Пейвол,закрыли пейвол,page_events,english_ai,close_paywall,,,student,user_agent
+,,Пейвол,"нажали на кнопку ""купить игру""",page_events,english_ai,click_buy,{ place },,student,user_agent
+,,Фейковая платежка,посетили фейковую платежку,page_events,english_ai,enter_fake_paid,,,student,user_agent
+,,Фейковая платежка,ввели 3 цифры карты,page_events,english_ai,input_card_fake,,,student,user_agent
+,,,,,,,,,,
+,,,Задел на будущее (после релиза игры),,,,,,,
+,,,,,,,,,,
+,,Главная,кликнули на покупку домика питомца,page_events,english_ai,click_buy_house,"{ houseName, housePrice, userCoins }",,student,user_agent
+,,Покупка,покупка курса,payments_detail,,"product = ""english_ai""",,,,user_agent
+,,Покупка,покупка курса,payments,,"product = ""english_ai""",,,,user_agent
+,,Главная,показали хотелку с гитарой,page_events,english_ai,display_guitar,,,student,user_agent
+,,Домик пета,показали активность с гитарой,page_events,english_ai,display_activity_with_guitar,,,student,user_agent
+,,Домик пета,показали кнопку назад,page_events,english_ai,display_back_button,,,student,user_agent
+,,Главная,показали ураган,page_events,english_ai,display_hurricane,,,student,user_agent

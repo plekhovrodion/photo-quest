@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from 'vitest';
 import { computeFlashes, mergeProgress, priceOf, LEVEL_BONUS, type Progress } from '../progress';
-import { SyncedStore, type ProgressStore } from './store';
+import { FoundApiStore, SyncedStore, progressFromFound, type ProgressStore } from './store';
 
 const P = (over: Partial<Progress> = {}): Progress => ({ levels: {}, found: {}, flashes: 0, owned: [], ...over });
 const mem = (init: Progress): ProgressStore & { data: Progress } => {
@@ -62,5 +62,57 @@ describe('SyncedStore', () => {
     fail = false;
     await store.flush();
     expect(sent).toHaveLength(1);
+  });
+});
+
+describe('FoundApiStore (бэкенд photo-quest-api)', () => {
+  const okJson = (data: unknown) => ({ ok: true, status: 200, json: async () => data }) as Response;
+
+  it('load: берёт found с сервера и выводит категории и вспышки', async () => {
+    const fetchMock = vi.fn().mockResolvedValue(okJson({ found: { 'color-red': 3 } }));
+    vi.stubGlobal('fetch', fetchMock);
+    const p = await new FoundApiStore('/api/v1', () => ({ 'Uchi-User-Id': '5' })).load();
+    expect(p.found).toEqual({ 'color-red': 3 });
+    expect(fetchMock.mock.calls[0][0]).toBe('/api/v1/progress');
+    expect(fetchMock.mock.calls[0][1].headers['Uchi-User-Id']).toBe('5');
+    vi.unstubAllGlobals();
+  });
+
+  it('save: отправляет только found через /progress/sync', async () => {
+    const fetchMock = vi.fn().mockResolvedValue(okJson({ found: {} }));
+    vi.stubGlobal('fetch', fetchMock);
+    await new FoundApiStore('/api/v1').save(P({ found: { a: 2 }, flashes: 9 }));
+    const [url, init] = fetchMock.mock.calls[0];
+    expect(url).toBe('/api/v1/progress/sync');
+    expect(init.method).toBe('POST');
+    expect(JSON.parse(init.body)).toEqual({ found: { a: 2 } });
+    vi.unstubAllGlobals();
+  });
+
+  it('save без находок ничего не шлёт, ошибка сервера бросает исключение', async () => {
+    const fetchMock = vi.fn().mockResolvedValue({ ok: false, status: 502 } as Response);
+    vi.stubGlobal('fetch', fetchMock);
+    await new FoundApiStore('/api/v1').save(P());
+    expect(fetchMock).not.toHaveBeenCalled();
+    await expect(new FoundApiStore('/api/v1').load()).rejects.toThrow('502');
+    vi.unstubAllGlobals();
+  });
+
+  it('progressFromFound отмечает полностью найденную категорию', () => {
+    expect(progressFromFound({}).levels).toEqual({});
+  });
+});
+
+describe('SyncedStore с итогом сервера (бусины)', () => {
+  it('при старте берёт итог сервера: задания, на которые не хватило бусин, в прогресс не попадают', async () => {
+    const local = mem(P({ found: { a: 3, b: 3 } }));
+    const remote: ProgressStore = {
+      load: async () => P({ found: { a: 3 } }),
+      save: async () => {},
+      reconcile: async () => P({ found: { a: 3 } }), // b отклонён
+    };
+    const result = await new SyncedStore(local, remote).load();
+    expect(result.found).toEqual({ a: 3 });
+    expect(local.data.found).toEqual({ a: 3 });
   });
 });

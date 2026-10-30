@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { TASKS } from '../data/tasks';
-import { createGame, reduce, canSkip, MAX_ATTEMPTS, type GameState } from './state';
+import { createGame, reduce, STARS_PER_TASK, type GameState } from './state';
 
 const run = (s: GameState, ...types: Array<Parameters<typeof reduce>[1]>) =>
   types.reduce(reduce, s);
@@ -18,24 +18,29 @@ describe('game state', () => {
     expect(s.attempts).toBe(0);
   });
 
-  it('неверный ответ -> ещё попытка на том же задании', () => {
+  it('неверный ответ -> можно искать снова сколько угодно раз', () => {
+    let s = createGame(TASKS.slice(0, 2));
+    for (let i = 0; i < 5; i++) {
+      s = attempt(s, false);
+      s = reduce(s, { type: 'next' });
+      expect(s.index).toBe(0);
+      expect(s.phase).toBe('task');
+    }
+  });
+
+  it('«другое задание» после неудачи переходит дальше без очков', () => {
     let s = attempt(createGame(TASKS.slice(0, 2)), false);
-    expect(canSkip(s)).toBe(false);
-    s = reduce(s, { type: 'next' });
-    expect(s.index).toBe(0);
+    s = reduce(s, { type: 'skip' });
+    expect(s.index).toBe(1);
+    expect(s.score).toBe(0);
     expect(s.phase).toBe('task');
   });
 
-  it(`после ${MAX_ATTEMPTS} неудач задание пропускается`, () => {
-    let s = createGame(TASKS.slice(0, 2));
-    for (let i = 0; i < MAX_ATTEMPTS; i++) {
-      s = attempt(s, false);
-      if (i < MAX_ATTEMPTS - 1) s = reduce(s, { type: 'next' });
-    }
-    expect(canSkip(s)).toBe(true);
-    s = reduce(s, { type: 'next' });
-    expect(s.index).toBe(1);
-    expect(s.score).toBe(0);
+  it('пропустить можно и сразу с экрана задания, но не во время проверки', () => {
+    const fresh = createGame(TASKS.slice(0, 2));
+    expect(reduce(fresh, { type: 'skip' }).index).toBe(1);
+    const checking = run(fresh, { type: 'start-camera' }, { type: 'photo-taken' });
+    expect(reduce(checking, { type: 'skip' })).toBe(checking);
   });
 
   it('сбой проверки не тратит попытку', () => {
@@ -57,12 +62,12 @@ describe('game state', () => {
 });
 
 describe('звёзды', () => {
-  it('3 звезды с первой попытки, 2 со второй', () => {
+  it('за найденное всегда одинаково, сколько бы раз ни снимал', () => {
     const first = attempt(createGame(TASKS.slice(0, 2)), true);
-    expect(first.stars).toBe(3);
-    let second = attempt(createGame(TASKS.slice(0, 2)), false);
-    second = reduce(second, { type: 'next' });
-    second = attempt(second, true);
-    expect(second.stars).toBe(2);
+    expect(first.stars).toBe(STARS_PER_TASK);
+    let later = attempt(createGame(TASKS.slice(0, 2)), false);
+    later = reduce(later, { type: 'next' });
+    later = attempt(later, true);
+    expect(later.stars).toBe(STARS_PER_TASK);
   });
 });

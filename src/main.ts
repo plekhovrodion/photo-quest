@@ -1,32 +1,36 @@
 import './style.css';
 import { LEVELS, type Level, type Task } from './data/tasks';
-import { createGame, currentTask, canSkip, reduce, starsFor, MAX_ATTEMPTS, type Action, type GameState } from './game/state';
+import { createGame, currentTask, reduce, STARS_PER_TASK, type Action, type GameState } from './game/state';
+import { PRAISE, INTRO_EN, TRY_AGAIN, TROUBLE, LEVEL_DONE, LOCKED_HINT, type Phrase, HINT_PLACE, HINT_ITEM, pickPhrase } from './data/phrases';
+import { starsSvg } from './ui/stars';
 import { takePhoto, compressPhoto } from './camera/capture';
-import { cropPhoto } from './camera/crop';
 import { targetOf } from './camera/target';
 import { verifyPhoto } from './api/verify';
-import { explainObject } from './api/explain';
 import { COLOR_RU } from './vision/names';
+import { englishFor } from './data/english';
 import { preloadModels } from './vision/models';
-import { confetti } from './fx/confetti';
+import { confetti, confettiBehind } from './fx/confetti';
 import { typeText, stopTyping } from './fx/typewriter';
-import { setBackground } from './fx/background';
-import { playSuccess, playTryAgain, speak } from './audio/sounds';
+import { speak, speakEnglish, stopSpeech, isMuted, setMuted } from './audio/sounds';
+import { hasRoom, roomHtml, mountPets, unmountPets, type Mood } from './ui/pets';
+import { canAfford, claimFound, getBeads } from './api/economy';
+import { showNotice } from './ui/notice';
+import { locPattern } from './ui/locPattern';
+import { showPaywall } from './ui/paywall';
+import { paywallUrl } from './api/paywall';
+import { playSfx, wireSfx } from './audio/sfx';
+import { wireMusic } from './audio/music';
 import { SLIDES, isOnboarded, markOnboarded } from './onboarding';
 import { feed, setLook, stageOf, fedOf, lookOf, ZAVRIKS, ZAVRIK_NAME, HUES, HATS, BADGES, UNLOCK_STAGE, MAX_STAGE, zavrikOfArt, type ZavrikId } from './zavrik';
 import { hatSvg, badgeSvg } from './ui/accessories';
 import { objectSvg, colorBallSvg, fitObject } from './map/objects';
-import { menuDecor } from './map/decor';
 import { album, toSticker, type Sticker } from './album';
 import { CLIP_OBJECTS } from './data/clip';
-import { loadProgress, recordTask, isUnlocked, canUnlock, unlockLevel, priceOf, CURRENCY, LEVEL_BONUS, type Progress } from './progress';
-
+import { loadProgress, recordTask, LEVEL_BONUS, type Progress } from './progress';
 import { createStore } from './storage/store';
-import { flashIcon, cameraIcon, speakerIcon, bulbIcon, lockIcon, starIcon, checkIcon, closeIcon, backIcon, albumIcon } from './ui/icons';
-import { isoPath, project, TW, TH, NODE_H, ROAD_H, WORLD, worldLayout } from './map/iso';
+import { flashIcon, lockIcon, starIcon, checkIcon, backIcon } from './ui/icons';
 import { placeSvg } from './map/places';
-
-type Palette = { top: string; left: string; right: string };
+import { mapDecor } from './ui/mapDecor';
 
 const root = document.getElementById('app')!;
 const store = createStore();
@@ -37,13 +41,8 @@ let notice = '';
 let view: 'album' | 'zavrik' | null = null;
 let zv: ZavrikId = 'sonya';
 const stickers = new Map<string, Sticker>();
-let stickerNew: boolean | null = null; // null — наклейки нет, true — новая, false — фото обновлено
 void album.all().then((all) => all.forEach((x) => stickers.set(x.id, x)));
 let photoUrl = '';
-let lastLabel: string | null = null;
-let lastFound: string | null = null;
-let lastFoundLabel: string | null = null;
-let explainToken = 0;
 let shownFlashes = progress.flashes;
 
 function dispatch(a: Action) {
@@ -62,28 +61,38 @@ let navDir: 'fwd' | 'back' = 'fwd';
 const goBack = () => { navDir = 'back'; };
 const reduceMotion = () => matchMedia('(prefers-reduced-motion: reduce)').matches;
 
+// Знакомство с завриками пока выключено: сразу открывается главная. Включить: true.
+const ONBOARDING = false;
+// Цвет «рамки» браузера: статус-бар сверху и область под панелью снизу окрашиваем под экран.
+// Сверху цвет шапки места, снизу цвет фона под карточками; фон страницы делится пополам, чтобы совпало и при оттяжке.
+function setChrome(cls: string) {
+  let top = '#471fb0', bottom = '#471fb0';
+  if (cls.includes('screen-loc') && level) { const c = LOC_COLORS[level.id] ?? LOC_COLORS.kitchen; top = c.head; bottom = c.bg; }
+  else if (cls.includes('screen-map')) { top = '#d9c8ff'; bottom = '#8a5eff'; }
+  const bg = `linear-gradient(${top} 50%, ${bottom} 50%)`;
+  document.documentElement.style.background = bg;
+  document.body.style.background = bg;
+  document.querySelector('meta[name="theme-color"]')?.setAttribute('content', top);
+}
+
 let quietNext = false;
+let lastShown = ''; // что нарисовано сейчас: если экран перерисовывается тем же (например, возврат с камеры), он не листается заново
+let screenSeq = 0;
 function show(html: string, cls = '') {
   stopTyping();
-  explainToken++; // ответ ИИ для прошлого экрана уже не нужен
-  setBackground(level?.id ?? null); // у главной и у каждой категории свой фон
   const dir = navDir;
   navDir = 'fwd';
   const quiet = quietNext; // перерисовка внутри экрана без перелистывания
   quietNext = false;
-  document.querySelectorAll('.ghost').forEach((g) => g.remove());
-  // Старый экран остаётся поверх копией и уезжает в сторону, пока новый въезжает с другой.
-  if (!quiet && !reduceMotion() && root.firstElementChild) {
-    const ghost = document.createElement('div');
-    ghost.className = `ghost out-${dir} ${root.className.replace(/go-(fwd|back)|quiet/g, '')}`;
-    ghost.setAttribute('aria-hidden', 'true');
-    ghost.innerHTML = root.innerHTML;
-    document.body.appendChild(ghost);
-    setTimeout(() => ghost.remove(), 520);
-  }
-  root.className = quiet ? `${cls} quiet` : `${cls} go-${dir}`.trim();
+  const same = lastShown === `${cls}|${html}`;
+  if (!quiet && !same) { screenSeq++; stopSpeech(); } // новый экран: прежняя озвучка и её отложенные запуски не должны накладываться
+  lastShown = `${cls}|${html}`;
+  root.className = quiet || same ? `${cls} quiet` : `${cls} go-${dir}`.trim(); // тот же экран заново (возврат с камеры) не листается
+  setChrome(cls);
+  unmountPets();
   root.innerHTML = html;
-  setTimeout(() => root.classList.remove('go-fwd', 'go-back'), 650);
+  mountPets(root);
+  setTimeout(() => root.classList.remove('go-fwd', 'go-back'), 800);
   root.querySelectorAll<SVGSVGElement>('svg.obj3d').forEach(fitObject);
   const b = root.querySelector<HTMLElement>('.bubble[data-say]');
   const typed = b?.querySelector<HTMLElement>('.typed');
@@ -100,26 +109,51 @@ function on(id: string, fn: () => void) {
 }
 
 function startLevel(l: Level) {
-  if (!isUnlocked(progress, l.id)) return showUnlock(l);
+  if (!isUnlocked(l)) return; // закрытое место не открываем даже напрямую
   setTimeout(() => preloadModels(), 900); // тяжёлые модели грузим после перехода, чтобы экран открывался сразу
   level = l;
   state = null;
   render();
 }
 
+// Следующее ненайденное задание места после текущего (по кругу); null, если найдено всё.
+function nextTaskAfter(l: Level, cur: Task): Task | null {
+  const i = l.tasks.indexOf(cur), n = l.tasks.length;
+  for (let k = 1; k < n; k++) { const t = l.tasks[(i + k) % n]; if (progress.found[t.id] === undefined) return t; }
+  return null;
+}
+
+let promptSpoken: string | null = null;
 function startTask(task: Task) {
+  if (!canAfford(progress.found[task.id] !== undefined)) { void showNoBeads(); return; }
+  promptSpoken = null;
+  recorded = null; // новое прохождение задания: прежний итог не переиспользуем
   setTimeout(() => preloadModels(), 900);
   state = createGame([task]);
   render();
 }
 
+// Бусины закончились: новое задание не открыть, найденные доступны. Если подключён пейвол, предлагаем полный доступ.
+async function showNoBeads(): Promise<void> {
+  const text = 'Найденные ты можешь пройти снова.';
+  if (!paywallUrl()) { await showNotice({ title: 'Бусины закончились', text, button: 'Понятно' }); return; }
+  const answer = await showNotice({ title: 'Бусины закончились', text, button: 'Открыть полный доступ', second: 'Понятно' });
+  if (answer === 'main') await showPaywall();
+}
+
 // Сохраняет награду за найденное задание; возвращает, закрыта ли категория целиком.
+// Вызывается сразу, как только показан успех (иначе находка терялась, если уйти стрелкой «назад»),
+// повторный вызов для того же задания ничего не меняет и отдаёт прежний результат.
+let recorded: { id: string; levelDone: boolean } | null = null;
 function finishTask(): boolean {
   const s = state!;
   if (s.score === 0) return false;
-  const res = recordTask(progress, level!, s.tasks[0].id, s.stars);
+  const id = s.tasks[0].id;
+  if (recorded?.id === id) return recorded.levelDone;
+  const res = recordTask(progress, level!, id, s.stars);
   progress = res.progress;
   void store.save(progress);
+  recorded = { id, levelDone: res.levelDone };
   return res.levelDone;
 }
 
@@ -128,39 +162,41 @@ async function capture() {
   dispatch({ type: 'start-camera' });
   const cap = await takePhoto(targetOf(task));
   if (!cap) return dispatch({ type: 'cancel-camera' });
-  // живая камера уже вырезала предмет; иначе даём обрезать вручную или взять весь кадр
-  const framed = cap.cropped || cap.skipCrop ? cap.blob : await cropPhoto(cap.blob);
-  if (!framed) return dispatch({ type: 'cancel-camera' });
-  const wasCropped = cap.cropped || framed !== cap.blob; // вырезано автоматически или вручную
+  // живая камера уже вырезала предмет или отдала целый кадр
+  const wasCropped = cap.cropped;
   try {
-    const photo = await compressPhoto(framed);
+    const photo = await compressPhoto(cap.blob);
     if (photoUrl) URL.revokeObjectURL(photoUrl);
     photoUrl = URL.createObjectURL(photo);
     dispatch({ type: 'photo-taken' });
     const verdict = await verifyPhoto(photo, task, { cropped: wasCropped, liveClass: cap.liveClass, liveClip: cap.liveClip });
-    const { found, foundLabel } = verdict;
     let match = verdict.match;
-    lastLabel = verdict.label ?? null;
     // Почти подошло: не переспрашиваем ребёнка и не отказываем, а засчитываем и называем предмет по заданию.
     if (!match && verdict.maybe) {
       match = true;
-      lastLabel = taskName(task);
     }
-    lastFound = found ?? null;
-    lastFoundLabel = foundLabel ?? null;
-    stickerNew = null;
     if (match) {
       try {
         const sticker: Sticker = { id: task.id, blob: await toSticker(photo), ts: Date.now() };
-        stickerNew = !stickers.has(task.id);
         stickers.set(task.id, sticker);
         void album.put(sticker);
       } catch { /* без наклейки игра продолжается */ }
     }
+    if (match) {
+      // Находка засчитывается на сервере (там же списываются бусины): не хватило, значит задание не засчитано
+      const claim = await claimFound(task.id, STARS_PER_TASK);
+      if (claim === 'insufficient') {
+        notice = 'no-beads'; // не повторяем озвучку задания при возврате на экран
+        dispatch({ type: 'check-failed' });
+        void showNoBeads();
+        return;
+      }
+    }
     dispatch({ type: 'verified', match });
-    (match ? playSuccess : playTryAgain)();
   } catch {
-    notice = 'Что-то пошло не так. Давай попробуем ещё раз!';
+    const trouble = pickPhrase(TROUBLE);
+    notice = trouble.text;
+    speak(trouble.text, false, trouble.who);
     if (state!.phase === 'camera') dispatch({ type: 'cancel-camera' });
     else dispatch({ type: 'check-failed' });
   }
@@ -169,44 +205,14 @@ async function capture() {
 
 // Картинки заврёнков Гриши и Сони (Figma «Иллюстрации. Гриша и Соня. Заврики»).
 const art = (name: string, cls = '') =>
-  `<img class="char ${cls}" src="/art/${name}.svg" alt="" aria-hidden="true" style="--hue:${lookOf(progress, zavrikOfArt(name)).hue}deg">`;
+  `<img class="char ${cls}" src="${import.meta.env.BASE_URL}art/${name}.svg" alt="" aria-hidden="true" style="--hue:${lookOf(progress, zavrikOfArt(name)).hue}deg">`;
 
 const starRow = (n: number) =>
   `<div class="stars" role="img" aria-label="Звёзд: ${n} из 3">${[1, 2, 3]
     .map((i) => `<span class="star ${i <= n ? 'on' : ''}" style="--d:${i * 0.25}s">${starIcon()}</span>`).join('')}</div>`;
 
-// Соня называет найденное: цвет для заданий на цвет, иначе предмет, который узнала модель.
-function sonyaSays(task: Task): string {
-  if (task.local?.kind === 'color') return `Это ${COLOR_RU[task.local.color]} цвет!`;
-  return lastLabel ? `Это ${lastLabel}!` : 'Ты нашёл нужный предмет!';
-}
-
-// Соня рассказывает про предмет голосом ИИ: в запрос уходит только название, фото никуда не отправляется.
-// Текст появляется под репликой, когда ответ готов; если сервер не ответил — блока просто нет.
-function attachExplain(label: string | null) {
-  const el = root.querySelector<HTMLElement>('#explain');
-  if (!el) return;
-  if (!label) { el.remove(); return; }
-  const token = ++explainToken;
-  el.hidden = false;
-  el.innerHTML = '<span class="dots" aria-hidden="true"><i></i><i></i><i></i></span><span class="sr-only">Соня думает</span>';
-  void explainObject(label).then((text) => {
-    if (token !== explainToken || !el.isConnected) return; // экран уже сменился
-    if (!text) { el.remove(); return; }
-    el.textContent = text;
-    el.classList.add('ready');
-    speak(text, true, 'sonya');
-  });
-}
-
-// «Найди предмет с красным цветом!» -> «предмет с красным цветом»
+// «Найди предмет с красным цветом» -> «предмет с красным цветом»
 const goalOf = (task: Task) => task.prompt.replace(/^Найди\s+/, '').replace(/[!.]$/, '');
-
-// Гриша объясняет, что нашёл ребёнок и что нужно искать.
-function grishaExplains(task: Task): string {
-  const seen = lastFound ? `${lastFound}.` : 'Это не похоже на то, что мы ищем.';
-  return `${seen} Мы ищем: ${goalOf(task)}.`;
-}
 
 const wallet = () =>
   `<span class="chip coin" role="button" tabindex="0" aria-label="Вспышек: ${progress.flashes}. Нажми, чтобы узнать, что это такое">${flashIcon()}${progress.flashes}</span>`;
@@ -225,7 +231,7 @@ function showFlashInfo() {
     <p class="fh-balance">${flashIcon()}У тебя ${progress.flashes}</p>
     <ul class="fh-list">
       <li>Вспышки — награда за каждый найденный предмет.</li>
-      <li>Нашёл с первой попытки — 3 вспышки, со второй — 2, с третьей — 1.</li>
+      <li>За каждый найденный предмет — 3 вспышки.</li>
       <li>Нашёл всё в категории — ещё ${LEVEL_BONUS} вспышек в подарок.</li>
       <li>Вспышками можно кормить Гришу и Соню: они растут, меняют цвет и получают шапки и значки.</li>
     </ul>
@@ -265,44 +271,124 @@ function renderOnboarding(i = 0) {
   on('oskip', done);
 }
 
-// Круглый прогресс места: сколько заданий найдено; когда все — зелёный круг с галочкой.
-function progressRing(l: Level): string {
+// Главная по макету: карта-дорожка из мест, плитки идут зигзагом, у каждой своя полоса прогресса; красная «Играть» прибита к низу.
+const ROOM_IDS = new Set(['colors', 'kitchen', 'room', 'school', 'bath', 'outdoor', 'food', 'hall']);
+let targetPlace: Level | undefined; // место, на которое показывает стрелка
+function mapTile(l: Level, i: number): string {
   const total = l.tasks.length;
   const found = l.tasks.filter((t) => progress.found[t.id] !== undefined).length;
-  if (found === 0) return `<span class="cube-ring" aria-hidden="true"><svg viewBox="0 0 44 44"><circle class="ring-track" cx="22" cy="22" r="17"/></svg><b>0/${total}</b></span>`;
-  const full = found >= total;
-  const pct = Math.round((found / total) * 100);
-  return `<span class="cube-ring ${full ? 'full' : ''}" aria-hidden="true">
-    <svg viewBox="0 0 44 44"><circle class="ring-track" cx="22" cy="22" r="17"/>
-    <circle class="ring-arc" cx="22" cy="22" r="17" pathLength="100" style="--pct:${pct}" transform="rotate(-90 22 22)"/></svg>
-    ${full ? checkIcon() : `<b>${found}/${total}</b>`}</span>`;
+  const pct = total ? Math.round((found / total) * 100) : 0;
+  const art = `${import.meta.env.BASE_URL}art/${ROOM_IDS.has(l.id) ? 'rooms' : 'map'}/${l.id}.svg`; // комнаты с питомцами из Figma, где они есть; у остальных прежняя картинка
+  const full = total > 0 && found >= total;
+  const locked = !isUnlocked(l);
+  const target = !locked && !full && l === targetPlace;
+  return `<button class="mp-tile ${i % 2 ? 'right' : 'left'}${full ? ' done' : ''}${locked ? ' locked' : ''}" role="listitem" data-i="${i}" style="--i:${i}" ${locked ? 'aria-disabled="true"' : ''} aria-label="${l.title}: найдено ${found} из ${total}${full ? ', всё найдено' : ''}${locked ? ', закрыто: сначала пройди предыдущее место' : ''}">${target ? `<img class="tut-arrow" src="${import.meta.env.BASE_URL}art/arrow-tutorial.svg" alt="" aria-hidden="true">` : ''}${locked ? '<span class="mp-lock" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M7 10V7a5 5 0 0 1 10 0v3h1.5A1.5 1.5 0 0 1 20 11.5v8a1.5 1.5 0 0 1-1.5 1.5h-13A1.5 1.5 0 0 1 4 19.5v-8A1.5 1.5 0 0 1 5.5 10H7Zm2.5 0h5V7a2.5 2.5 0 0 0-5 0v3Z" fill="#fff"/></svg></span>' : ''}
+    <span class="mp-win${ROOM_IDS.has(l.id) ? ' is-room' : ''}">${hasRoom(l.id) ? roomHtml(l.id, true, 'head-', full ? 'happy-loop' : 'sad-loop') : `<img src="${art}" alt="">`}</span>${full ? `<img class="loc-check mp-check" src="${LOC_BASE()}/check.svg" alt="">` : ''}
+    <span class="mp-track" role="progressbar" aria-valuemin="0" aria-valuemax="${total}" aria-valuenow="${found}"><span class="loc-fill" style="--w:${pct}%;background-image:url(${LOC_BASE()}/stripe-a.svg)"></span></span></button>`;
+}
+
+// Дорожка между плитками: от центра плитки вниз, широкая плавная петля на другую сторону и вниз к следующей. Рисуется под плитками.
+// При первом показе «прорисовывается» маской сверху вниз; пересчёт при смене размера анимацию не повторяет.
+function drawRoad(road: HTMLElement) {
+  const pts = Array.from(road.querySelectorAll<HTMLElement>('.mp-tile')).map((t) => [t.offsetLeft + t.offsetWidth / 2, t.offsetTop + t.offsetHeight / 2]);
+  if (pts.length < 2) return;
+  let d = `M${pts[0][0]} ${pts[0][1]}`;
+  for (let i = 1; i < pts.length; i++) {
+    const [px, py] = pts[i - 1], [qx, qy] = pts[i], my = (py + qy) / 2;
+    const r = Math.min(56, Math.abs(qx - px) / 2, (qy - py) / 2), dir = qx > px ? 1 : -1;
+    d += `L${px} ${my - r}Q${px} ${my} ${px + dir * r} ${my}L${qx - dir * r} ${my}Q${qx} ${my} ${qx} ${my + r}L${qx} ${qy}`;
+  }
+  const animated = !road.dataset.drawn;
+  road.dataset.drawn = '1';
+  // Оформление: в пустой половине рядом с каждой плиткой, «стоит» на её нижней кромке
+  road.querySelectorAll('.mp-decor').forEach((e) => e.remove());
+  Array.from(road.querySelectorAll<HTMLElement>('.mp-tile')).forEach((t, i) => {
+    const el = document.createElement('div');
+    el.className = `mp-decor ${t.classList.contains('left') ? 'right' : 'left'}${animated ? '' : ' still'}`;
+    el.style.cssText = `top:${t.offsetTop + t.offsetHeight}px;--i:${i}`;
+    el.innerHTML = mapDecor(i);
+    road.appendChild(el);
+  });
+  road.querySelector('.mp-path')?.remove();
+  road.insertAdjacentHTML('afterbegin', `<svg class="mp-path${animated ? ' draw' : ''}" width="${road.offsetWidth}" height="${road.offsetHeight}" aria-hidden="true">
+    <mask id="mp-reveal" maskUnits="userSpaceOnUse" x="-50" y="-50" width="${road.offsetWidth + 100}" height="${road.offsetHeight + 100}"><path d="${d}" class="mp-reveal" pathLength="1"/></mask>
+    <g mask="url(#mp-reveal)"><path d="${d}" class="mp-lane"/><path d="${d}" class="mp-dash"/></g></svg>`);
+}
+
+// Счётчик бесплатных заданий и кнопка «Открыть доступ» на карте пока скрыты; включить: true
+const SHOW_ACCESS_HUD = false;
+const SHOW_BEADS_CHIP = false; // счётчик бусин в шапке карты скрыт (ограничение по бусинам при этом работает)
+
+// Фон карты (макет Figma «01 / Кухня»): облака и холмы поверх светло-сиреневого, собираются из файлов art/map/wide.
+// Две раскладки: широкая (экран от 900 px) и узкая для телефона; облака плавно плывут (класс cloud, см. style.css).
+function mapBg(): string {
+  const u = (n: string) => `${import.meta.env.BASE_URL}art/map/wide/${n}.svg`;
+  const im = (n: string, x: number, y: number, w: number, h: number, extra = '') =>
+    `<image href="${u(n)}" x="${x}" y="${y}" width="${w}" height="${h}" preserveAspectRatio="none"${extra}/>`;
+  const cloud = (n: string, x: number, y: number, w: number, h: number, k: number) => im(n, x, y, w, h, ` class="cloud" style="--k:${k}"`);
+  const wide = `<svg class="mp-bg mp-bg-wide" viewBox="0 0 1438 869" preserveAspectRatio="xMidYMid slice" aria-hidden="true"><rect width="1438" height="869" fill="#ebe0ff"/>
+    ${cloud('cloud-a', 54, 36, 443.2, 230.9, 0)}${cloud('cloud-b', 794.1, 208, 178.7, 118.9, 1)}${cloud('cloud-c', 1162, 104, 218, 145, 2)}
+    ${im('hills-a', -87, 404, 952.955, 675.284)}${im('hills-b', 719, 434, 824.911, 502.014)}
+    ${im('hills-c', -216.24, 710.71, 1789.961, 405.527, ' transform="translate(678.74 913.47) scale(-1 1) translate(-678.74 -913.47)"')}</svg>`;
+  const tall = `<svg class="mp-bg mp-bg-tall" viewBox="0 0 390 844" preserveAspectRatio="xMidYMax slice" aria-hidden="true"><rect width="390" height="844" fill="#ebe0ff"/>
+    ${cloud('cloud-a', -60, -6, 222, 116, 0)}${cloud('cloud-b', 250, 190, 107, 71, 1)}${cloud('cloud-c', 236, -10, 130, 87, 2)}
+    ${im('hills-a', -140, 600, 560, 397)}${im('hills-b', 200, 640, 460, 280)}
+    ${im('hills-c', -330, 770, 1050, 238, ' transform="translate(195 889) scale(-1 1) translate(-195 -889)"')}</svg>`;
+  return wide + tall;
+}
+
+// Голосовая подсказка при входе на экран: говорим, только если ребёнок всё ещё на нём (sel есть на экране).
+function sayHint(sel: string, list: Phrase[]) {
+  const line = pickPhrase(list);
+  const seq = screenSeq;
+  setTimeout(() => { if (seq === screenSeq && root.querySelector(sel)) speak(line.text, false, line.who); }, 600);
 }
 
 function renderLevels() {
-  const { W, H, items } = worldLayout(LEVELS.length);
-  const cubes = LEVELS.map((l, i) => {
-    const p = progress.levels[l.id];
-    const it = items[i];
-    const locked = !isUnlocked(progress, l.id);
-    const badge = locked
-      ? `<span class="cube-lock" aria-hidden="true">${lockIcon()}</span><span class="cube-price" aria-hidden="true">${flashIcon()}${priceOf(l.id)}</span>`
-      : progressRing(l);
-    return `<button class="cube-btn ${p?.passed ? 'done' : ''} ${locked ? 'locked' : ''}" data-i="${i}"
-      aria-label="${l.title}${locked ? `, закрыто, стоит ${priceOf(l.id)} вспышек` : `, найдено ${l.tasks.filter((t) => progress.found[t.id] !== undefined).length} из ${l.tasks.length}`}"
-      style="left:${(it.cx / W) * 100}%;top:${(it.top / H) * 100}%;width:${(WORLD.CUBE_W / W) * 100}%;--i:${i};--ph:${(i * 0.7).toFixed(1)}s">
-      <span class="cube-in"><span class="cube-float">${placeSvg(l.id)}${badge}
-      <span class="cube-label">${l.title}</span></span></span>
-    </button>`;
-  }).join('');
-  show(`${hud('', '', '', `<button id="album" class="hud-btn al" aria-label="Мои находки"><span class="hb-ico">${albumIcon()}</span><span class="hb-txt">Альбом</span></button>`)}
-    ${menuDecor()}
-    <div class="world" style="aspect-ratio:${W} / ${H.toFixed(0)}">${cubes}</div>`, 'screen-menu');
-  root.querySelectorAll<HTMLButtonElement>('.cube-btn').forEach((b) =>
-    b.addEventListener('click', () => startLevel(LEVELS[Number(b.dataset.i)])),
-  );
-  on('album', openAlbum);
+  const base = LOC_BASE();
+  const b = getBeads();
+  // Баланс бусин и сколько новых заданий ещё бесплатно: только если оплата включена и баланс известен (у премиума и без кошелька его нет)
+  const paid = b.cost > 0 && b.remaining !== undefined;
+  const free = paid ? Math.floor(b.remaining! / b.cost) : 0;
+  const beadsChip = SHOW_BEADS_CHIP && paid
+    ? (paywallUrl()
+      ? `<button id="beads" class="mp-chip mp-beads" aria-label="Бусин: ${b.remaining}. Открыть доступ"><i class="bead" aria-hidden="true"></i><b>${b.remaining}</b></button>` // клик по бусинам открывает пейвол
+      : `<div class="mp-chip mp-beads" role="status" aria-label="Бусин: ${b.remaining}"><i class="bead" aria-hidden="true"></i><b>${b.remaining}</b></div>`) : '';
+  const freeChip = SHOW_ACCESS_HUD && paid
+    ? `<div class="mp-chip mp-free" role="status" aria-label="Бесплатных заданий: ${free}"><b>${free}</b><span>бесплатных заданий</span></div>` : '';
+  const accessBtn = SHOW_ACCESS_HUD && paywallUrl() ? '<button id="access" class="mp-access">Открыть доступ</button>' : '';
+  const hud = `${beadsChip ? `<div class="mp-hud">${beadsChip}</div>` : ''}${freeChip || accessBtn ? `<div class="mp-hud mp-hud2">${freeChip}${accessBtn}</div>` : ''}`;
+  const places = MAP_ORDER.map((id) => LEVELS.find((l) => l.id === id)).filter((l): l is Level => !!l);
+  const next = places.find((l) => !levelFull(l)) ?? places[0]; // первое непройденное место: оно всегда открыто
+  targetPlace = places.find((l) => !levelFull(l));
+  const tool = (id: string, icon: string, label: string) => `<button id="${id}" class="loc-btn" aria-label="${label}"><i class="loc-i" style="--m:url(${base}/${icon}.svg)"></i></button>`;
+  show(`<div class="loc mp">${mapBg()}<header class="mp-head"><div class="mp-strip" aria-hidden="true">${['mirror', '', 'mirror'].map((c) => `<img class="mp-art ${c}" src="${import.meta.env.BASE_URL}art/map/header.svg" alt="">`).join('')}</div>
+      ${hud}
+      <button id="back" class="loc-btn" aria-label="На главную Учи"><i class="loc-i" style="--m:url(${base}/back.svg)"></i></button>
+      <div class="loc-tools">${tool('snd', 'sound', isMuted() ? 'Включить звук' : 'Выключить звук')}${tool('fs', 'fullscreen', 'На весь экран')}</div></header>
+    <main class="loc-body"><div class="mp-road" role="list" aria-label="Места">${places.map(mapTile).join('')}</div></main>
+    ${paywallUrl() ? '<button id="buy" class="mp-buy">Купить игру</button>' : ''}
+    ${bigBtn('play', playIcon(), 'Играть', false)}</div>`, `screen-loc screen-map${isMuted() ? ' muted' : ''}`);
+  root.querySelectorAll<HTMLButtonElement>('.mp-tile').forEach((b) => b.addEventListener('click', () => {
+    const pl = places[Number(b.dataset.i)];
+    if (isUnlocked(pl)) return startLevel(pl);
+    b.classList.remove('shake'); void b.offsetWidth; b.classList.add('shake'); // закрыто: качаем плашку и подсказываем голосом
+    const line = pickPhrase(LOCKED_HINT);
+    speak(line.text, false, line.who);
+  }));
+  on('play', () => startLevel(next));
+  sayHint('.mp-road', HINT_PLACE);
+  on('access', () => { void showPaywall(); });
+  on('buy', () => { void showPaywall(); });
+  root.querySelector('#beads')?.addEventListener('click', () => { void showPaywall(); });
+  on('back', () => location.assign('/')); // из игры на главную Учи (тот же хост, корень сайта)
+  wireLocTools();
+  const road = root.querySelector<HTMLElement>('.mp-road')!;
+  drawRoad(road);
+  // Перерисовка только при смене размера (первый вызов наблюдателя пропускаем, иначе он оборвёт анимацию)
+  let w = road.offsetWidth, h = road.offsetHeight;
+  new ResizeObserver(() => { if (road.offsetWidth !== w || road.offsetHeight !== h) { w = road.offsetWidth; h = road.offsetHeight; drawRoad(road); } }).observe(road);
 }
-
 
 // Экран «Заврики»: кормим вспышками, растим, одеваем.
 const ZV_ART: Record<ZavrikId, string> = { grisha: 'jet-2', sonya: 'sonya-wave' };
@@ -330,7 +416,7 @@ function renderZavrik(quiet = false) {
     <h1>Заврики</h1>
     <div class="zv-tabs">${tabs}</div>
     <div class="zv-stage s${st.stage}" style="--hue:${look.hue}deg;aspect-ratio:${id === 'grisha' ? '118 / 222' : '117 / 190'}">
-      <img class="zv-char" src="/art/${ZV_ART[id]}.svg" alt="${ZAVRIK_NAME[id]}">
+      <img class="zv-char" src="${import.meta.env.BASE_URL}art/${ZV_ART[id]}.svg" alt="${ZAVRIK_NAME[id]}">
       ${look.hat ? hatSvg(look.hat, `acc-hat hat-${id}`) : ''}${look.badge ? badgeSvg(look.badge, `acc-badge badge-${id}`) : ''}
     </div>
     <div class="zv-info"><b>${ZAVRIK_NAME[id]}: ${STAGE_TITLE[st.stage - 1]}, уровень ${st.stage}</b>
@@ -358,7 +444,6 @@ function renderZavrik(quiet = false) {
     if (res.progress === progress) return;
     progress = res.progress;
     void store.save(progress);
-    playSuccess();
     if (res.levelUp) { confetti(1600); speak(`${ZAVRIK_NAME[id]} вырос! Уровень ${res.levelUp}!`, false, 'sonya'); }
     renderZavrik(true);
     const stage = root.querySelector('.zv-stage');
@@ -387,11 +472,6 @@ const COLOR_CSS: Record<string, string> = {
 function taskArt(t: Task, cls = 'obj3d'): string {
   if (t.local?.kind === 'color') return colorBallSvg(COLOR_CSS[t.local.color], cls);
   return objectSvg(t.id.replace(/^object-/, ''), cls);
-}
-function taskCard(t: Task): string {
-  if (t.local?.kind === 'color') return `<div class="task-card">${colorBallSvg(COLOR_CSS[t.local.color])}</div>`;
-  const pic = objectSvg(t.id.replace(/^object-/, ''));
-  return pic ? `<div class="task-card">${pic}</div>` : '';
 }
 
 // Название предмета задания в именительном падеже для подписи наклейки.
@@ -471,194 +551,225 @@ function showSticker(t: Task, url: string) {
   overlay.querySelector<HTMLElement>('.st-ok')!.focus();
 }
 
-// Окно покупки места: открыть за вспышки или подсказать, сколько не хватает.
-function showUnlock(l: Level) {
-  if (document.querySelector('.modal-overlay')) return;
-  const price = priceOf(l.id);
-  const ok = canUnlock(progress, l.id);
-  const missing = price - progress.flashes;
-  const overlay = document.createElement('div');
-  overlay.className = 'modal-overlay';
-  overlay.setAttribute('role', 'dialog');
-  overlay.setAttribute('aria-modal', 'true');
-  overlay.setAttribute('aria-labelledby', 'ul-title');
-  overlay.innerHTML = `<div class="modal">
-    <div class="modal-place">${placeSvg(l.id)}</div>
-    <h2 id="ul-title">${ok ? `Открыть «${l.title}»?` : `«${l.title}» пока закрыто`}</h2>
-    <p class="fh-balance">${flashIcon()}У тебя ${progress.flashes}, нужно ${price}</p>
-    <p class="modal-text">${ok
-      ? `Это место стоит ${price} вспышек. Там ${l.tasks.length} новых заданий.`
-      : `Не хватает ${missing} вспышек. Находи предметы в открытых местах, и вспышки накопятся!`}</p>
-    ${ok ? `<button class="ul-buy" type="button">${flashIcon()}Открыть за ${price}</button>` : ''}
-    <button class="ul-cancel secondary" type="button">${ok ? 'Не сейчас' : 'Понятно'}</button>
-  </div>`;
-  document.body.appendChild(overlay);
-  const close = () => { overlay.remove(); removeEventListener('keydown', onKey); };
-  const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape') close(); };
-  addEventListener('keydown', onKey);
-  overlay.addEventListener('click', (e) => { if (e.target === overlay) close(); });
-  overlay.querySelector('.ul-cancel')!.addEventListener('click', close);
-  overlay.querySelector('.ul-buy')?.addEventListener('click', () => {
-    progress = unlockLevel(progress, l.id);
-    void store.save(progress);
-    close();
-    playSuccess();
-    confetti(1400);
-    startLevel(l);
-  });
-  overlay.querySelector<HTMLElement>(ok ? '.ul-buy' : '.ul-cancel')!.focus();
-}
-
 const toMenu = () => { goBack(); state = null; level = null; render(); };
 const toMap = () => { goBack(); state = null; render(); };
 
-// Изометрическая карта: плитки-кубики по ромбовой сетке 2:1, путь зигзагом вниз (геометрия в map/iso.ts).
-const PAL = {
-  road: { top: '#a78bfa', left: '#6d28d9', right: '#4c1d95' },
-  todo: { top: '#ddd6fe', left: '#8b5cf6', right: '#5b21b6' },
-  next: { top: '#fde68a', left: '#f59e0b', right: '#b45309' },
-  done: { top: '#86efac', left: '#16a34a', right: '#166534' },
-} satisfies Record<string, Palette>;
-
-function tileSvg(sx: number, sy: number, h: number, c: Palette, cls: string, i: number): string {
-  const x0 = sx - TW / 2, x1 = sx + TW / 2, ty = sy - h;
-  return `<g class="tile ${cls}" style="--i:${i}">
-    <polygon points="${x0},${ty} ${sx},${ty + TH / 2} ${sx},${sy + TH / 2} ${x0},${sy}" fill="${c.left}"/>
-    <polygon points="${x1},${ty} ${sx},${ty + TH / 2} ${sx},${sy + TH / 2} ${x1},${sy}" fill="${c.right}"/>
-    <polygon points="${sx},${ty - TH / 2} ${x1},${ty} ${sx},${ty + TH / 2} ${x0},${ty}" fill="${c.top}"/>
-  </g>`;
+// Экран места по макету: шапка с фоном места, полоса прогресса, сетка карточек с иконками и кнопка «играть».
+// Иконки и шапки — спрайты из Figma (public/art/loc): порядок в спрайте — места по макету, внутри места — порядок заданий.
+const LOC_ORDER = ['kitchen', 'colors', 'room', 'school', 'bath', 'hall', 'food', 'outdoor'];
+// Порядок на главной и открытие по очереди: первым идут «Цвета», каждое следующее место открывается, когда найдено всё в предыдущем.
+// (LOC_ORDER выше нельзя менять: по нему устроены спрайты иконок и шапок.)
+const MAP_ORDER = ['colors', 'kitchen', 'room', 'school', 'bath', 'hall', 'food', 'outdoor'];
+const levelFull = (l: Level) => l.tasks.length > 0 && l.tasks.every((t) => progress.found[t.id] !== undefined);
+function isUnlocked(l: Level): boolean {
+  const i = MAP_ORDER.indexOf(l.id);
+  if (i <= 0) return true;
+  const prev = LEVELS.find((x) => x.id === MAP_ORDER[i - 1]);
+  return !prev || levelFull(prev);
 }
+const LOC_COUNTS = [8, 10, 9, 7, 4, 5, 8, 10];
+const LOC_COLORS: Record<string, { bg: string; head: string; fill: string; shadow: string; btn: string; btns: string }> = {
+  kitchen: { bg: '#efe6ff', head: '#d9c8ff', fill: '#7a5ad0', shadow: '#cbb7ff', btn: '#7a5ad0', btns: '#977eda' },
+  colors: { bg: '#fde9bd', head: '#ffd3e2', fill: '#ff8f0d', shadow: '#fbce6d', btn: '#ff8f0d', btns: '#ffa842' },
+  room: { bg: '#ffdfc2', head: '#c3e4ff', fill: '#5779ff', shadow: '#ffb56f', btn: '#5779ff', btns: '#7c96ff' },
+  school: { bg: '#ffd2b0', head: '#ffe59a', fill: '#2f6b57', shadow: '#ffa35d', btn: '#2f6b57', btns: '#5d8c7c' },
+  bath: { bg: '#c7f4fd', head: '#b9ecf5', fill: '#82d0e6', shadow: '#77e4fa', btn: '#82d0e6', btns: '#9ddaeb' },
+  hall: { bg: '#ffe2d8', head: '#ffc7bd', fill: '#ee7a6c', shadow: '#ffa485', btn: '#ee7a6c', btns: '#f2978c' },
+  food: { bg: '#fff4d1', head: '#e6f5a6', fill: '#e069c1', shadow: '#ffe07e', btn: '#e069c1', btns: '#e78acf' },
+  outdoor: { bg: '#fff1c9', head: '#c6efe6', fill: '#5fc9a8', shadow: '#ffdc76', btn: '#5fc9a8', btns: '#82d5bb' },
+};
 
+// Общая оболочка экранов места и заданий: переменные цветов места, шапка с фоном и кнопками, подключение «звука» и «на весь экран».
+const LOC_BASE = () => `${import.meta.env.BASE_URL}art/loc`;
+// Тот же тон, но темнее и насыщеннее: для узора фона и теней карточек
+function deepen(hex: string): string {
+  const n = parseInt(hex.slice(1), 16), r = (n >> 16) / 255, g = ((n >> 8) & 255) / 255, b = (n & 255) / 255;
+  const mx = Math.max(r, g, b), mn = Math.min(r, g, b), d = mx - mn;
+  let h = 0;
+  if (d) h = mx === r ? ((g - b) / d + (g < b ? 6 : 0)) : mx === g ? (b - r) / d + 2 : (r - g) / d + 4;
+  const l = (mx + mn) / 2, sat = d ? d / (1 - Math.abs(2 * l - 1)) : 0;
+  return `hsl(${Math.round(h * 60)} ${Math.round(Math.min(1, sat * 1.3 + 0.1) * 100)}% ${Math.round(Math.max(0.55, l - 0.22) * 100)}%)`;
+}
+// Цвета стены и пола комнат из Figma: шапка места и фон под ней продолжают комнату
+const ROOM_WALLS: Record<string, [string, string]> = {
+  kitchen: ['#bbf0fc', '#fffbde'], colors: ['#fcf79a', '#d5ffda'], room: ['#d8dafc', '#cff1ff'], school: ['#ffd2f5', '#ffebcc'],
+  bath: ['#96e6fc', '#cbffdf'], hall: ['#ffc0a5', '#ffe6aa'], food: ['#ffd97b', '#e1d7fd'], outdoor: ['#b7f5b3', '#f6eea4'],
+};
+function locVars(l: Level): string {
+  const c = { ...(LOC_COLORS[l.id] ?? LOC_COLORS.kitchen) }, li = LOC_ORDER.indexOf(l.id);
+  const rw = ROOM_WALLS[l.id];
+  if (rw && hasRoom(l.id)) { c.head = rw[0]; c.bg = rw[1]; c.shadow = deepen(rw[1]); } // узор и тени карточек «тон в тон» с полом комнаты
+  return `--lbg:${c.bg};--lhead:${c.head};--lfill:${c.fill};--lshadow:${c.shadow};--lbtn:${c.btn};--lbtns:${c.btns};--lpat:${locPattern(l.id, c.shadow)};--hy:${-Math.max(li, 0) * 216}px`;
+}
+// Частицы поверх фона места: у каждого места своя тема (пар, конфетти, звёзды, пузыри, облака).
+const LOC_FX: Record<string, { kind: string; colors?: string[] }> = {
+  kitchen: { kind: 'rise' }, colors: { kind: 'fall', colors: ['#ff647a', '#ffc65a', '#5ab2ff', '#7ed957', '#ff9fb8'] },
+  room: { kind: 'twinkle' }, school: { kind: 'fall', colors: ['#ffffff', '#fff3b0', '#ffffff'] },
+  bath: { kind: 'bubble' }, hall: { kind: 'drift' }, food: { kind: 'rise' }, outdoor: { kind: 'drift' },
+};
+function locFx(l: Level): string {
+  const fx = LOC_FX[l.id]; if (!fx) return '';
+  const n = fx.kind === 'drift' ? 4 : 9;
+  const rnd = (i: number, k: number) => ((Math.sin(i * 12.9898 + k * 78.233) * 43758.5453) % 1 + 1) % 1; // детерминированный «случайный» разброс
+  const bits = Array.from({ length: n }, (_, i) => {
+    const s = fx.kind === 'drift' ? 10 + rnd(i, 1) * 10 : fx.kind === 'twinkle' ? 5 + rnd(i, 1) * 5 : 6 + rnd(i, 1) * 9;
+    const c = fx.colors ? fx.colors[i % fx.colors.length] : '';
+    return `<i style="--x:${(6 + (i + rnd(i, 2) * 0.8) * (88 / n)).toFixed(1)}%;--y:${(8 + rnd(i, 3) * 60).toFixed(0)}%;--s:${s.toFixed(0)}px;--t:${(fx.kind === 'drift' ? 18 + rnd(i, 4) * 12 : 3.4 + rnd(i, 4) * 3).toFixed(1)}s;--d:${(-rnd(i, 5) * 8).toFixed(1)}s;--dx:${((rnd(i, 6) - 0.5) * 40).toFixed(0)}px${c ? `;--c:${c}` : ''}"></i>`;
+  }).join('');
+  return `<div class="loc-fx fx-${fx.kind}" aria-hidden="true">${bits}</div>`;
+}
+function locHeader(l: Level, mood?: Mood): string {
+  const base = LOC_BASE();
+  const tool = (id: string, icon: string, label: string) => `<button id="${id}" class="loc-btn" aria-label="${label}"><i class="loc-i" style="--m:url(${base}/${icon}.svg)"></i></button>`;
+  return `<header class="loc-head${hasRoom(l.id) ? ' has-room' : ''}">${hasRoom(l.id) ? `<div class="loc-art loc-room" aria-hidden="true"><img class="room-side" src="${import.meta.env.BASE_URL}art/rooms/hd-${l.id}-side.svg" alt=""><span class="room-mid">${roomHtml(l.id, true, 'hd-', mood)}</span><img class="room-side" src="${import.meta.env.BASE_URL}art/rooms/hd-${l.id}-side.svg" alt=""></div>` : `<div class="loc-art" style="background-image:url(${base}/headers.svg)" aria-hidden="true"></div>`}${locFx(l)}
+    <button id="back" class="loc-btn" aria-label="Назад"><i class="loc-i" style="--m:url(${base}/back.svg)"></i></button>
+    <div class="loc-tools">${tool('snd', 'sound', isMuted() ? 'Включить звук' : 'Выключить звук')}${tool('fs', 'fullscreen', 'На весь экран')}</div></header>`;
+}
+function wireLocTools() {
+  on('snd', () => {
+    setMuted(!isMuted());
+    root.classList.toggle('muted', isMuted());
+    root.querySelector('#snd')?.setAttribute('aria-label', isMuted() ? 'Включить звук' : 'Выключить звук');
+  });
+  on('fs', () => {
+    if (document.fullscreenElement) void document.exitFullscreen();
+    else void document.documentElement.requestFullscreen?.().catch(() => {});
+  });
+}
+// Иконка задания из спрайта макета (порядок: места как в LOC_ORDER, внутри — задания).
+function taskIcon(l: Level, t: Task): string {
+  const li = LOC_ORDER.indexOf(l.id), i = l.tasks.indexOf(t);
+  if (li < 0 || i < 0) return taskArt(t);
+  const idx = LOC_COUNTS.slice(0, li).reduce((a, b) => a + b, 0) + i, col = idx % 8, row = Math.floor(idx / 8);
+  return `<span class="loc-ico" style="background-image:url(${LOC_BASE()}/icons.svg);background-position:${(col / 7) * 100}% ${(row / 7) * 100}%"></span>`;
+}
+// Экран задания: карточка + нижняя панель с одной большой кнопкой.
+// Над большой кнопкой покачивается стрелка из макета: куда нажимать (на экране места не нужна, там сетка карточек).
+const bigBtn = (id: string, inner: string, label: string, arrow = true) =>
+  `<div class="loc-bar">${arrow ? `<img class="tap-arrow" src="${import.meta.env.BASE_URL}art/arrow-tutorial.svg" alt="" aria-hidden="true">` : ''}<button id="${id}" class="loc-play" aria-label="${label}">${inner}</button></div>`;
+function taskScreen(l: Level, card: string, extra: string, bar: string, cls: string) {
+  show(`<div class="loc" style="${locVars(l)}">${locHeader(l, cls.includes('tk-bad') ? 'sad' : cls.includes('tk-ok') ? 'happy' : undefined)}<main class="loc-body tk-body"><div class="loc-box">${card}${extra}</div></main>${bar}</div>`, `screen-loc screen-tk ${cls}${isMuted() ? ' muted' : ''}`);
+  wireLocTools();
+  on('back', toMap);
+}
+const retryIcon = () => `<img src="${LOC_BASE()}/retry.svg" alt="">`;
+const nextIcon = () => `<img src="${LOC_BASE()}/next.svg" alt="">`;
+const cameraBtnIcon = () => `<img src="${LOC_BASE()}/camera.svg" alt="">`;
+const playIcon = () => `<img src="${LOC_BASE()}/play.svg" alt="">`;
+
+// Экран места по макету: шапка с фоном места, полоса прогресса, сетка карточек с иконками и кнопка «играть».
 function renderMap(l: Level) {
+  const base = LOC_BASE();
   const n = l.tasks.length;
-  const cells = isoPath(n);
-  const pos = cells.map((c) => ({ ...c, ...project(c.gx, c.gy) }));
-  const PAD = 12;
-  const minX = Math.min(...pos.map((p) => p.sx)) - TW / 2 - PAD;
-  const maxX = Math.max(...pos.map((p) => p.sx)) + TW / 2 + PAD;
-  const minY = Math.min(...pos.map((p) => p.sy)) - NODE_H - TH / 2 - PAD - 70; // место под Соню
-  const maxY = Math.max(...pos.map((p) => p.sy)) + TH / 2 + PAD;
-  const W = maxX - minX, H = maxY - minY;
-  const next = l.tasks.findIndex((t) => progress.found[t.id] === undefined);
-  const stateOf = (i: number) => (progress.found[l.tasks[i].id] !== undefined ? 'done' : i === next ? 'next' : 'todo');
-
-  // порядок отрисовки «от дальнего к ближнему», чтобы кубики перекрывали друг друга правильно
-  const order = pos.map((p, idx) => ({ p, idx })).sort((a, b) => a.p.gx + a.p.gy - (b.p.gx + b.p.gy) || a.p.gx - b.p.gx);
-  const tiles = order.map(({ p, idx }) => {
-    const st = p.node === null ? 'road' : stateOf(p.node);
-    return tileSvg(p.sx - minX, p.sy - minY, p.node === null ? ROAD_H : NODE_H, PAL[st], st, idx);
-  }).join('');
-
-  const nodes = l.tasks.map((t, i) => {
-    const p = pos.find((q) => q.node === i)!;
-    const st = stateOf(i);
-    const done = st === 'done';
-    return `<button class="stop ${st}" data-i="${i}" aria-label="Задание ${i + 1}${done ? ', найдено' : ''}"
-      style="left:${((p.sx - minX) / W) * 100}%;top:${((p.sy - NODE_H - minY) / H) * 100}%;--i:${i}">${done ? checkIcon() : i + 1}</button>`;
-  }).join('');
-
   const found = l.tasks.filter((t) => progress.found[t.id] !== undefined).length;
-  // Картинки по бокам карты (на больших экранах): предметы этого места и флаг у последнего задания.
-  const lastP = pos.find((q) => q.node === n - 1)!;
-  const props = l.tasks.slice(0, 8).map((t, i) => {
-    const left = i % 2 === 0;
-    const top = 4 + (Math.floor(i / 2) * 24) + (left ? 0 : 10);
-    return `<span class="prop ${left ? 'pl' : 'pr'}" style="top:${top}%;--r:${left ? -6 + i : 6 - i}deg">${taskArt(t, 'obj3d prop-obj')}</span>`;
+  const cards = l.tasks.map((t, i) => {
+    const done = progress.found[t.id] !== undefined;
+    return `<button class="loc-card ${done ? 'done' : ''}" data-i="${i}" style="--i:${i}" aria-label="${taskName(t)}${done ? ', найдено' : ''}">${taskIcon(l, t)}${done ? `<img class="loc-check" src="${base}/check.svg" alt="">` : ''}</button>`;
   }).join('');
-  const flag = `<span class="prop flag" style="left:${(((lastP.sx - minX) / W) * 100 + 14).toFixed(1)}%;top:${(((lastP.sy - NODE_H - minY) / H) * 100 - 6).toFixed(1)}%">${objectSvg('flag', 'obj3d prop-obj')}</span>`;
-  show(`${hud(`<button id="back" class="secondary small" aria-label="Назад">${backIcon()}</button>`)}
-    <h1>${l.title}</h1><p>Найдено: ${found} из ${n}</p>
-    <div class="map" style="aspect-ratio:${W.toFixed(1)} / ${H.toFixed(1)};--w:${W.toFixed(0)}">
-      <svg viewBox="0 0 ${W.toFixed(1)} ${H.toFixed(1)}" aria-hidden="true">${tiles}</svg>${props}${flag}${nodes}
-    </div>`, 'screen-map');
-  root.querySelectorAll<HTMLButtonElement>('.stop').forEach((b) =>
+  const pct = n ? Math.round((found / n) * 100) : 0;
+  show(`<div class="loc" style="${locVars(l)}">${locHeader(l, n > 0 && found >= n ? 'happy-loop' : undefined)}
+      <main class="loc-body"><div class="loc-box">
+        <div class="loc-progress" role="progressbar" aria-label="Найдено" aria-valuemin="0" aria-valuemax="${n}" aria-valuenow="${found}" aria-valuetext="${found} из ${n}"><div class="loc-track"><div class="loc-fill" style="--w:${pct}%;background-image:url(${base}/stripe-a.svg)"></div></div></div>
+        <div class="loc-grid">${cards}</div>
+      </div></main>
+      ${bigBtn('play', playIcon(), 'Играть', found < n)}</div>`, `screen-loc${isMuted() ? ' muted' : ''}`);
+  root.querySelectorAll<HTMLButtonElement>('.loc-card').forEach((b) =>
     b.addEventListener('click', () => startTask(l.tasks[Number(b.dataset.i)])),
   );
+  on('play', () => startTask(l.tasks.find((t) => progress.found[t.id] === undefined) ?? l.tasks[0]));
   on('back', toMenu);
+  wireLocTools();
+  if (found < n) sayHint('.loc-grid', HINT_ITEM); // у пройденного места подсказка не нужна
 }
 
 function renderLevelDone() {
-  show(`${hud('')}<div class="duo">${art('grisha-cheer', 'cheer')}${art('sonya-cheer', 'cheer')}</div><div class="trophy">${objectSvg('trophy')}</div><h1>Все найдено!</h1>
+  playSfx('level-up');
+  const doneLine = pickPhrase(LEVEL_DONE);
+  const hero = hasRoom(level!.id)
+    ? `<div class="done-room">${roomHtml(level!.id, true, 'head-', 'happy-loop')}</div>` // зверёнок места радуется в своей комнате
+    : `<div class="duo">${art('grisha-cheer', 'cheer')}${art('sonya-cheer', 'cheer')}</div>`;
+  show(`${hud('')}${hero}<div class="trophy">${objectSvg('trophy')}</div><h1>Все найдено!</h1>
     <p>Ты справился со всей категорией «${level!.title}»</p>
     <div class="reward">${flashIcon()}бонус +${LEVEL_BONUS}</div>
     <button id="map" class="green">К заданиям</button>`);
   confetti(2200);
+  const seq = screenSeq;
+  setTimeout(() => { if (seq === screenSeq && root.querySelector('#map')) speak(doneLine.text, false, doneLine.who); }, 700); // озвучка после фанфар
   on('map', toMap);
 }
 
 function render() {
   if (view === 'album') return renderAlbum();
   if (view === 'zavrik') return renderZavrik();
-  if (!level) return isOnboarded() ? renderLevels() : renderOnboarding();
+  if (!level) return !ONBOARDING || isOnboarded() ? renderLevels() : renderOnboarding();
   if (!state) return renderMap(level);
   const s = state;
   const task = currentTask(s);
-  const bar = hud(`<button id="menu" class="secondary small" aria-label="К заданиям">${closeIcon()}</button>`);
   switch (s.phase) {
     case 'task':
     case 'camera': {
-      const hint = s.attempts > 0 && task!.hint ? `<div class="hint">${bulbIcon()}<span>${task!.hint}</span></div>` : '';
-      show(`${bar}<div class="hero">${art('grisha-solo')}</div>
-        <div class="say-row">${bubble(task!.prompt)}<button id="say" class="say-btn" aria-label="Повторить задание">${speakerIcon()}</button></div>
-        ${taskCard(task!)}${hint}
-        ${notice ? `<div class="notice">${notice}</div>` : ''}
-        <button id="shoot" class="primary-xl">${cameraIcon()}Сфотографировать</button>`, 'screen-task');
+      const L = level!;
+      taskScreen(L, `<section class="tk-card" id="tkcard"><span class="tk-ico">${taskIcon(L, task!)}</span><p class="tk-text">${task!.prompt}</p></section>`,
+        `${notice ? `<div class="notice">${notice}</div>` : ''}`, bigBtn('shoot', cameraBtnIcon(), 'Сфотографировать'), 'tk-task');
       on('shoot', capture);
-      on('say', () => speak(task!.prompt));
-      on('menu', toMap);
-      if (!notice) speak(task!.prompt);
+      root.querySelector('#tkcard')?.addEventListener('click', () => speak(task!.prompt)); // нажатие на карточку повторяет задание
+      if (!notice && promptSpoken !== task!.id) { promptSpoken = task!.id; speak(task!.prompt); } // не повторяем при открытии камеры и возврате
       notice = '';
       break;
     }
     case 'checking':
-      show(`${bar}<img class="preview" src="${photoUrl}" alt=""><div class="spinner"></div><p>Смотрю, что ты нашёл…</p>`);
-      on('menu', toMap);
+      taskScreen(level!, `<section class="tk-card tk-wait" id="tkcard" role="status" aria-label="Проверяю фото"><svg class="tk-spin" viewBox="0 0 48 48" aria-hidden="true"><circle class="tk-spin-track" cx="24" cy="24" r="19"/><circle class="tk-spin-arc" cx="24" cy="24" r="19"/></svg></section>`, '', '', 'tk-check');
       break;
     case 'result': {
+      const L = level!;
       if (s.lastMatch) {
-        const got = starsFor(s.attempts);
-        const again = progress.found[task!.id] !== undefined;
-        const says = sonyaSays(task!);
-        show(`${bar}<div class="res-hero">${art('sonya-cheer', 'cheer')}<div class="res-obj">${taskCard(task!)}</div></div>${bubble(says)}
-          <div class="explain" id="explain" hidden></div>
-          ${starRow(got)}
-          ${again ? '' : `<div class="reward">${flashIcon()}+${got}</div>`}
-          ${stickerNew === null ? '' : `<div class="sticker-new"><img src="${photoUrl}" alt=""><span>${stickerNew ? 'Новая наклейка в альбоме!' : 'Фото в альбоме обновлено'}</span></div>`}
-          <button id="next" class="green">Дальше</button>`, 'ok');
-        confetti();
-        speak(`${says} Молодец!`, false, 'sonya');
-        attachExplain(task!.local?.kind === 'color' ? `${COLOR_RU[task!.local.color]} цвет` : lastLabel);
-      } else if (canSkip(s)) {
-        show(`${bar}<div class="res-hero">${art('sonya-sad', 'sad shake')}<div class="res-obj">${taskCard(task!)}</div></div><div class="banner no">Это сложное задание</div>
-          ${photoUrl ? `<img class="preview mini" src="${photoUrl}" alt="">` : ''}
-          ${bubble(`${grishaExplains(task!)} Давай попробуем другое!`)}
-          <div class="explain" id="explain" hidden></div><button id="next">Дальше</button>`);
-        speak(grishaExplains(task!));
-        attachExplain(lastFoundLabel);
+        finishTask(); // находка сохраняется сразу, не дожидаясь «Следующее»
+        playSfx('correct'); setTimeout(() => playSfx('star'), 380);
+        const word = englishFor(task!.id);
+        taskScreen(L, `<section class="tk-card ok" id="tkcard" ${word ? 'role="button" tabindex="0" aria-label="Послушать слово ещё раз"' : ''}>
+            <div class="tk-stars" role="img" aria-label="Звёзд: ${STARS_PER_TASK} из 3">${starsSvg()}</div><span class="tk-ico">${taskIcon(L, task!)}</span>
+            <p class="tk-en">${word ? word.en : taskName(task!)}</p>${word ? `<p class="tk-ru">${word.ru}</p>` : ''}</section>`, '',
+          bigBtn('next', nextIcon(), 'Следующее задание'), 'tk-ok');
+        const card = root.querySelector<HTMLElement>('#tkcard')!;
+        confettiBehind(root.querySelector<HTMLElement>('.loc')!, card);
+        // Универсально: сначала похвала (записывается один раз), потом слово по-английски.
+        const praise = pickPhrase(PRAISE);
+        speak(praise.text, false, praise.who);
+        if (word) {
+          const intro = pickPhrase(INTRO_EN); // «Вот так это будет по-английски»
+          speak(intro.text, true, intro.who);
+          speakEnglish(word.en); speakEnglish(word.en);
+          card.addEventListener('click', () => speakEnglish(word.en, false));
+        }
       } else {
-        const left = MAX_ATTEMPTS - s.attempts;
-        show(`${bar}<div class="res-hero">${art('sonya-sad', 'sad shake')}<div class="res-obj">${taskCard(task!)}</div></div><div class="banner no">Пока не то</div>
-          ${photoUrl ? `<img class="preview mini" src="${photoUrl}" alt="">` : ''}
-          ${bubble(grishaExplains(task!))}
-          <div class="explain" id="explain" hidden></div>
-          <p>Осталось попыток: ${left}</p><button id="next">Искать снова</button>`);
-        speak(grishaExplains(task!));
-        attachExplain(lastFoundLabel);
+        // Не то: коротко и по-доброму, без объяснений, что оказалось в кадре, и без счётчика попыток; карточка трясётся.
+        const line = pickPhrase(TRY_AGAIN);
+        taskScreen(L, `<section class="tk-card shake" id="tkcard"><img class="tk-try" src="${LOC_BASE()}/try-again.svg" alt=""><p class="tk-text">${line.text}</p></section>`,
+          '', bigBtn('next', retryIcon(), 'Искать снова'), 'tk-bad');
+        navigator.vibrate?.([60, 40, 60]);
+        playSfx('wrong-soft');
+        speak(line.text, false, line.who);
+        root.querySelector('#tkcard')?.addEventListener('click', () => speak(line.text, false, line.who));
       }
       on('next', () => dispatch({ type: 'next' }));
-      on('menu', toMap);
       break;
     }
     case 'finish': {
+      const last = s.tasks[0];
       const levelDone = finishTask();
       state = null;
       if (levelDone) renderLevelDone();
-      else renderMap(level);
+      else {
+        const nxt = nextTaskAfter(level!, last);
+        if (nxt) startTask(nxt); else renderMap(level!);
+      }
       break;
     }
   }
 }
 
+wireSfx(); // звуки кликов и событий
+wireMusic(); // фоновая музыка с первого касания
 render();
 
 // Подтягиваем прогресс с сервера (если он настроен) и перерисовываем, не прерывая задание.

@@ -1,0 +1,125 @@
+Статус,Дата выкатки на прод,Тест аналитика,Описание,Источник,event_source / ссылка,event_type,event_info,cd1,cd2,cd3,page,user_type (авторизованный пользователь),user_agent
+,,,увидели плашку,page_events,"event_source: ""/""",display,math_race,,,,"Отдельная page для ленда, отдельная для всего курса.
+Например,
+для ленда page = 'uchi.ru/course_name/land'
+для курса: 'uchi.ru/course_name/game', 'uchi.ru/course_name/game/...'
+(для отдельных страниц в курсе к основной page через слэш добавляется часть ссылки)",student,user_agent
+,,+,кликнули на плашку,page_events,"event_source: ""/""",click,math_race,,,,,student,user_agent
+,,,посетили ленд/курс,pageviews,ссылка на ленд/курс,,,,,,,student,user_agent
+,,+,лоадер (пользователь увидел экран загрузки),page_events,math_race,loader,"from (откуда попал в курс):
+- main (из ЛК)
+- hw (из домашки)
+homework_id: идентификатор домашки, если запустили из домашки",,,,,student,user_agent
+,,+,пользователь открыл главный экран,page_events,math_race,enter_course,,,,,,student,user_agent
+,,+,"нажал на кнопку ""Герои"" на главной курса",page_events,math_race,heroes_button_click,,,,,,student,user_agent
+,,+,нажатие на персонажа в окне выбора,page_events,math_race,hero_click,heroType: какого героя выбрал ученик,,,,,student,user_agent
+,,+,выбор скина,page_events,math_race,skin_click,skinType: какой скин выбран,,,,,student,user_agent
+,,,покупка скина,page_events,math_race,skin_buy,"skinType, cost",,,,,student,user_agent
+,,+,нажал на купить перса,page_events,math_race,click_buy_hero,"{ hero: { heroType: какого героя выбрал ученик, cost: стоимость перса }, skin: { skinType, cost } }",,,,,student,user_agent
+,,,купил в итоге перса,page_events,math_race,buy_hero,"heroType: какого героя выбрал ученик, cost: стоимость перса",,,,,student,user_agent
+,,,нажатие на кнопку старта игры с окна выбора перса,page_events,math_race,continue_with_hero,,,,,,student,user_agent
+,,+,"начали курс (нажал на кнопку ""Играть"")",page_events,math_race,start_game,type: tutorial | game,,,,,student,user_agent
+,,+,начало показа туториала,page_events,math_race,tutorial_start,,,,,,student,user_agent
+,,+,"показ информации о том, что нужно сделать",page_events,math_race,tutorial_event,"type:
+welcome_event (приветствие в начале туториала)
+rules (инфа о том, что нужно решать пример)
+right_answer (инфа о том, что правильные ответы ускоряют машинку)
+wrong_answer (инфа о том, что неправильные ответы замедляют машинку)
+competition (инфа о том, что в игре есть соперники)
+last_event (финишное событие о том, что гонка завершена)
+drag_racing (информирование о том, что в игре есть таймер)",,,,,student,user_agent
+,,+,завершение показа туториала,page_events,math_race,tutorial_end,отправляется ПОСЛЕ сохранения результатов и ДО показа конгратов,,,,,student,user_agent
+,,,клик на экране выбора локации игры,page_events,math_race,choose_location,"location: straight_road | circle_road
+heroType: за какого героя играет игрок
+skinType: какой скин выбран",,,,,student,user_agent
+,,+,начало подбора соперников,page_events,math_race,start_matching,"raceId (id конкретной гонки)
+location: straight_road | circle_road",,,,,student,user_agent
+,,+,завершение подбора соперников,page_events,math_race,end_matching,"raceId (id конкретной гонки)
+location: straight_road | circle_road",,,,,student,user_agent
+,,+-,увидели пейвол,page_events,math_race,paywall_seen,place: game | main (откуда перешли на пейвол),,,,,student,user_agent
+,,+,пролистали пейвол до конца,page_events,math_race,paywall_scroll,,,,,,student,user_agent
+,,,"нажали кнопку ""Купить""",page_events,math_race,click_buy,place: paywall_top | paywall_medium | paywall_bottom (нажал на пейволе наверху / по центру / внизу) | main (нажал на главной),,,,,student,user_agent
+,,,начал гонку (когда прогрузилось поле и начинается отсчет до старта),page_events,math_race,start_level,"themes: [{ name: plus_and_minus, complexity: 1.5 (какая была сложность на старте гонки) }, ...]
+raceId (id конкретной гонки)
+location: straight_road | circle_road
+heroType: за какого героя играет игрок
+skinType: какой скин выбран
+homework_id: идентификатор домашки, если запустили из домашки",,,,,student,user_agent
+,,"{""raceId"": 156, ""location"": ""circle_road"", ""task"": ""4, 5, 6, 7, ?"", ""theme"": ""number_sequence"", ""complexity"": 1, ""heroType"": ""cat"", ""skinType"": ""cat-basic"", ""taskNumber"": 1}",открыл задание (уровень),page_events,math_race,start_task,"theme: plus_and_minus
+complexity: 2
+enterType: keypad | select (keypad - ввод ответа, select - выбор варианта)
+task: 2+2
+raceId (id конкретной гонки)
+taskNumber: n (порядковый номер задания)
+location: straight_road | circle_road
+heroType: за какого героя играет игрок
+skinType: какой скин выбран
+homework_id: идентификатор домашки, если запустили из домашки",,,,,student,user_agent
+,,"{""raceId"": 156, ""location"": ""circle_road"", ""task"": ""4, 5, 6, 7, ?"", ""theme"": ""number_sequence"", ""complexity"": 1, ""heroType"": ""cat"", ""skinType"": ""cat-basic"", ""taskNumber"": 1, ""success"": 1, ""studentAnswer"": ""8"", ""spentTime"": 110093}",завершил задание (уровень),page_events,math_race,end_task,"theme: plus_and_minus
+complexity: 2
+task: 2+2
+enterType: keypad | select (keypad - ввод ответа, select - выбор варианта)
+raceId (id конкретной гонки)
+taskNumber: n (порядковый номер задания)
+location: straight_road | circle_road
+heroType: за какого героя играет игрок
+skinType: какой скин выбран
+success: 1/0 (успех или поражение)
+studentAnswer: ... (ответ)
+spentTime: n (время решения задания, мс)
+homework_id: идентификатор домашки, если запустили из домашки",,,,,student,user_agent
+,,"{""raceId"": 348, ""location"": ""circle_road"", ""themes"": [{""name"": ""number_comparison"", ""complexity"": 1, ""newComplexity"": 1.25}, {""name"": ""number_sequence"", ""complexity"": 1.25, ""newComplexity"": 1.5}, {""name"": ""addition_subtraction"", ""complexity"": 1, ""newComplexity"": 1.25}], ""heroType"": ""cat"", ""skinType"": ""cat-basic"", ""coins"": 15, ""resultPlace"": 1, ""countTasks"": 33, ""countRightTasks"": 32}",завершил гонку (когда показывается результат игры),page_events,math_race,end_level,"themes: [{ name: plus_and_minus, complexity: 1.5, newComplexity: 1.75 (какая стала сложность на завершении гонки) }, ...]
+raceId (id конкретной гонки)
+location: straight_road | circle_road
+resultPlace: n (место по итогам гонки)
+coins: сколько монет получил за гонку
+eggs: сколько яиц получил за гонку
+countTasks: кол-во всех заданий
+countRightTasks: кол-во решенных верно заданий
+heroType: за какого героя играет игрок
+skinType: какой скин выбран
+homework_id: идентификатор домашки, если запустили из домашки",,,,,student,user_agent
+,,+,клик на фулскрин,page_events,math_race,fullscreen,раскрыть экран / сузить экран,,,,,student,user_agent
+,,+,клик на отключение / включение звука,page_events,math_race,sound,off / on,,,,,student,user_agent
+,,,"вышел из курса (нажал на ""Выход"")",page_events,math_race,left_course,,,,,,student,user_agent
+,,,купил курс,payments,,"product = ""math_race""",,,,,,,user_agent
+,,+,"переход к статистике с главного экрана (нажатие на ""Успехи"")",page_events,math_race,game_statistics,,,,,,student,user_agent
+,,+,нажали на сердечко,page_events,math_race,click_feedback,,,,,,student,user_agent
+,,,переход на детальную статистику темы,page_events,math_race,game_statistics_detailed,theme: статистика по конкретной теме,,,,,student,user_agent
+,,,переход на конкретные карточки для отработки темы,page_events,math_race,card_click,"theme: статистика по конкретной теме
+card_id: id карточки",,,,,student,user_agent
+,,,+ уникальные ивенты в зависимости от курса,,,,,,,,,student,user_agent
+,,,"открытие страницы ""Произошла ошибка""",page_events,math_race,error_page,,,,,,student,user_agent
+,,,"нажал на кнопку ""Обновить"" на экране ошибки",page_events,math_race,reload_click,,,,,,student,user_agent
+,,,открытие экрана игры,page_events,math_race,open_screen,screen: main | matching | game | congrat_coins | congrat_stat | heroes | paywall | stat,,,,,student,user_agent
+,,,нажатие на кнопку back,page_events,math_race,click_back_btn,screen: main | matching | game | congrat_coins | congrat_stat | heroes | paywall | stat,,,,,student,user_agent
+,,,закрытие попапа подтверждения о выходе с гонки,page_events,math_race,continue_popup,result: exit (вышли с гонки) | canceled (остались в гонке),,,,,student,user_agent
+,,,игрок получил сундук,page_events,math_race,chest_earned,"skin: имя скина (no_skin, если скин не выиграл)
+coins: кол-во монет
+eggs: кол-во яиц (0, если не выиграл)",,,,,student,user_agent
+,,,,,,,,,,,,student,user_agent
+,,,ЛК Учителя,,,,,,,,,student,user_agent
+,,,"Нажать на ""Выдать задание""",page_events,virtual_class,click,go_to_tasks,,,,,,
+,,,Выбрать предмет - математика,,,,,,,,,,
+,,,Выбор типа задания - карточки или тренажер,page_events,virtual_class,choose_task_type,type: card | trainer,,,,,,
+,,,Выбор класса,,,,,,,,,,
+,,,Выбор учеников,,,,,,,,,,
+,,,"Нажатие кнопки ""Выбрать задания""",page_events,virtual_class,click,go_to_cards,,,,,,
+,,,Просмотр навыка,page_events,virtual_class,click,play_trainer,кука пользователя GuestID,trainer_card_id = <id>,,,,
+,,,"Нажатие на кнопку ""Подтвердить"" - список выбранных тем и навыков",page_events,virtual_class,click,submit_trainer,кука пользователя GuestID,array (card_id - идентификаторы выбранных навыков),,,,
+,,,"Выдача задания - список выбранных тем и навыков, название и id задания",page_events,virtual_class,click,submit_whole_homework_trainer,кука пользователя GuestID,"JSON: 1) id выбранного предмета, 2) homework_id",кол-во выбранных навыков,,,
+,,,Нажатие на плашку с домашним заданием в списке заданий,page_events,virtual_class,click,homework_stat,,"JSON: 1) homework_id, 2) homework_status",,,,
+,,,,,,,,,,,,student,user_agent
+,,,ЛК Ученика,,,,,,,,,student,user_agent
+,,,Увидел ДЗ тренажера,page_events,lessons_page,display,seen_trainer_hw,,,,,,
+,,,"Нажатие на кнопку ""Решать"" в ДЗ от учителя",page_events,lessons_page,click,start_solve_hw_teacher_trainer,homework_id,card_id,,,,
+,,,"Конграт, если решил ДЗ от учителя целиком - нажатие на кнопку ""Дальше"" / ""Продолжить""",page_events,cardwork,click,continue_all_hw_trainer,homework_id (после которого показался конграт),card_id (после которой показался конграт),,,,
+,,,"Конграт, если решил карточку из ДЗ, но еще остались другие карточки - нажатие на кнопку ""Дальше"" / ""Продолжить""",page_events,cardwork,click,continue_part_hw_trainer,homework_id,card_id (после которой показался конграт),,,,
+,,,Нажатие на определенную карточку из ДЗ от учителя,page_events,lessons_page,click,start_card_hw_teacher_trainer,homework_id,card_id,,,,
+,,,,,,,,,,,,student,user_agent
+,,,Сюжет (задел на будущее),,,,,,,,,,
+,,,Старт интро,,,,,,,,,,
+,,,Завершение интро,,,,,,,,,,
+,,,"Доп. шаги туториала - поздравление, сбор карты, тутор на карте",,,,,,,,,,
+,,,"Старт и завершение гонки, новый тип - сюжетная и босс",,,,,,,,,,
+,,,Доп. инфа за место - кол-во звезд,,,,,,,,,,

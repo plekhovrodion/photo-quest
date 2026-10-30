@@ -1,0 +1,35 @@
+Статус,Тест аналитика,Дата раскатки,Описание,Источник,event_source,Название события (event_type),Дополнительные поля (event_info),Значения дополнительных полей (event_info),user_type,device type,Комментарии
+,,,увидели плашку турнира,page_events,"event_source: ""/""",display,tournaments_3d_fairytale,"- session_id: уникальный идентификатор сессии пользователя
+
+- deviceType: тип устройства пользователя (ПК - desktop, Планшеты - tablet, смартфоны - mobile, другие - other)
+
+- spentTime: время, проведенное в задании (мс.)
+
+- taskId: id задания (по которому можно понять, для какого класса и какой вариант)
+
+- attempts: сколько раз студент взаимодействовал со слотами (1 попытка = 1 ""вставление""/""вытаскивание"" объекта в слот)
+
+- studentAnswer: какие объекты в каких слотах в текущем задании оставил ребенок к моменту выхода из него (список json-объектов)
+
+- click_type: что нажал после интро правил (ok - ""понятно"" | repeat - ""повторить"")",student,user_agent,
+,,,кликнули на плашку турнира,page_events,"event_source: ""/""",click,tournaments_3d_fairytale,,student,user_agent,
+,,,увидел пейвол,page_events,tournaments_3d_fairytale,paywall_seen,{ session_id },,student,user_agent,
+,,,"нажал кнопку ""Купить""",page_events,tournaments_3d_fairytale,click_buy,{ session_id },,student,user_agent,
+,,,зашел в хаб,page_events,tournaments_3d_fairytale,enter_course,"{ session_id, deviceType }",,student,user_agent,
+,,,Лоадер хаба,page_events,tournaments_3d_fairytale,loader,{ session_id },,student,user_agent,
+,,,кликнул кнопку плей,page_events,tournaments_3d_fairytale,start_game,{ session_id },,student,user_agent,
+,,,Интро в хабе,page_events,tournaments_3d_fairytale,intro_hub,{ session_id },,student,user_agent,
+,,,Взял интерактивный объект,page_events,tournaments_3d_fairytale,interactive_object,{ session_id },,student,user_agent,
+,,,Катсцена,page_events,tournaments_3d_fairytale,intro_1,{ session_id },,student,user_agent,
+,,,"начал турнир (нажал кнопку ""Начать турнир"")",page_events,tournaments_3d_fairytale,start_tournament,{ session_id },,student,user_agent,
+,,,"включил онбординг повторно (нажал кнопку ""потренироваться"")",page_events,tournaments_3d_fairytale,repeat_intro,{ session_id },,student,user_agent,
+,,,Интро в правила турнира,page_events,tournaments_3d_fairytale,intro_rules,"{ session_id, click_type }",,student,user_agent,
+,,,онбординг работы с картой,page_events,tournaments_3d_fairytale,map_onboarding,{ session_id },,student,user_agent,
+,,,открыл карту,page_events,tournaments_3d_fairytale,open_map,{ session_id },,student,user_agent,
+,,,"нажал ""завершить турнир""",page_events,tournaments_3d_fairytale,click_end,{ session_id },,student,user_agent,
+,,,подтвердил завершение,page_events,tournaments_3d_fairytale,end_tournament,"{ session_id, spentTime }",,student,user_agent,
+,,,Отменил завершение,page_events,tournaments_3d_fairytale,cancel_end,"{ session_id, spentTime }",,student,user_agent,
+,,,Выкинуло из турнира по завершению времени,page_events,tournaments_3d_fairytale,end_time,"{ session_id, taskId }",,student,user_agent,
+,,,События по заданиям,,,,,,student,user_agent,
+,,,Задание загрузилось,page_events,tournaments_3d_fairytale,start_task,"{ session_id, taskId }",,student,user_agent,
+,,,Вышел из задания,page_events,tournaments_3d_fairytale,end_task,"{ session_id, taskId, spentTime, attempts, studentAnswer }",,student,user_agent,

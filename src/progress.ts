@@ -20,16 +20,6 @@ export const LEVEL_BONUS = 5;
 
 // Места открываются за вспышки: «Цвета» бесплатны, остальные покупаются (цена — в data/tasks.ts).
 export const priceOf = (levelId: string): number => LEVELS.find((l) => l.id === levelId)?.price ?? 0;
-// Для тестирования: VITE_OPEN_ALL=1 открывает все места без покупки (см. .env.development и .env.production).
-const OPEN_ALL = import.meta.env?.VITE_OPEN_ALL === '1';
-export const isUnlocked = (p: Pick<Progress, 'owned'>, levelId: string): boolean => OPEN_ALL || priceOf(levelId) === 0 || p.owned.includes(levelId);
-export const canUnlock = (p: Pick<Progress, 'owned' | 'flashes'>, levelId: string): boolean =>
-  !isUnlocked(p, levelId) && p.flashes >= priceOf(levelId);
-
-export function unlockLevel(p: Progress, levelId: string): Progress {
-  return canUnlock(p, levelId) ? { ...p, flashes: p.flashes - priceOf(levelId), owned: [...p.owned, levelId] } : p;
-}
-
 // Оставляем только существующие платные места (в старых сохранениях там лежали id друзей из магазина).
 export const sanitizeOwned = (owned: unknown): string[] =>
   Array.isArray(owned) ? [...new Set(owned.filter((id): id is string => typeof id === 'string' && priceOf(id) > 0))] : [];

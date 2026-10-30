@@ -13,7 +13,7 @@ html, body { margin: 0; height: 100%; }
 body {
   color: #fff; overflow-x: hidden;
   font-family: 'Factor A', ui-rounded, system-ui, -apple-system, 'Segoe UI', sans-serif;
-  background: #471fb0;
+  background: #f0e6ff;
 }
 
 #app { position: relative; z-index: 1; min-height: 100dvh; display: flex; flex-direction: column;
@@ -45,10 +45,6 @@ button:focus-visible { outline: 4px solid var(--blue); outline-offset: 3px; }
   display: inline-flex; gap: 6px; align-items: center; }
 .chip.coin { border: 3px solid var(--gold); }
 .pips { display: flex; gap: 6px; flex: 1; justify-content: center; flex-wrap: wrap; max-width: 60vw; }
-.pip { width: 14px; height: 14px; border-radius: 50%; background: rgba(255,255,255,.7); border: 2px solid #fff; }
-.pip.done { background: var(--ok); border-color: var(--ok-d); }
-.pip.fail { background: var(--bad); border-color: #c24848; }
-.pip.now { background: var(--gold); border-color: #d99a00; transform: scale(1.3); }
 
 /* Маскот и реплика */
 @keyframes bob { 50% { transform: translateY(-10px) rotate(-3deg); } }
@@ -69,20 +65,17 @@ button.level:nth-child(even) { transform: rotate(1.2deg) translateY(10px); }
 button.level.done { background: #eafff3; }
 button.level.owned { background: #eafff3; opacity: 1; }
 button.level small { font-size: 15px; font-weight: 700; color: #3d4a6b; }
-.emoji-s { font-size: 52px; line-height: 1; }
+
 .badge { font-size: 16px; }
 
 /* Результат / крупные эмодзи */
-.emoji { font-size: 110px; line-height: 1; }
+
 .reward { display: inline-flex; gap: 8px; align-items: center; background: var(--panel); border: 3px solid var(--gold);
   border-radius: 999px; padding: 8px 22px; font-size: 30px; font-weight: 900; animation: pop .6s .2s ease both; }
 @keyframes pop { 0% { transform: scale(.3); } 60% { transform: scale(1.25); } 100% { transform: scale(1); } }
-.banner { padding: 8px 20px; border-radius: 16px; color: #fff; font-size: 22px; font-weight: 900; }
-.banner.ok { background: var(--ok); } .banner.no { background: var(--blue); }
 
-.preview { max-width: min(80vw, 360px); max-height: 38vh; border-radius: 22px; border: 6px solid #fff; }
-.spinner { width: 64px; height: 64px; border: 9px solid #fff; border-top-color: var(--accent); border-radius: 50%; animation: spin 1s linear infinite; }
-@keyframes spin { to { transform: rotate(360deg); } }
+ 
+
 .dots { display: flex; gap: 10px; }
 .dot { width: 14px; height: 14px; border-radius: 50%; background: rgba(255,255,255,.8); }
 .dot.on { background: var(--accent); transform: scale(1.3); }
@@ -122,20 +115,19 @@ p { text-shadow: 0 2px 0 rgba(20, 10, 60, .5); }
   animation: bob 2.6s ease-in-out infinite; }
 .char.small { height: clamp(100px, 16vh, 140px); }
 .char.cheer { animation: cheer .7s ease both; }
-.char.sad { animation: none; filter: grayscale(.25) drop-shadow(0 8px 14px rgba(10, 5, 40, .45)); }
+
 .duo { display: flex; gap: 8px; align-items: flex-end; justify-content: center; }
 .duo .char { height: clamp(130px, 22vh, 210px); }
 .stars { display: flex; gap: 10px; justify-content: center; }
 .star { font-size: 60px; line-height: 1; color: rgba(255, 255, 255, .3); }
 .star.on { color: var(--gold); text-shadow: 0 4px 0 #c78f00; animation: pop .55s var(--d, 0s) cubic-bezier(.2, 1.6, .4, 1) both; }
 
-
 /* ===== Анимации ===== */
 :root { --spring: cubic-bezier(.2, 1.5, .4, 1); }
 .sr-only { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
 
 /* Мерцающие звёзды поверх фона */
-body::before, body::after { content: ''; position: fixed; inset: 0; pointer-events: none; z-index: 0; opacity: .75;
+body::before, body::after { display: none; content: ''; position: fixed; inset: 0; pointer-events: none; z-index: 0; opacity: .75;
   background-image:
     radial-gradient(2px 2px at 20px 30px, #fff, transparent), radial-gradient(1.5px 1.5px at 90px 80px, #fff, transparent),
     radial-gradient(2px 2px at 160px 20px, #d0b6ff, transparent), radial-gradient(1.5px 1.5px at 60px 140px, #fff, transparent);
@@ -156,7 +148,7 @@ body::after { background-size: 270px 230px; background-position: 90px 60px; anim
 @keyframes char-in { from { opacity: 0; transform: translateY(40px) scale(.7) rotate(-6deg); } }
 .char.cheer { animation: cheer .8s var(--spring) backwards, hop 1.1s ease-in-out .8s infinite; }
 @keyframes hop { 50% { transform: translateY(-14px) rotate(3deg); } }
-.char.sad { animation: char-in .7s var(--spring) backwards, sway 3s ease-in-out .7s infinite; }
+
 @keyframes sway { 50% { transform: rotate(-3deg) translateY(2px); } }
 .char.shake { animation: char-in .5s var(--spring) backwards, shake .6s .4s ease both, sway 3s 1s ease-in-out infinite; }
 @keyframes shake { 20%, 60% { transform: translateX(-9px) rotate(-3deg); } 40%, 80% { transform: translateX(9px) rotate(3deg); } }
@@ -170,12 +162,12 @@ body::after { background-size: 270px 230px; background-position: 90px 60px; anim
 .bubble { animation: bubble-in .5s .15s var(--spring) backwards; min-height: 1.4em; }
 @keyframes bubble-in { from { opacity: 0; transform: scale(.6) translateY(16px); } }
 .bubble .typed { white-space: pre-wrap; }
-.banner { animation: pop-in .5s .1s var(--spring) backwards; }
+
 .hint { animation: drop-in .5s .3s var(--spring) backwards; }
 .notice { animation: shake .5s ease; }
 @keyframes drop-in { from { opacity: 0; transform: translateY(-14px) scale(.92); } }
 @keyframes pop-in { from { opacity: 0; transform: scale(.5); } }
-.preview.mini { max-height: 96px; border-width: 4px; border-radius: 16px; animation: pop-in .5s .1s var(--spring) backwards; }
+
 .chip.coin.bump { animation: bump .7s var(--spring); }
 @keyframes bump { 30% { transform: scale(1.35) rotate(-4deg); } 60% { transform: scale(.95); } }
 .star.on { animation: pop .55s var(--d, 0s) var(--spring) backwards, twinkle-star 2.4s calc(var(--d, 0s) + .8s) ease-in-out infinite; }
@@ -186,9 +178,9 @@ button.breathe { animation: slide-in .45s var(--ease) .24s backwards, breathe 2.
 @keyframes breathe { 50% { transform: scale(1.045); } }
 @media (hover: hover) {
   button:hover:not(:disabled) { filter: brightness(1.08); }
-  button.level:hover:not(:disabled) .emoji-s { animation: wiggle .6s ease; }
+  
 }
-@keyframes wiggle { 25% { transform: rotate(-12deg) scale(1.1); } 75% { transform: rotate(12deg) scale(1.1); } }
+
 button.level { animation: pop-in .5s calc(var(--i, 0) * 70ms + .2s) var(--spring) backwards; }
 button.level.owned { animation: pop-in .5s calc(var(--i, 0) * 70ms + .2s) var(--spring) backwards; }
 
@@ -207,8 +199,6 @@ button.stop.done { animation: stop-in .55s calc(var(--i, 0) * 60ms + .25s) var(-
 .cam-overlay { animation: fade-in .3s ease; }
 .cam-video { animation: pop-in .45s var(--spring) backwards; }
 @keyframes fade-in { from { opacity: 0; } }
-.spinner + p { animation: blink 1.4s ease-in-out infinite; }
-@keyframes blink { 50% { opacity: .45; } }
 
 /* ===== Единые крупные фиолетовые кнопки ===== */
 :root { --btn: #7c3aed; --btn-d: #4c1d95; --btn2: #9061f9; --btn2-d: #5b21b6; --btn-w: min(100%, 380px); --btn-h: 80px; --icon: 68px; }
@@ -228,24 +218,17 @@ button:focus-visible { outline: 4px solid #fde68a; outline-offset: 4px; }
 /* карточки категорий и магазина — тоже крупнее */
 .levels { gap: 20px; width: min(100%, 560px); }
 button.level { min-height: 170px; font-size: 26px; padding: 20px 12px; justify-content: center; }
-.emoji-s { font-size: 64px; }
+
 button.level small { font-size: 18px; }
 
 /* ===== Переходы между экранами ===== */
 :root { --enter: 80px; }
-#app.go-fwd { animation: screen-in-fwd .5s var(--ease) both; }
-#app.go-back { animation: screen-in-back .5s var(--ease) both; }
-@keyframes screen-in-fwd { from { opacity: 0; transform: translateX(var(--enter)) scale(.97); } }
-@keyframes screen-in-back { from { opacity: 0; transform: translateX(calc(var(--enter) * -1)) scale(.97); } }
 /* уходящий экран — копия поверх, без собственных анимаций */
 #app, .ghost { position: relative; z-index: 1; min-height: 100dvh; display: flex; flex-direction: column; align-items: center;
   justify-content: center; gap: 18px; padding: calc(72px + var(--safe-top)) 16px 28px; text-align: center; }
-.ghost { position: fixed; inset: 0; z-index: 4; pointer-events: none; overflow: hidden; }
+#app.ghost, .ghost { position: fixed; inset: 0; z-index: 8; pointer-events: none; overflow: hidden; min-height: 0; }
 .ghost, .ghost * { animation: none !important; }
-.ghost.out-fwd { animation: screen-out-fwd .45s var(--ease) forwards !important; }
-.ghost.out-back { animation: screen-out-back .45s var(--ease) forwards !important; }
-@keyframes screen-out-fwd { to { opacity: 0; transform: translateX(calc(var(--enter) * -1)) scale(.95); } }
-@keyframes screen-out-back { to { opacity: 0; transform: translateX(var(--enter)) scale(.95); } }
+@media (prefers-reduced-motion: reduce) { .ghost { display: none; } }
 .cam-actions { flex-direction: column; align-items: center; }
 
 /* ===== Изометрическая карта ===== */
@@ -260,42 +243,11 @@ button.stop { width: 66px; height: 66px; font-size: 30px; background: #fff; colo
 button.stop.next { border-color: #f59e0b; box-shadow: 0 5px 0 #b45309; }
 button.stop.done { background: #16a34a; border-color: #166534; color: #fff; box-shadow: 0 5px 0 #166534; }
 
-
 /* ===== Главная: парящие 3D-кубы ===== */
-.world { position: relative; width: min(100%, 420px); container-type: inline-size; }
-button.cube-btn { --du: calc(100cqw / 360); position: absolute; padding: 0; border: 0; background: none; color: var(--ink);
-  transform: translateX(-50%); cursor: pointer; box-shadow: none; text-align: center; width: auto; min-width: 0;
-  }
-button.cube-btn svg { display: block; width: 100%; height: auto; overflow: visible; filter: drop-shadow(0 4px 0 rgba(10, 5, 40, .12)); }
-button.cube-btn .cube-label { position: absolute; left: 50%; top: calc(var(--du) * 122); transform: translateX(-50%); white-space: nowrap;
-  background: #fff; color: var(--ink); font-weight: 900; font-size: calc(var(--du) * 22); line-height: 1; padding: calc(var(--du) * 7) calc(var(--du) * 16);
-  border-radius: 999px; box-shadow: 0 calc(var(--du) * 3) 0 rgba(10, 5, 40, .25); }
-button.cube-btn .cube-badge { position: absolute; right: calc(var(--du) * 4); top: calc(var(--du) * -2); width: calc(var(--du) * 34); height: calc(var(--du) * 34);
-  display: grid; place-items: center; border-radius: 50%; background: #16a34a; color: #fff; font-size: calc(var(--du) * 22); font-weight: 900;
-  border: calc(var(--du) * 3) solid #fff; }
-@keyframes cube-in { from { opacity: 0; transform: translateY(-90px) scale(.6) rotate(-8deg); } }
-@keyframes cube-bob { 50% { transform: translateY(-9px); } }
+
 /* вход, парение и наведение на разных слоях, чтобы ховер не перезапускал появление */
-button.cube-btn .cube-in { display: block; position: relative; transition: transform .2s var(--spring);
-  animation: cube-in .7s calc(var(--i, 0) * 90ms + .15s) var(--spring) backwards; }
-button.cube-btn .cube-float { display: block; position: relative; animation: cube-bob 4s calc(var(--ph, 0s) + 1s) ease-in-out infinite; }
-@media (hover: hover) { button.cube-btn:hover .cube-in { transform: translateY(-12px) scale(1.04); } }
-button.cube-btn:active .cube-in { transform: translateY(6px) scale(.97); transition: transform .08s; }
-button.cube-btn:focus-visible { outline: 4px solid #fde68a; outline-offset: 6px; border-radius: 24px; }
 
-
-/* ===== Смена фонов с плавным перекрытием ===== */
-#bg { position: fixed; inset: 0; z-index: -1; overflow: hidden; background: #471fb0; }
-.bg-layer { position: absolute; inset: -3%; background-size: cover; background-repeat: no-repeat; opacity: 0;
-  transition: opacity .9s ease; animation: bg-drift 40s ease-in-out infinite alternate; }
-.bg-layer.on { opacity: 1; }
-@keyframes bg-drift { to { transform: scale(1.06) translateX(-1.5%); } }
-
-/* затемнение фона на экранах категорий, чтобы персонажи на фоне не спорили с интерфейсом */
-#bg::after { content: ''; position: absolute; inset: 0; pointer-events: none; opacity: 0; transition: opacity .9s ease;
-  background: radial-gradient(ellipse at 50% 45%, rgba(30, 10, 95, .62), rgba(30, 10, 95, .4) 75%); }
-#bg.dim::after { opacity: 1; }
-
+@media (hover: hover) {  }
 
 /* ===== Иконки вместо эмодзи ===== */
 .ico { width: 1.15em; height: 1.15em; flex: none; display: inline-block; vertical-align: -.2em; }
@@ -304,14 +256,14 @@ button .ico { width: 1.2em; height: 1.2em; }
 .chip .ico, .reward .ico { width: 1.15em; height: 1.15em; margin-right: .1em; }
 .hint { display: flex; align-items: center; gap: 10px; text-align: left; }
 .hint .ico { width: 34px; height: 34px; }
-.shop-art { height: 92px; width: auto; max-width: 100%; object-fit: contain; display: block; margin: 0 auto 4px; }
+
 button.level .price { display: inline-flex; align-items: center; gap: 4px; }
 button.level small .ico { width: 1.1em; height: 1.1em; }
 
 .star .ico { width: 1em; height: 1em; vertical-align: 0; display: block; }
 .star { display: inline-flex; }
 button.stop .ico { width: 1em; height: 1em; vertical-align: 0; }
-button.cube-btn .cube-badge .ico { width: 70%; height: 70%; vertical-align: 0; }
+
 button.small .ico { width: 1.1em; height: 1.1em; vertical-align: 0; }
 button.level { overflow-wrap: anywhere; hyphens: auto; line-height: 1.1; }
 
@@ -342,7 +294,6 @@ button.stop.next { border-color: #f59e0b; box-shadow: 0 5px 0 #b45309; }
 .crop-title, .crop-actions { position: relative; z-index: 3; }
 .crop-close { z-index: 4; }
 
-
 /* ===== Живая камера с поиском предмета ===== */
 .cam-stage { position: relative; display: inline-block; max-width: 100%; line-height: 0; }
 .cam-stage .cam-video { transform: none; max-height: calc(100dvh - 360px); }
@@ -351,7 +302,6 @@ button.stop.next { border-color: #f59e0b; box-shadow: 0 5px 0 #b45309; }
 /* общий стиль кнопок не должен перебивать атрибут hidden */
 button[hidden] { display: none !important; }
 .cam-actions { width: min(100%, 380px); }
-
 
 /* ===== Плашка вспышек: розовая, как кнопки, с белой молнией ===== */
 .chip.coin, .reward { background: var(--btn2); color: #fff; text-shadow: 0 2px 0 rgba(131, 24, 67, .55);
@@ -365,24 +315,11 @@ button.level small .ico-flash { color: var(--btn); }
   font: 12px/1.35 ui-monospace, Menlo, monospace; white-space: pre-wrap; text-align: left; }
 .dbg-copy { color: #fff; text-decoration: underline; cursor: pointer; font-size: 14px; }
 
-
 /* ===== Объяснение предмета от ИИ (Соня) ===== */
-.explain { max-width: 520px; background: #fff; color: var(--ink); text-shadow: none; border-radius: 22px; padding: 12px 20px;
-  font-size: 21px; font-weight: 700; line-height: 1.3; box-shadow: 0 5px 0 rgba(10, 5, 40, .25); border: 3px solid var(--btn2);
-  animation: drop-in .5s var(--spring) backwards; }
-.explain[hidden] { display: none; }
-.explain .dots { display: inline-flex; gap: 6px; align-items: center; height: 1.3em; }
-.explain .dots i { width: 10px; height: 10px; border-radius: 50%; background: var(--btn2); animation: dot-bounce 1s ease-in-out infinite; }
-.explain .dots i:nth-child(2) { animation-delay: .15s; } .explain .dots i:nth-child(3) { animation-delay: .3s; }
-@keyframes dot-bounce { 40% { transform: translateY(-7px); } }
-.explain.ready { animation: drop-in .45s var(--spring) backwards; }
 
+ 
 
 /* ===== Главная: места-диорамы вместо кубиков ===== */
-button.cube-btn svg.place-svg { display: block; width: 100%; height: auto; overflow: visible; filter: drop-shadow(0 6px 0 rgba(10, 5, 40, .12)); }
-button.cube-btn .cube-label { top: calc(var(--du) * 142); }
-button.cube-btn .cube-badge { right: calc(var(--du) * 6); top: calc(var(--du) * 2); }
-
 
 /* ===== Окно «Что такое вспышки?» ===== */
 .chip.coin { cursor: pointer; transition: transform .15s var(--spring); user-select: none; }
@@ -403,23 +340,13 @@ button.cube-btn .cube-badge { right: calc(var(--du) * 6); top: calc(var(--du) * 
 .fh-list li { position: relative; padding-left: 28px; }
 .fh-list li::before { content: ''; position: absolute; left: 4px; top: .45em; width: 14px; height: 14px; border-radius: 50%; background: var(--btn2); }
 
-
 /* ===== Закрытые места и покупка ===== */
-button.cube-btn.locked svg.place-svg { filter: grayscale(.92) brightness(.72) drop-shadow(0 6px 0 rgba(10, 5, 40, .12)); }
-button.cube-btn.locked .cube-label { background: rgba(255, 255, 255, .85); }
-.cube-lock { position: absolute; right: calc(var(--du) * 6); top: calc(var(--du) * 2); width: calc(var(--du) * 38); height: calc(var(--du) * 38);
-  display: grid; place-items: center; border-radius: 50%; background: #1e1b4b; color: #fff; border: calc(var(--du) * 3) solid #fff; }
-.cube-lock .ico { width: 60%; height: 60%; vertical-align: 0; }
-.cube-price { position: absolute; left: calc(var(--du) * 6); top: calc(var(--du) * 4); display: inline-flex; align-items: center; gap: calc(var(--du) * 4);
-  background: var(--btn2); color: #fff; border: calc(var(--du) * 3) solid #fff; border-radius: 999px; padding: calc(var(--du) * 3) calc(var(--du) * 11);
-  font-size: calc(var(--du) * 22); font-weight: 900; line-height: 1; box-shadow: 0 calc(var(--du) * 3) 0 var(--btn2-d); }
-.cube-price .ico { width: calc(var(--du) * 20); height: calc(var(--du) * 20); vertical-align: 0; margin: 0; }
+
 .modal-place { width: min(70%, 230px); }
 .modal-place .place-svg { display: block; width: 100%; height: auto; filter: drop-shadow(0 6px 0 rgba(10, 5, 40, .15)); }
 .modal-text { margin: 0; font-size: 20px; font-weight: 700; line-height: 1.3; color: var(--ink); text-shadow: none; }
 .modal button { white-space: nowrap; font-size: 28px; }
 .modal button .ico { width: 1.05em; height: 1.05em; }
-
 
 /* ===== Галочки и круглый прогресс ===== */
 button.stop.done .ico { width: 62%; height: 62%; }
@@ -438,7 +365,6 @@ button.stop.done .ico { width: 62%; height: 62%; }
 .cube-ring.full .ring-arc { stroke: #fff; }
 .cube-ring.full .ico { position: relative; width: 52%; height: 52%; vertical-align: 0; }
 
-
 /* ===== Альбом находок ===== */
 .hud-right { display: flex; align-items: center; gap: 10px; }
 .screen-album .album { width: min(100%, 460px); display: flex; flex-direction: column; gap: 18px; padding-bottom: 28px; }
@@ -456,17 +382,12 @@ button.stop.done .ico { width: 62%; height: 62%; }
 .sticker.empty .q { display: grid; place-items: center; width: 100%; aspect-ratio: 1; font-size: 40px; font-weight: 900; opacity: .6; }
 .album-empty, .album-note { margin: 0; text-align: center; font-size: 18px; font-weight: 700; color: #fff; }
 .album-note { font-size: 14px; opacity: .8; }
-.sticker-new { display: flex; align-items: center; gap: 10px; background: #fff; color: var(--ink); border-radius: 18px; padding: 8px 16px 8px 8px;
-  font-weight: 800; font-size: 17px; box-shadow: 0 5px 0 rgba(10, 5, 40, .3); transform: rotate(-2deg); text-shadow: none;
-  animation: sticker-stick .6s .5s var(--spring) backwards; }
-.sticker-new img { width: 56px; height: 56px; object-fit: cover; border-radius: 12px; }
-@keyframes sticker-stick { from { opacity: 0; transform: scale(2.2) rotate(12deg); } }
-.sticker-modal .sticker-big { width: min(80%, 300px); aspect-ratio: 1; object-fit: cover; border-radius: 22px; box-shadow: 0 6px 0 rgba(10, 5, 40, .2); transform: rotate(-2deg); }
 
+.sticker-modal .sticker-big { width: min(80%, 300px); aspect-ratio: 1; object-fit: cover; border-radius: 22px; box-shadow: 0 6px 0 rgba(10, 5, 40, .2); transform: rotate(-2deg); }
 
 /* ===== Заврики: рост и одежда ===== */
 .char { filter: hue-rotate(var(--hue, 0deg)) drop-shadow(0 8px 14px rgba(10, 5, 40, .45)); }
-.char.sad { filter: hue-rotate(var(--hue, 0deg)) grayscale(.25) drop-shadow(0 8px 14px rgba(10, 5, 40, .45)); }
+
 #app.quiet > * { animation: none !important; }
 .screen-zavrik { gap: 12px; }
 .zv-tabs { display: flex; gap: 10px; width: min(100%, 420px); }
@@ -507,7 +428,6 @@ button.stop.done .ico { width: 62%; height: 62%; }
 .zv-up { position: fixed; left: 50%; top: 16%; transform: translateX(-50%); z-index: 70; background: #fff; color: var(--ink); font-weight: 900; font-size: 22px; padding: 12px 22px;
   border-radius: 22px; box-shadow: 0 8px 0 rgba(10, 5, 40, .3); text-align: center; animation: pop-in .5s var(--spring); max-width: 90vw; }
 
-
 /* =====================================================================
    Дизайн v2: три роли элементов и три вида движения
    Роли: основное действие (яркое, крупное), второстепенное (контур), информация (стекло).
@@ -532,27 +452,17 @@ button.stop.done .ico { width: 62%; height: 62%; }
 :is(#app, .ghost) button.hud-btn { width: 76px; min-width: 76px; height: 82px; min-height: 82px; padding: 6px 2px 4px; display: flex; flex-direction: column; align-items: center;
   justify-content: center; gap: 3px; border-radius: 22px; background: rgba(255, 255, 255, .14); border: 2px solid rgba(255, 255, 255, .4);
   box-shadow: none; font-size: 14px; font-weight: 800; color: #fff; text-shadow: none; }
-.hb-ico { width: 40px; height: 40px; border-radius: 50%; display: grid; place-items: center; color: #fff; }
-.hb-ico .ico { width: 24px; height: 24px; vertical-align: 0; }
-.hud-btn.zv .hb-ico { background: #f97316; }
-.hud-btn.al .hb-ico { background: #0ea5e9; }
+
 .hud-right { gap: 8px; }
 
 /* --- Экран задания --- */
-.hero { position: relative; width: min(54vw, 210px); aspect-ratio: 1; border-radius: 50%; overflow: hidden; margin-top: 56px; flex: none;
-  display: flex; align-items: flex-end; justify-content: center;
-  background: radial-gradient(circle at 50% 38%, rgba(255, 255, 255, .42), rgba(255, 255, 255, .12) 72%);
-  box-shadow: inset 0 0 0 3px rgba(255, 255, 255, .4); }
-.hero .char { height: 94%; width: auto; filter: hue-rotate(var(--hue, 0deg)); }
-.say-row { display: flex; align-items: center; gap: 10px; width: min(100%, 540px); }
-.say-row .bubble { flex: 1; min-width: 0; }
+
 :is(#app, .ghost) button.say-btn { flex: none; width: 60px; min-width: 60px; height: 60px; min-height: 60px; padding: 0; border-radius: 50%; display: grid; place-items: center;
   background: #fff; color: var(--btn); box-shadow: 0 5px 0 rgba(10, 5, 40, .3); }
 :is(#app, .ghost) button.say-btn .ico { width: 30px; height: 30px; vertical-align: 0; margin: 0; }
 .task-card { flex: none; width: 150px; height: 150px; border-radius: 34px; display: grid; place-items: center; color: #fff;
   background: rgba(255, 255, 255, .12); border: 3px solid rgba(255, 255, 255, .45); animation: pop-in .45s .2s var(--spring) backwards; }
-.task-card .picto { width: 98px; height: 98px; stroke-width: 1.5; }
-.task-card .swatch { width: 98px; height: 98px; border-radius: 50%; background: var(--c); border: 6px solid #fff; box-shadow: 0 0 0 3px rgba(10, 5, 40, .35); }
+
 :is(#app, .ghost) button.primary-xl { width: min(100%, 440px); min-height: 92px; font-size: 28px; padding: 0 14px; white-space: nowrap; border-radius: 30px; gap: 12px; display: inline-flex; align-items: center; justify-content: center;
   background: var(--btn); box-shadow: 0 10px 0 var(--btn-d), 0 0 0 4px rgba(255, 255, 255, .3); }
 :is(#app, .ghost) button.primary-xl .ico { width: 1.15em; height: 1.15em; vertical-align: 0; margin: 0; }
@@ -561,7 +471,7 @@ button.stop.done .ico { width: 62%; height: 62%; }
 /* --- Движение: только появление, нажатие, награда --- */
 .char { animation: char-in .5s ease-out backwards; }
 .char.cheer { animation: cheer .7s var(--spring) backwards; }
-.char.sad { animation: char-in .5s ease-out backwards; }
+
 .char.shake { animation: char-in .5s ease-out backwards, shake .6s .4s ease both; }
 .char.talking { animation: char-in .5s ease-out backwards !important; }
 .zv-char, .acc-hat, .acc-badge { animation: none; }
@@ -571,36 +481,31 @@ button.stop, button.stop.done { animation: stop-in .5s calc(var(--i, 0) * 50ms +
 button.stop.next { animation: stop-in .5s calc(var(--i, 0) * 50ms + .2s) var(--spring) backwards; transform: translate(-50%, -50%) scale(1.18); border-color: #f59e0b; }
 .map .tile.next { animation: tile-drop .6s calc(var(--i, 0) * 45ms + .15s) var(--spring) backwards; }
 .map > svg path { animation: none; }
-button.cube-btn .cube-float { animation: none; }
+
 .star.on { animation: pop .55s var(--d, 0s) var(--spring) backwards; }
 .dot.on { animation: none; }
-.spinner + p { animation: none; }
-body::before, body::after, .bg-layer { animation: none; }
-.screen-menu > .char { margin-top: 74px; height: clamp(120px, 19vh, 180px); }
+
+body::before, body::after { animation: none; }
 
 /* 3D-картинка задания */
 .task-card { width: 190px; height: 190px; background: radial-gradient(circle at 50% 40%, rgba(255, 255, 255, .3), rgba(255, 255, 255, .08) 75%); }
 .task-card .obj3d { width: 88%; height: 88%; overflow: visible; filter: drop-shadow(0 4px 0 rgba(10, 5, 40, .12)); }
 
-
 /* =====================================================================
    Адаптив: планшет и компьютер. На телефоне ничего не меняется.
    ===================================================================== */
-#app.screen-menu { padding-top: calc(108px + var(--safe-top)); }
 
 @media (min-width: 720px) {
   /* Главная: места сеткой, а не зигзагом */
-  #app.screen-menu { gap: 14px; justify-content: flex-start; padding-top: calc(96px + var(--safe-top)); }
-  .screen-menu h1 { font-size: clamp(40px, 4.4vw, 60px); }
-  .screen-menu > p { font-size: clamp(20px, 1.8vw, 26px); }
-  .screen-menu .world { width: min(100%, 1120px); aspect-ratio: auto !important; display: grid; grid-template-columns: repeat(3, 1fr);
-    gap: 18px 26px; margin-top: 18px; container-type: normal; }
-  .screen-menu .cube-btn { position: relative !important; left: auto !important; top: auto !important; width: 100% !important; transform: none;
-    padding-bottom: 17%; --du: calc(100cqw / 165); }
-  .screen-menu .cube-in { container-type: inline-size; }
+  
+  
+  
+  
+  
+  
 }
 @media (min-width: 1100px) {
-  .screen-menu .world { grid-template-columns: repeat(4, 1fr); }
+  
 }
 
 @media (min-width: 900px) {
@@ -610,13 +515,12 @@ body::before, body::after, .bg-layer { animation: none; }
   .bubble { font-size: clamp(30px, 2.8vw, 40px); max-width: 640px; }
 
   /* Экран задания: слева герой и реплика, справа картинка предмета, кнопка снизу по центру */
-  #app.screen-task, .ghost.screen-task { display: grid; grid-template-columns: minmax(0, 520px) minmax(0, 420px); justify-content: center;
-    align-content: center; column-gap: clamp(32px, 6vw, 96px); row-gap: 22px; padding: calc(84px + var(--safe-top)) 40px 40px; }
-  .screen-task .hero { grid-column: 1; grid-row: 1; justify-self: center; width: min(26vw, 300px); margin-top: 0; }
-  .screen-task .say-row { grid-column: 1; grid-row: 2; width: 100%; }
-  .screen-task .task-card { grid-column: 2; grid-row: 1 / span 2; align-self: center; justify-self: center; width: min(100%, 400px); height: min(60vh, 400px); border-radius: 44px; }
-  .screen-task .hint, .screen-task .notice { grid-column: 1 / -1; justify-self: center; }
-  .screen-task .primary-xl { grid-column: 1 / -1; justify-self: center; width: min(100%, 520px); }
+  
+  
+  
+  
+  
+  
 
   /* Альбом: шесть карточек в ряд */
   .screen-album .album { width: min(100%, 1000px); }
@@ -633,8 +537,8 @@ body::before, body::after, .bg-layer { animation: none; }
 }
 
 @media (min-width: 1400px) {
-  .screen-menu .world { width: min(100%, 1280px); gap: 24px 36px; }
-  .screen-task .task-card { height: min(56vh, 460px); width: min(100%, 460px); }
+  
+  
 }
 
 /* Карта на больших экранах: крупнее и по центру; кружки заданий растут вместе с картой */
@@ -645,30 +549,18 @@ body::before, body::after, .bg-layer { animation: none; }
 }
 
 /* Реплика строго по центру под заврика, динамик справа в своей колонке */
-.say-row { display: grid; grid-template-columns: 70px minmax(0, 1fr) 70px; align-items: center; gap: 0; }
-.say-row .bubble { grid-column: 2; }
+
 :is(#app, .ghost) button.say-btn { grid-column: 3; justify-self: end; }
 
-/* Переходы между экранами без «улёта»: старый экран гаснет на месте, новый мягко поднимается */
-#app.go-fwd, #app.go-back { animation: screen-in .3s ease-out both; }
-@keyframes screen-in { from { opacity: 0; transform: translateY(12px); } }
-.ghost.out-fwd, .ghost.out-back { animation: screen-out .2s ease-out forwards !important; }
-@keyframes screen-out { to { opacity: 0; } }
-
 /* Места на главной: нажатие чувствуется, но кнопка не убегает из-под курсора */
-button.cube-btn { touch-action: manipulation; -webkit-tap-highlight-color: transparent; }
-button.cube-btn .cube-in { transition: transform .15s ease-out; }
-@media (hover: hover) { button.cube-btn:hover .cube-in { transform: scale(1.04); } }
-button.cube-btn:active .cube-in { transform: scale(.97); transition: transform .06s; }
 
+@media (hover: hover) {  }
 
 /* =====================================================================
    Больше графики: планеты на главной, предметы вокруг карты, картинки в результатах
    ===================================================================== */
 /* Декор главной: на телефоне только искорки, на больших экранах планеты в пустых полях */
-.deco { position: absolute; inset: 0; z-index: -1; overflow: hidden; pointer-events: none; }
-.deco .d { position: absolute; display: block; }
-.deco .d svg { display: block; width: 100%; height: auto; }
+
 .d5 { left: 8%; top: 12%; width: 18px; opacity: .8; } .d6 { right: 10%; top: 20%; width: 26px; opacity: .7; } .d7 { left: 14%; top: 46%; width: 14px; opacity: .7; }
 .d1, .d2, .d3, .d4 { display: none !important; }
 @media (min-width: 1000px) {
@@ -682,10 +574,6 @@ button.cube-btn:active .cube-in { transform: scale(.97); transition: transform .
 }
 
 /* Результат: заврик и предмет рядом */
-.res-hero { display: flex; align-items: center; justify-content: center; gap: 12px; flex: none; }
-.res-hero .char { height: clamp(130px, 22vh, 190px); }
-.res-obj .task-card { width: clamp(120px, 20vh, 170px); height: clamp(120px, 20vh, 170px); border-radius: 30px; }
-.res-obj .task-card .obj3d { width: 90%; height: 90%; }
 
 /* Кубок на экране «Все найдено» */
 .trophy { width: clamp(120px, 20vh, 190px); aspect-ratio: 1; flex: none; animation: pop-in .6s .3s var(--spring) backwards; }
@@ -701,12 +589,12 @@ button.cube-btn:active .cube-in { transform: scale(.97); transition: transform .
 .sticker.empty .q { font-size: 0; opacity: 1; }
 
 /* Предметы вокруг карты: только на больших экранах */
-.map .prop { display: none; }
+
 @media (min-width: 900px) {
-  .map .prop { display: block; position: absolute; width: 36%; pointer-events: none; transform: rotate(var(--r, 0deg)); }
-  .map .prop.pl { left: -52%; } .map .prop.pr { right: -52%; }
-  .map .prop-obj { width: 100%; height: auto; overflow: visible; filter: drop-shadow(0 6px 0 rgba(10, 5, 40, .14)); }
-  .map .prop.flag { width: 16%; transform: none; }
+  
+   
+  
+  
 }
 .sticker.empty .q .obj3d.sil-color { filter: saturate(.6) brightness(.62); opacity: .7; }
 
@@ -735,3 +623,372 @@ button.cube-btn:active .cube-in { transform: scale(.97); transition: transform .
 /* «Снять» оживает, когда предмет узнан */
 .cam-overlay button.cam-shoot.ready { box-shadow: 0 9px 0 #166534, 0 0 0 6px rgba(134, 239, 172, .75); animation: ready-pulse 1s ease-in-out infinite; }
 @keyframes ready-pulse { 50% { transform: scale(1.04); } }
+
+/* Вспышки временно скрыты: счётчик, награда за предмет и бонус, цены на местах.
+   Чтобы вернуть, удалите этот блок. */
+:is(#app, .ghost) .chip.coin,
+:is(#app, .ghost) .reward,
+:is(#app, .ghost) .cube-price,
+:is(#app, .ghost) .cube-lock { display: none !important; }
+
+/* Карточка английского слова на экране находки */
+:is(#app, .ghost) button.word-card { position: relative; display: grid; justify-items: center; gap: 2px; width: min(100%, 360px); margin: 6px auto 4px;
+  height: auto; min-height: 0; padding: 12px 56px 12px 20px; border: 0; border-radius: 24px; background: #fff; color: var(--ink); text-align: center;
+  box-shadow: 0 6px 0 rgba(60, 30, 140, .35), 0 10px 24px rgba(20, 8, 70, .3); cursor: pointer; }
+:is(#app, .ghost) .word-card .wc-tag { font-size: 13px; font-weight: 800; letter-spacing: .08em; text-transform: uppercase; color: #7c3aed; }
+:is(#app, .ghost) .word-card .wc-en { font-size: clamp(36px, 11vw, 52px); font-weight: 900; line-height: 1.05; }
+:is(#app, .ghost) .word-card .wc-ru { font-size: 18px; font-weight: 700; color: #5b4b8a; }
+:is(#app, .ghost) .word-card .wc-say { position: absolute; right: 14px; top: 50%; translate: 0 -50%; width: 38px; height: 38px; border-radius: 50%;
+  display: grid; place-items: center; background: #7c3aed; color: #fff; }
+:is(#app, .ghost) .word-card .wc-say .ico { width: 22px; height: 22px; margin: 0; vertical-align: 0; }
+:is(#app, .ghost) .word-card:active { transform: translateY(3px); }
+
+/* ===== Главная: карточки мест (макет Figma) ===== */
+
+/* ===== Экран места по макету Figma: шапка, прогресс, сетка карточек, «играть» ===== */
+#app.screen-loc { padding: 0; gap: 0; justify-content: flex-start; align-items: stretch; text-align: left; min-height: 100dvh; background: transparent; }
+#app.screen-loc > .loc { min-height: 100dvh; background: var(--lpat, none) 0 216px / 320px 320px repeat, var(--lbg); display: flex; flex-direction: column; animation: none; --lbtn: #7a5ad0; --lbtns: #977eda; }
+.loc-head { position: relative; height: 216px; flex: none; background: var(--lhead); overflow: hidden; }
+.loc-art { position: absolute; left: 50%; top: 0; width: 576px; height: 216px; margin-left: -288px; background-size: 576px 1728px; background-position: 0 var(--hy); background-repeat: no-repeat; }
+/* Кнопки шапки: цвет значка и нижней кромки свой у каждого места (как у «назад» в макетах) */
+#app.screen-loc button.loc-btn { position: absolute; top: calc(24px + var(--safe-top)); width: 56px; min-width: 56px; height: 56px; min-height: 56px; padding: 0; border: 0; border-radius: 20px; background: #fff;
+  box-shadow: 0 6px 0 var(--lbtns); display: grid; place-items: center; cursor: pointer; transition: transform .2s cubic-bezier(.22, 1, .36, 1), box-shadow .2s cubic-bezier(.22, 1, .36, 1); }
+.loc-i { display: block; width: 24px; height: 24px; background: var(--lbtn); -webkit-mask: var(--m) center / contain no-repeat; mask: var(--m) center / contain no-repeat; }
+#app.screen-loc #back { left: 24px; }
+#app.screen-loc .loc-tools { position: absolute; inset: 0; pointer-events: none; }
+#app.screen-loc .loc-tools .loc-btn { pointer-events: auto; right: 24px; }
+#app.screen-loc .loc-tools #snd { right: 92px; }
+#app.screen-loc button.loc-btn:active { transform: translateY(4px); box-shadow: 0 2px 0 var(--lbtns); }
+#app.screen-loc.muted #snd { opacity: .55; }
+#app.screen-loc.muted #snd::after { content: ''; position: absolute; left: 14px; right: 14px; top: 50%; height: 4px; border-radius: 2px; background: var(--lbtn); rotate: -40deg; }
+.loc-body { flex: 1; padding: 24px 24px 16px; display: flex; justify-content: center; }
+.loc-box { width: 100%; max-width: 600px; display: flex; flex-direction: column; gap: 24px; }
+.loc-progress { height: 40px; }
+.loc-track { height: 40px; border-radius: 999px; background: #fff; padding: 4px; overflow: hidden; }
+/* Заполнение вырастает при открытии экрана, полоски бегут вбок */
+.loc-fill { height: 100%; width: var(--w, 0%); border-radius: 999px; background-color: var(--lfill); background-repeat: repeat-x; background-size: 30px 100%;
+  animation: loc-grow 1.4s cubic-bezier(.22, 1, .36, 1) .35s backwards, loc-stripes 2.4s linear infinite; }
+@keyframes loc-grow { from { width: 0; } }
+@keyframes loc-stripes { to { background-position: 30px 0; } }
+.loc-fill[style*="--w:0%"] { display: none; }
+.loc-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 24px 16px; }
+@media (min-width: 600px) { .loc-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 24px; } }
+#app.screen-loc button.loc-card { position: relative; width: 100%; aspect-ratio: 1; min-height: 0; height: auto; padding: 20px; border: 0; border-radius: 32px; background: #fff; box-shadow: 0 8px 0 var(--lshadow);
+  display: grid; place-items: center; cursor: pointer; overflow: clip; transition: transform .2s cubic-bezier(.22, 1, .36, 1), box-shadow .2s cubic-bezier(.22, 1, .36, 1); }
+#app.screen-loc button.loc-card:hover { transform: translateY(-2px); box-shadow: 0 10px 0 var(--lshadow); }
+#app.screen-loc button.loc-card:active { transform: translateY(5px); box-shadow: 0 3px 0 var(--lshadow); }
+.loc-ico { width: 104px; height: 104px; background-size: 800% 800%; background-repeat: no-repeat; display: block; }
+@media (min-width: 600px) { .loc-ico { width: 128px; height: 128px; } }
+.loc-check { position: absolute; top: 8px; right: 8px; width: 56px; height: 56px; }
+/* «Играть» прибита к низу экрана, карточки прокручиваются под ней */
+.loc-bar { position: sticky; bottom: 0; z-index: 5; display: flex; justify-content: center; padding: 16px 24px calc(24px + env(safe-area-inset-bottom, 0px)); background: linear-gradient(to top, var(--lbg) 62%, transparent); }
+#app.screen-loc button.loc-play { width: 100%; max-width: 600px; min-height: 64px; height: 64px; padding: 16px 24px; border: 0; border-radius: 24px; background: #8a5eff; box-shadow: 0 6px 0 #6e46da; display: grid; place-items: center; cursor: pointer; transition: transform .2s cubic-bezier(.22, 1, .36, 1), box-shadow .2s cubic-bezier(.22, 1, .36, 1); }
+#app.screen-loc button.loc-play:active { transform: translateY(4px); box-shadow: 0 2px 0 #6e46da; }
+#app.screen-loc button.loc-play img { width: 32px; height: 32px; display: block; }
+@media (prefers-reduced-motion: reduce) { .loc-fill { animation: none; } }
+
+/* Карточки места появляются по очереди: выпрыгивают снизу с лёгким отскоком */
+@keyframes loc-pop { from { opacity: 0; transform: translateY(26px) scale(.9); } to { opacity: 1; transform: none; } }
+.loc-card { animation: loc-pop .8s cubic-bezier(.22, 1, .36, 1) backwards; animation-delay: calc(var(--i, 0) * 90ms + 200ms); }
+.loc-card .loc-check { animation: loc-check .6s cubic-bezier(.22, 1, .36, 1) backwards; animation-delay: calc(var(--i, 0) * 90ms + 700ms); }
+@keyframes loc-check { from { transform: scale(0) rotate(-40deg); } }
+
+/* ===== Экраны заданий по макету Figma ===== */
+.loc { position: relative; }
+.tk-body { align-items: flex-start; }
+.tk-card { position: relative; z-index: 2; background: #fff; border-radius: 32px; box-shadow: 0 8px 0 var(--lshadow); padding: var(--tkpad); display: flex; flex-direction: column; align-items: center; gap: 16px; text-align: center; color: #221c5f; font-family: 'Factor A', system-ui, sans-serif; --tkpad: 32px; --tkico: 128px; }
+@media (min-width: 600px) { .tk-card { --tkpad: 40px; } }
+@media (min-width: 1024px) { .tk-card { --tkpad: 48px; --tkico: 160px; } }
+.tk-ico .loc-ico { width: var(--tkico); height: var(--tkico); display: block; }
+.tk-text, .tk-en, .tk-ru { margin: 0; text-shadow: none; letter-spacing: 0; color: #221c5f; font-family: 'Factor A', system-ui, sans-serif; font-style: normal; text-wrap: balance; }
+.tk-text { font-size: 28px; line-height: 36px; font-weight: 700; }
+@media (min-width: 600px) { .tk-text { font-size: 32px; line-height: 40px; } }
+.tk-en { font-size: 40px; line-height: 48px; font-weight: 700; }
+.tk-ru { font-size: 24px; line-height: 30px; font-weight: 400; }
+.tk-en { margin-bottom: -12px; }
+.tk-card.ok { cursor: pointer; }
+.tk-stars { display: flex; justify-content: center; height: 72px; margin-bottom: -4px; }
+.tk-stars-svg { width: 198px; height: 74px; display: block; overflow: visible; }
+.tk-stars-svg .st { transform-box: fill-box; transform-origin: center; animation: star-pop .8s cubic-bezier(.22, 1.2, .36, 1) backwards; animation-delay: calc(var(--k) * 180ms + 300ms); }
+@keyframes star-pop { from { opacity: 0; scale: 0; rotate: -60deg; } }
+.tk-try { width: var(--tkico); height: var(--tkico); display: block; }
+
+.screen-tk .hint { background: #fff; border-radius: 20px; padding: 12px 16px; display: flex; gap: 10px; align-items: center; color: #221c5f; font-weight: 700; box-shadow: 0 5px 0 var(--lshadow); }
+.screen-tk .hint .ico { width: 24px; height: 24px; flex: none; color: #ffb400; }
+.screen-tk .notice { text-align: center; color: #221c5f; font-weight: 700; }
+.screen-tk .loc-play img { width: 32px; height: 32px; display: block; }
+
+/* Не то: карточка трясётся */
+.tk-card.shake { animation: tk-shake 1.5s cubic-bezier(.45, .05, .3, 1) .15s both; }
+@keyframes tk-shake { 0%, 100% { transform: none; } 18% { transform: translateX(-9px) rotate(-1.2deg); } 36% { transform: translateX(9px) rotate(1.2deg); } 54% { transform: translateX(-6px) rotate(-.8deg); } 72% { transform: translateX(5px) rotate(.6deg); } 88% { transform: translateX(-2px) rotate(-.2deg); } }
+/* Верно: конфетти вылетает из-под карточки (холст лежит под ней) */
+.confetti-behind { position: absolute; inset: 0; width: 100%; height: 100%; z-index: 1; pointer-events: none; }
+.tk-card.ok { animation: tk-land .8s cubic-bezier(.22, 1, .36, 1) backwards; }
+@keyframes tk-land { from { transform: translateY(-14px) scale(.94); opacity: .6; } }
+@media (prefers-reduced-motion: reduce) { .loc-card, .loc-card .loc-check, .tk-card.shake, .tk-card.ok, .tk-stars-svg .st { animation: none; } }
+
+/* Спиннер проверки: дуга с круглыми концами */
+.tk-wait { min-height: 236px; justify-content: center; }
+.tk-spin { width: 76px; height: 76px; animation: tk-spin 1.1s linear infinite; }
+.tk-spin circle { fill: none; stroke-width: 6; }
+.tk-spin-track { stroke: #efe6ff; }
+.tk-spin-arc { stroke: #8a5eff; stroke-linecap: round; stroke-dasharray: 34 90; }
+@keyframes tk-spin { to { transform: rotate(360deg); } }
+@media (prefers-reduced-motion: reduce) { .tk-spin { animation-duration: 3s; } }
+
+/* Десктоп: заголовок задания 40/48 */
+@media (min-width: 1024px) { .tk-text { font-size: 40px; line-height: 48px; } }
+
+/* ===== Камера по макету Figma: видео на весь экран, «назад» сверху, большая кнопка снизу ===== */
+.cam-overlay { display: block; padding: 0; gap: 0; background: #1a1235; --lbtn: #7a5ad0; --lbtns: #977eda; }
+.cam-overlay .cam-stage { position: absolute; inset: 0; display: block; max-width: none; }
+.cam-overlay .cam-video, .cam-overlay .cam-stage .cam-video { position: absolute; inset: 0; width: 100%; height: 100%; max-width: none; max-height: none; border: 0; border-radius: 0; object-fit: cover; animation: none; transform: none; background: #1a1235; }
+.cam-overlay button.cam-back:not(.level):not(.stop):not(.cube-btn):not(.x) { position: absolute; z-index: 3; top: calc(24px + env(safe-area-inset-top, 0px)); left: 24px; width: 56px; min-width: 56px; height: 56px; min-height: 56px; padding: 0; border: 0; border-radius: 20px; background: #fff;
+  box-shadow: 0 6px 0 var(--lbtns); display: grid; place-items: center; cursor: pointer; transition: transform .2s cubic-bezier(.22, 1, .36, 1), box-shadow .2s cubic-bezier(.22, 1, .36, 1); }
+.cam-overlay button.cam-back:not(.level):not(.stop):not(.cube-btn):not(.x):active { transform: translateY(4px); box-shadow: 0 2px 0 var(--lbtns); }
+.cam-overlay .cam-hint { position: absolute; z-index: 2; top: calc(32px + env(safe-area-inset-top, 0px)); left: 96px; right: 24px; margin: 0; padding: 10px 16px; border-radius: 20px; background: #fff; color: #221c5f; font-size: 16px; line-height: 20px; font-weight: 700; text-shadow: none; text-align: center; box-shadow: 0 5px 0 var(--lbtns); }
+.cam-overlay .cam-hint.quiet { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; border: 0; box-shadow: none; background: none; left: 0; right: auto; }
+.cam-overlay .cam-msg { position: absolute; z-index: 2; left: 24px; right: 24px; top: 40%; transform: translateY(-50%); max-width: none; text-align: center; color: #fff; font-size: 22px; line-height: 28px; font-weight: 700; }
+.cam-overlay .cam-actions { position: absolute; z-index: 3; left: 0; right: 0; bottom: 0; width: auto; flex-direction: column; flex-wrap: nowrap; align-items: center; gap: 12px; padding: 24px 24px calc(24px + env(safe-area-inset-bottom, 0px)); }
+.cam-overlay button.cam-shoot:not(.level):not(.stop):not(.cube-btn):not(.x) { width: 100%; max-width: 600px; height: 64px; min-height: 64px; padding: 16px 24px; border-radius: 24px; background: #8a5eff; color: #fff; box-shadow: 0 6px 0 #6e46da; display: grid; place-items: center; font-size: 0; }
+.cam-overlay button.cam-shoot img { width: 32px; height: 32px; display: block; }
+.cam-overlay button.cam-shoot:not(.level):not(.stop):not(.cube-btn):not(.x):active:not(:disabled) { transform: translateY(4px); box-shadow: 0 2px 0 #6e46da; }
+.cam-overlay button.cam-shoot:disabled { opacity: .6; }
+.cam-overlay button.cam-shoot.ready { box-shadow: 0 6px 0 #6e46da, 0 0 0 6px rgba(255, 255, 255, .7); animation: ready-pulse 1.2s ease-in-out infinite; }
+.cam-overlay[hidden] { display: none !important; }
+
+/* ===== Экраны «камера не включилась» по макету Figma «Ошибки» ===== */
+.cam-problem { position: fixed; inset: 0; z-index: 40; display: flex; flex-direction: column; background: #f5efff; color: #221c5f; font-family: 'Factor A', system-ui, sans-serif; animation: fade-in .3s ease; }
+.cam-problem button.cp-back:not(.level):not(.stop):not(.cube-btn):not(.x) { position: absolute; top: calc(24px + env(safe-area-inset-top, 0px)); left: 24px; width: 56px; min-width: 56px; height: 56px; min-height: 56px; padding: 0; border: 0; border-radius: 20px; background: #fff;
+  box-shadow: 0 6px 0 #977eda; display: grid; place-items: center; cursor: pointer; transition: transform .2s cubic-bezier(.22, 1, .36, 1), box-shadow .2s cubic-bezier(.22, 1, .36, 1); }
+.cam-problem button.cp-back:not(.level):not(.stop):not(.cube-btn):not(.x):active { transform: translateY(4px); box-shadow: 0 2px 0 #977eda; }
+.cam-problem .loc-i { background: #7a5ad0; }
+.cp-main { flex: 1; display: flex; padding: 96px 16px 120px; overflow: auto; }
+.cp-main > .cp-card { margin: auto; } /* по центру, а если не влезает, не обрезается сверху */
+.cp-card { width: 100%; max-width: 600px; background: #fff; border-radius: 32px; box-shadow: 0 8px 0 #cbb7ff; padding: 32px; display: flex; flex-direction: column; align-items: center; gap: 16px; text-align: center; animation: tk-in .8s cubic-bezier(.22, 1, .36, 1) backwards; }
+.cp-ico { width: 108px; height: 108px; display: block; animation: tk-pop .9s cubic-bezier(.22, 1.3, .36, 1) .15s backwards, tk-float 3.8s ease-in-out .95s infinite; }
+.cp-card h2 { margin: 0; font-size: 28px; line-height: 36px; font-weight: 700; color: #221c5f; text-shadow: none; text-wrap: balance; }
+.cp-card p { margin: 0; font-size: 20px; line-height: 30px; font-weight: 400; color: #221c5f; text-shadow: none; text-wrap: balance; }
+.cp-card.cp-steps { align-items: stretch; text-align: left; gap: 24px; padding: 40px 32px; }
+.cp-steps h2 { text-align: left; }
+.cp-steps-body { display: grid; gap: 32px; }
+.cp-media { margin: 0; border-radius: 24px; overflow: hidden; background: #1c2f78; aspect-ratio: 16 / 10; }
+.cpm-gif { position: relative; width: 100%; height: 100%; background: radial-gradient(120% 90% at 30% 20%, #3556b8, #1c2f78 70%); }
+.cpm-gif img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
+.cp-steps ol { margin: 0; padding-left: 28px; display: grid; gap: 16px; font-size: 20px; line-height: 28px; font-weight: 400; color: #221c5f; }
+.cp-bar { position: absolute; left: 0; right: 0; bottom: 0; display: flex; justify-content: center; padding: 16px 16px calc(24px + env(safe-area-inset-bottom, 0px)); }
+.cam-problem button.cp-btn:not(.level):not(.stop):not(.cube-btn):not(.x) { width: 100%; max-width: 600px; height: 64px; min-height: 64px; padding: 16px 24px; border: 0; border-radius: 24px; background: #8a5eff; color: #fff; font: 700 20px/24px 'Factor A', system-ui, sans-serif; text-shadow: none;
+  box-shadow: 0 6px 0 #6e46da; display: grid; place-items: center; cursor: pointer; transition: transform .2s cubic-bezier(.22, 1, .36, 1), box-shadow .2s cubic-bezier(.22, 1, .36, 1); }
+.cam-problem button.cp-btn:not(.level):not(.stop):not(.cube-btn):not(.x):active { transform: translateY(4px); box-shadow: 0 2px 0 #6e46da; }
+@media (min-width: 1024px) {
+  .cp-card { padding: 48px; }
+  .cp-ico { width: 160px; height: 160px; }
+  .cp-card h2 { font-size: 40px; line-height: 48px; }
+  .cp-card p { font-size: 24px; line-height: 32px; }
+  .cp-steps ol { font-size: 24px; line-height: 32px; }
+  .cp-card.cp-steps { padding: 48px; }
+}
+@media (prefers-reduced-motion: reduce) { .cp-card, .cp-ico { animation: none; } }
+
+/* Стрелка из макета над главной кнопкой: подсказывает, куда нажимать (появляется через секунду и покачивается) */
+.tap-arrow { position: absolute; left: 50%; bottom: calc(24px + 64px + 6px + env(safe-area-inset-bottom, 0px)); width: 48px; height: auto; translate: -50% 0; pointer-events: none; z-index: 6;
+  animation: tap-in .5s ease 1.1s backwards, tap-bob 1.1s ease-in-out 1.6s infinite; filter: drop-shadow(0 4px 0 rgba(110, 70, 218, .25)); }
+@keyframes tap-in { from { opacity: 0; translate: -50% -14px; } }
+@keyframes tap-bob { 0%, 100% { translate: -50% 0; } 50% { translate: -50% 12px; } }
+@media (prefers-reduced-motion: reduce) { .tap-arrow { animation: none; } }
+
+/* ===== Анимация экрана задания ===== */
+.tk-task .tk-card { animation: tk-in .8s cubic-bezier(.22, 1, .36, 1) backwards; }
+@keyframes tk-in { from { opacity: 0; transform: translateY(28px) scale(.94); } }
+.tk-task .tk-ico, .tk-ok .tk-ico { animation: tk-pop .9s cubic-bezier(.22, 1.3, .36, 1) .15s backwards, tk-float 3.8s ease-in-out .95s infinite; }
+@keyframes tk-pop { from { opacity: 0; transform: scale(.5) rotate(-12deg); } }
+@keyframes tk-float { 0%, 100% { transform: translateY(0) rotate(0); } 50% { transform: translateY(-8px) rotate(1.5deg); } }
+.tk-task .tk-text, .tk-ok .tk-en, .tk-ok .tk-ru, .tk-bad .tk-text { animation: tk-rise .7s cubic-bezier(.22, 1, .36, 1) .3s backwards; }
+.tk-ok .tk-ru { animation-delay: .42s; }
+@keyframes tk-rise { from { opacity: 0; transform: translateY(14px); } }
+.tk-task .loc-play { animation: tk-btn-in .7s cubic-bezier(.22, 1, .36, 1) .45s backwards, tk-nudge 3.4s ease-in-out 2.2s infinite; }
+@keyframes tk-btn-in { from { opacity: 0; transform: translateY(40px); } }
+@keyframes tk-nudge { 0%, 86%, 100% { scale: 1; } 93% { scale: 1.035; } }
+
+/* ===== Анимация фонов мест: фон «дышит», поверх летают частицы по теме места ===== */
+.loc-art { animation: loc-art-sway 12s ease-in-out infinite alternate; will-change: transform; }
+@keyframes loc-art-sway { from { transform: translateX(-7px) scale(1.015); } to { transform: translateX(7px) scale(1.03); } }
+.loc-fx { position: absolute; inset: 0; z-index: 1; pointer-events: none; overflow: hidden; }
+.loc-head .loc-btn { z-index: 2; }
+.loc-fx i { position: absolute; left: var(--x); width: var(--s); height: var(--s); opacity: 0; will-change: transform, opacity; animation-duration: var(--t); animation-delay: var(--d); animation-iteration-count: infinite; animation-timing-function: ease-in-out; }
+
+@media (prefers-reduced-motion: reduce) { .loc-art, .tk-task .tk-card, .tk-task .tk-ico, .tk-ok .tk-ico, .tk-task .tk-text, .tk-ok .tk-en, .tk-ok .tk-ru, .tk-bad .tk-text, .tk-task .loc-play { animation: none; } .loc-fx { display: none; } }
+
+/* Объяснение перед запросом камеры (макет «Саундчек»): размытый тёмный фон → пауза → выезжает герой */
+.cam-ask { position: fixed; inset: 0; z-index: 45; display: flex; align-items: center; justify-content: center; padding: 16px; font-family: 'Factor A', system-ui, sans-serif;
+  background: rgba(34, 28, 95, .72); -webkit-backdrop-filter: blur(12px); backdrop-filter: blur(12px); animation: ca-fade .5s ease backwards; }
+.ca-card { position: relative; width: min(100%, 480px); background: #fff; color: #221c5f; border-radius: 32px; box-shadow: 0 8px 0 #cbb7ff; padding: 40px 32px 32px;
+  display: flex; flex-direction: column; align-items: stretch; gap: 12px; text-align: center; animation: ca-card .5s cubic-bezier(.22, 1, .36, 1) .8s backwards; }
+.cam-ask h2 { margin: 0; font-size: 32px; line-height: 40px; font-weight: 700; color: #221c5f; text-shadow: none; text-wrap: balance; }
+.cam-ask p { margin: 0; font-size: 22px; line-height: 30px; font-weight: 400; color: #221c5f; text-shadow: none; text-wrap: balance; }
+.cam-ask p b { font-weight: 700; }
+.cam-ask button.ca-second:not(.level):not(.stop):not(.cube-btn):not(.x) { width: 100%; height: 56px; min-height: 56px; margin-top: 0; padding: 12px 24px; border: 0; border-radius: 24px; background: transparent; box-shadow: none; color: #6e46da; font: 700 20px/28px 'Factor A', system-ui, sans-serif; cursor: pointer; }
+.cam-ask button.ca-second:not(.level):not(.stop):not(.cube-btn):not(.x):active { transform: none; box-shadow: none; opacity: .6; }
+/* Пейвол: общий сервис Учи на весь экран, пока он грузится фон не мигает белым */
+.paywall { position: fixed; inset: 0; z-index: 60; background: #221c5f; }
+.pw-frame { position: absolute; inset: 0; width: 100%; height: 100%; border: 0; }
+button.pw-back:not(.level):not(.stop):not(.cube-btn) { position: absolute; top: max(16px, env(safe-area-inset-top)); left: max(16px, env(safe-area-inset-left)); z-index: 1; display: flex; align-items: center; justify-content: center; width: 48px; height: 48px; min-width: 0; min-height: 0; box-shadow: none; padding: 0; border: 0; border-radius: 50%; color: #fff; background: rgb(0 0 0 / 30%); cursor: pointer; appearance: none; }
+.pw-back svg { width: 28px; height: 28px; fill: none; stroke: currentcolor; stroke-width: 2.5; stroke-linecap: round; stroke-linejoin: round; }
+.cam-ask button.ca-btn:not(.level):not(.stop):not(.cube-btn):not(.x) { width: 100%; height: 64px; min-height: 64px; margin-top: 8px; padding: 16px 24px; border: 0; border-radius: 24px; background: #8a5eff; color: #fff;
+  font: 700 20px/24px 'Factor A', system-ui, sans-serif; box-shadow: 0 6px 0 #6e46da; cursor: pointer; }
+.cam-ask button.ca-btn:not(.level):not(.stop):not(.cube-btn):not(.x):active { transform: translateY(4px); box-shadow: 0 2px 0 #6e46da; }
+@media (min-width: 768px) {
+  .ca-card { width: 560px; padding: 56px 48px 48px; gap: 16px; }
+  .cam-ask h2 { font-size: 40px; line-height: 48px; }
+  .cam-ask p { font-size: 24px; line-height: 32px; }
+  .cam-ask button.ca-btn:not(.level):not(.stop):not(.cube-btn):not(.x) { height: 72px; min-height: 72px; font-size: 24px; margin-top: 16px; }
+}
+@keyframes ca-fade { from { opacity: 0; } }
+@keyframes ca-card { from { opacity: 0; transform: translateY(24px); } }
+@media (prefers-reduced-motion: reduce) { .cam-ask, .ca-card { animation: none; } }
+
+/* ===== Главная: карта-дорожка из мест (макет «01 / Кухня») ===== */
+#app.screen-map > .loc { --lbg: #8a5eff; --lfill: #66d385; --lbtns: #cbb7ff; } /* подложки кнопок шапки того же сиреневого, что у первой карточки (кухня) */
+.mp-head { position: relative; height: 216px; flex: none; display: flex; justify-content: center; background: linear-gradient(#d9c8ff 70%, #8a5eff); overflow: hidden; }
+.mp-strip { display: flex; flex: none; height: 100%; }
+.mp-art { display: block; height: 100%; width: auto; max-width: none; flex: none; margin: 0 -.5px; } /* нахлёст в полпикселя, чтобы на стыках копий не было шва */
+.mp-art.mirror { transform: scaleX(-1); } /* зеркальные копии слева и справа продолжают пейзаж, края сцены сходятся без шва */
+.mp-road { position: relative; width: 100%; max-width: 360px; display: flex; flex-direction: column; gap: 48px; margin: 0 auto; }
+#app.screen-map .loc-body { padding: 24px 24px 16px; }
+#app.screen-map button.mp-tile { width: 188px; min-width: 0; height: auto; min-height: 0; padding: 8px; border: 0; border-radius: 24px; background: #fff; box-shadow: 0 6px 0 rgba(0, 0, 0, .1);
+  display: flex; flex-direction: column; align-items: stretch; gap: 0; cursor: pointer; font: inherit; color: inherit; transition: transform .2s cubic-bezier(.22, 1, .36, 1), box-shadow .2s cubic-bezier(.22, 1, .36, 1);
+  animation: tk-in .7s cubic-bezier(.22, 1, .36, 1) calc(.15s + var(--i) * .16s) backwards; }
+#app.screen-map button.mp-tile.left { align-self: flex-start; }
+#app.screen-map button.mp-tile.right { align-self: flex-end; }
+#app.screen-map button.mp-tile:hover { transform: translateY(-2px); box-shadow: 0 8px 0 rgba(0, 0, 0, .1); }
+#app.screen-map button.mp-tile:active { transform: translateY(4px); box-shadow: 0 2px 0 rgba(0, 0, 0, .1); }
+.mp-win { display: block; width: 100%; aspect-ratio: 132 / 96; border-radius: 16px; overflow: hidden; background: #efe6ff; }
+.mp-win img { display: block; width: 100%; height: 100%; object-fit: cover; }
+.mp-win.is-room { container-type: size; position: relative; }
+.mp-win.is-room > img { transform: scale(1.6); transform-origin: 52% 78%; }
+/* Комната сохраняет пропорции 368:200 и покрывает окно карточки (как object-fit: cover): проценты питомца считаются от комнаты, а не от окна */
+.mp-win.is-room .room-box { position: absolute; left: 50%; top: 50%; width: max(100cqw, 184cqh); height: auto; aspect-ratio: 368 / 200; translate: -50% -50%; scale: 1.6; transform-origin: 50% 90%; } /* комнату увеличиваем к питомцу: он крупнее, стены обрезаются */
+.mp-track { display: block; height: 24px; margin: 8px 4px 4px; padding: 4px; border-radius: 999px; background: rgba(102, 211, 133, .2); overflow: hidden; }
+#app.screen-map .mp-track .loc-fill { display: block; }
+#app.screen-map .mp-track .loc-fill[style*="--w:0%"] { display: none; }
+#app.screen-map button.loc-play { background: #ff6170; box-shadow: 0 6px 0 #c1414d; }
+#app.screen-map button.loc-play:active { box-shadow: 0 2px 0 #c1414d; }
+@media (min-width: 600px) {
+  .mp-road { max-width: 480px; }
+  #app.screen-map button.mp-tile { width: 264px; }
+  .mp-decor { width: 170px; }
+}
+@media (prefers-reduced-motion: reduce) { #app.screen-map button.mp-tile { animation: none; } }
+/* Карта по макету Figma «01 / Кухня»: места сеткой на фоне из облаков и холмов, без шапки-пейзажа, дороги и кнопки «Играть».
+   Телефон: две колонки; широкий экран (от 900 px): четыре колонки и две строки. */
+.mp-bg { position: fixed; inset: 0; width: 100%; height: 100%; z-index: 0; pointer-events: none; }
+.mp-bg-wide { display: none; }
+.mp-bg .cloud { animation: mp-cloud calc(7s + var(--k) * 2s) ease-in-out calc(var(--k) * -3s) infinite alternate; }
+@keyframes mp-cloud { from { transform: translate(-40px, -6px); } to { transform: translate(56px, 8px); } }
+@media (prefers-reduced-motion: reduce) { .mp-bg .cloud { animation: none; } }
+#app.screen-map > .loc { background: #ebe0ff; }
+.mp .mp-head { position: relative; z-index: 1; height: 104px; background: none; overflow: visible; }
+.mp .mp-strip { display: none; }
+#app.screen-map .loc-body { position: relative; z-index: 1; padding: 0 16px 32px; align-items: flex-start; }
+.mp-road { max-width: 720px; width: 100%; margin: 0 auto; display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; }
+.mp-path, .mp-decor { display: none; }
+#app.screen-map button.mp-tile, #app.screen-map button.mp-tile.left, #app.screen-map button.mp-tile.right { width: auto; align-self: stretch; justify-self: stretch; padding: 12px; gap: 12px; border-radius: 28px; box-shadow: 0 8px 0 #cbb7ff; }
+#app.screen-map button.mp-tile:hover { box-shadow: 0 10px 0 #cbb7ff; }
+#app.screen-map button.mp-tile:active { box-shadow: 0 3px 0 #cbb7ff; }
+.mp .mp-win { flex: none; aspect-ratio: 1 / 0.92; border-radius: 16px; }
+.mp .mp-track { height: 28px; margin: 0; flex: none; }
+#app.screen-map .loc-bar { display: none; }
+@media (max-width: 479px) { /* узкий телефон (360–390): две плашки в ряд, поменьше отступы */
+  .mp-road { gap: 24px 16px; } /* между рядами 24, между плашками в ряду 16 */
+  #app.screen-map button.mp-tile, #app.screen-map button.mp-tile.left, #app.screen-map button.mp-tile.right { padding: 8px; gap: 8px; border-radius: 22px; }
+  .mp .mp-track { height: 22px; }
+}
+@media (min-width: 900px) {
+  .mp-bg-wide { display: block; } .mp-bg-tall { display: none; }
+  #app.screen-map .loc-body { padding: 0 64px 64px; align-items: center; } /* на высоком экране сетка по центру, а не растягивается */
+  .mp-road { max-width: 1312px; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 32px; }
+  #app.screen-map button.mp-tile, #app.screen-map button.mp-tile.left, #app.screen-map button.mp-tile.right { padding: 16px; gap: 16px; border-radius: 32px; box-shadow: 0 8px 0 #cbb7ff; }
+  #app.screen-map button.mp-tile:hover { box-shadow: 0 10px 0 #cbb7ff; }
+  #app.screen-map button.mp-tile:active { box-shadow: 0 3px 0 #cbb7ff; }
+  #app.screen-map button.mp-tile, #app.screen-map button.mp-tile.left, #app.screen-map button.mp-tile.right { aspect-ratio: 1; align-self: start; } /* квадратные плашки: без растяжения по строке, иначе aspect-ratio не работает */
+  .mp .mp-win { flex: 1 1 0; min-height: 0; aspect-ratio: auto; }
+  .mp .mp-track { height: 32px; }
+}
+
+.mp-path { position: absolute; left: 0; top: 0; pointer-events: none; overflow: visible; }
+.mp-lane { fill: none; stroke: rgba(255, 255, 255, .22); stroke-width: 36; stroke-linecap: round; stroke-linejoin: round; }
+.mp-dash { fill: none; stroke: rgba(255, 255, 255, .6); stroke-width: 4; stroke-linecap: round; stroke-linejoin: round; stroke-dasharray: 0.1 14; }
+.mp-path .mp-dash { animation: mp-flow 1.8s linear infinite; }
+@keyframes mp-flow { to { stroke-dashoffset: -14.1; } }
+.mp-reveal { fill: none; stroke: #fff; stroke-width: 80; stroke-linecap: round; stroke-linejoin: round; }
+.mp-path.draw .mp-reveal { stroke-dasharray: 1; animation: mp-draw 1.6s cubic-bezier(.45, 0, .25, 1) .1s backwards; }
+@keyframes mp-draw { from { stroke-dashoffset: 1; } to { stroke-dashoffset: 0; } }
+@media (prefers-reduced-motion: reduce) { .mp-path.draw .mp-reveal, .mp-path .mp-dash { animation: none; } }
+#app.screen-map button.mp-tile { position: relative; z-index: 1; }
+.mp-decor { position: absolute; width: 116px; translate: 0 -100%; pointer-events: none; z-index: 0; transform-origin: 50% 100%; animation: mp-pop .7s cubic-bezier(.34, 1.4, .64, 1) calc(.5s + var(--i) * .16s) backwards; }
+.mp-decor.still { animation: none; }
+.mp-decor.left { left: 0; } .mp-decor.right { right: 0; }
+.mp-decor svg { display: block; width: 100%; height: auto; overflow: visible; }
+@keyframes mp-pop { from { opacity: 0; transform: scale(.4); } }
+@media (prefers-reduced-motion: reduce) { .mp-decor { animation: none; } }
+#app.screen-map .mp-check { top: -10px; right: -10px; width: 56px; height: 56px; z-index: 2; animation: tk-pop .7s cubic-bezier(.22, 1.4, .36, 1) .4s backwards; pointer-events: none; }
+
+/* Шапка карты: баланс бусин, счётчик бесплатных заданий и кнопка доступа */
+.mp-hud { position: absolute; left: 92px; right: 160px; top: calc(24px + var(--safe-top)); display: flex; flex-wrap: wrap; align-items: center; gap: 12px; z-index: 2; }
+.mp-chip { height: 56px; padding: 0 20px 0 16px; display: flex; align-items: center; gap: 10px; border-radius: 20px;
+  background: #fff; box-shadow: 0 6px 0 #cbb7ff; color: #221c5f; font: 700 24px/1 'Factor A', system-ui, sans-serif; }
+.mp-hud2 { left: 24px; right: 24px; top: calc(96px + var(--safe-top)); flex-wrap: nowrap; }
+#app.screen-map button.mp-beads { width: auto; min-width: 0; min-height: 0; height: 56px; padding: 0 20px 0 16px; border: 0; border-radius: 20px; background: #fff; color: #221c5f; box-shadow: 0 6px 0 #cbb7ff; font: 700 24px/1 'Factor A', system-ui, sans-serif; cursor: pointer; }
+#app.screen-map button.mp-beads:active { transform: translateY(4px); box-shadow: 0 2px 0 #cbb7ff; }
+.mp-beads b { color: #7a4fe8; }
+.mp-free { padding: 0 18px; gap: 8px; }
+.mp-free span { font-size: 16px; line-height: 1.1; max-width: 110px; }
+#app.screen-map .mp-access { width: auto; flex: none; min-width: 0; min-height: 0; height: 56px; padding: 0 22px; border: 0; border-radius: 20px; background: #ff6170; box-shadow: 0 6px 0 #c2424f; color: #fff; font: 800 18px/1 'Factor A', system-ui, sans-serif; cursor: pointer; }
+#app.screen-map .mp-access:active { transform: translateY(4px); box-shadow: 0 2px 0 #c2424f; }
+.mp-beads .bead { width: 20px; height: 20px; border-radius: 50%; background: radial-gradient(circle at 35% 30%, #fff 0 12%, transparent 13%), linear-gradient(140deg, #b69cff, #7a4fe8); box-shadow: inset 0 -3px 0 rgba(60, 20, 150, .25); }
+
+/* «Купить игру» в левом нижнем углу карты: размер и стиль как у кнопки «Играть» */
+#app.screen-map .mp-buy { position: fixed; left: 24px; bottom: calc(24px + var(--safe-bottom, 0px)); z-index: 3; width: auto; min-width: 0; min-height: 64px; height: 64px; padding: 16px 32px; border: 0; border-radius: 24px; background: #ff6170; box-shadow: 0 6px 0 #bf3a47; color: #fff; font: 700 24px/1 'Factor A', system-ui, sans-serif; cursor: pointer; transition: transform .2s cubic-bezier(.22, 1, .36, 1), box-shadow .2s cubic-bezier(.22, 1, .36, 1); }
+#app.screen-map .mp-buy:active { transform: translateY(4px); box-shadow: 0 2px 0 #bf3a47; }
+@media (min-width: 480px) { #app.screen-map .loc-body { padding-bottom: 120px; } } /* кнопка «Купить игру» внизу слева: карточки заканчиваются выше неё */
+
+/* Комната с живым питомцем: картинка комнаты во всю коробку 368:200, питомец (Lottie) стоит на полу */
+.room-box { position: relative; display: block; width: 100%; height: 100%; }
+.room-img { display: block; width: 100%; height: 100%; object-fit: cover; }
+.pet { position: absolute; left: var(--px); bottom: var(--pb); width: var(--pw); aspect-ratio: 1; transform: translateX(-50%); pointer-events: none; }
+.pet-anim { position: absolute; inset: 0; display: block; }
+.pet-anim svg { display: block; width: 100%; height: 100%; }
+
+/* Шапка места с комнатой из Figma: по бокам зеркальные копии комнаты (без питомца), края сходятся без шва */
+.loc-head.has-room { background: linear-gradient(var(--lhead) 98px, var(--lbg) 98px); }
+.loc-art.loc-room { display: flex; width: 1728px; margin-left: -864px; background: none; animation: none; will-change: auto; }
+.loc-art.loc-room .room-side { flex: none; display: block; width: 576px; height: 313px; margin-top: -97px; }
+.loc-art.loc-room .room-side:first-child { transform: scaleX(-1); }
+.loc-art.loc-room .room-side:last-child { transform: scaleX(-1); }
+.loc-art.loc-room .room-mid { position: relative; flex: none; display: block; width: 576px; height: 216px; }
+.loc-art.loc-room .room-box { position: absolute; left: 0; top: -97px; width: 576px; height: auto; aspect-ratio: 368 / 200; }
+/* Десктоп: шапка места выше, комната в ней крупнее (низ комнаты у нижней кромки шапки) */
+@media (min-width: 900px) {
+  .loc-head { height: 300px; }
+  .loc-head.has-room { background: linear-gradient(var(--lhead) 147px, var(--lbg) 147px); }
+  #app.screen-loc > .loc { background-position: 0 300px, 0 0; }
+  .loc-art.loc-room { width: 2250px; margin-left: -1125px; height: 300px; }
+  .loc-art.loc-room .room-side { width: 750px; height: 408px; margin-top: -108px; }
+  .loc-art.loc-room .room-mid { width: 750px; height: 300px; }
+  .loc-art.loc-room .room-box { top: -108px; width: 750px; }
+}
+.loc-art.loc-room > * + * { margin-left: -1px; } /* стыки копий внахлёст: без светлой полоски на шве */
+/* Экран «Все найдено»: зверёнок места радуется в своей комнате */
+.done-room { position: relative; width: min(520px, 90vw); aspect-ratio: 368 / 200; border-radius: 28px; overflow: hidden; box-shadow: 0 8px 0 rgba(0, 0, 0, .18); flex: none; }
+
+/* Закрытые места и стрелка-подсказка на главной */
+#app.screen-map button.mp-tile.locked { cursor: not-allowed; }
+.mp-tile.locked .mp-win { filter: grayscale(.85) brightness(.9); }
+.mp-tile.locked .mp-track { opacity: .5; }
+.mp-lock { position: absolute; right: -8px; top: -8px; width: 44px; height: 44px; border-radius: 50%; background: rgba(60, 40, 120, .72); display: grid; place-items: center; z-index: 2; pointer-events: none; }
+.mp-lock svg { width: 24px; height: 24px; }
+.mp-tile.shake { animation: mp-shake .45s ease; }
+@keyframes mp-shake { 0%, 100% { translate: 0; } 20% { translate: -8px; } 40% { translate: 8px; } 60% { translate: -5px; } 80% { translate: 5px; } }
+.tut-arrow { position: absolute; left: 50%; top: -44px; width: 44px; height: auto; translate: -50% 0; z-index: 3; pointer-events: none; animation: tut-bob 1.1s ease-in-out infinite; filter: drop-shadow(0 4px 0 rgba(110, 70, 218, .25)); }
+@keyframes tut-bob { 0%, 100% { translate: -50% 0; } 50% { translate: -50% 10px; } }
+@media (prefers-reduced-motion: reduce) { .mp-tile.shake, .tut-arrow { animation: none; } }

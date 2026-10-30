@@ -1,4 +1,5 @@
-import { cameraIcon, imageIcon } from '../ui/icons';
+import { classifyCameraError, showCameraProblem, unavailableReason } from './problems';
+import { explainCameraAccess } from './prepermission';
 import { BoxFollower, expandBox, type Box } from './box';
 import { detectObject, lastPreds } from './detector';
 import type { Target } from './target';
@@ -24,19 +25,6 @@ export async function compressPhoto(file: Blob): Promise<Blob> {
   return new Promise((resolve, reject) =>
     canvas.toBlob((b) => (b ? resolve(b) : reject(new Error('toBlob failed'))), 'image/jpeg', QUALITY),
   );
-}
-
-// Системная камера через <input capture>: работает в мобильных браузерах без доп. разрешений.
-export function pickPhotoFile(): Promise<Blob | null> {
-  return new Promise((resolve) => {
-    const input = document.createElement('input');
-    input.type = 'file';
-    input.accept = 'image/*';
-    input.setAttribute('capture', 'environment');
-    input.addEventListener('change', () => resolve(input.files?.[0] ?? null));
-    input.addEventListener('cancel', () => resolve(null));
-    input.click();
-  });
 }
 
 // Снимок, признак «уже вырезан по предмету» и класс, который нашла живая камера (учитывается при проверке).
@@ -74,22 +62,18 @@ function liveCamera(target: Target): Promise<Captured | null> {
     overlay.setAttribute('aria-label', 'Камера');
     overlay.innerHTML = `
       <div class="cam-stage"><video class="cam-video" autoplay playsinline muted></video><canvas class="cam-boxes"></canvas></div>
+      <button class="cam-back" type="button" aria-label="Назад"><i class="loc-i" style="--m:url(${import.meta.env.BASE_URL}art/loc/back.svg)"></i></button>
       <p class="cam-hint" aria-live="polite"></p>
       ${debug ? '<pre class="cam-debug"></pre><span class="dbg-copy" role="button" tabindex="0">Скопировать отчёт</span>' : ''}
-      <p class="cam-msg" hidden></p>
       <div class="cam-actions">
-        <button class="cam-shoot" type="button">${cameraIcon()}Снять</button>
-        <button class="cam-file secondary" type="button" hidden>${imageIcon()}Выбрать файл</button>
-        <button class="cam-cancel secondary" type="button">Отмена</button>
+        <button class="cam-shoot" type="button" aria-label="Сфотографировать"><img src="${import.meta.env.BASE_URL}art/loc/camera.svg" alt=""></button>
       </div>`;
     document.body.appendChild(overlay);
 
     const video = overlay.querySelector<HTMLVideoElement>('.cam-video')!;
     const canvas = overlay.querySelector<HTMLCanvasElement>('.cam-boxes')!;
     const hint = overlay.querySelector<HTMLElement>('.cam-hint')!;
-    const msg = overlay.querySelector<HTMLElement>('.cam-msg')!;
     const shoot = overlay.querySelector<HTMLButtonElement>('.cam-shoot')!;
-    const fileBtn = overlay.querySelector<HTMLButtonElement>('.cam-file')!;
     const dbgEl = overlay.querySelector<HTMLElement>('.cam-debug');
     let stream: MediaStream | null = null;
     let alive = true;
@@ -107,17 +91,6 @@ function liveCamera(target: Target): Promise<Captured | null> {
     const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape') done(null); };
     addEventListener('keydown', onKey);
 
-    const fail = (text: string) => {
-      alive = false;
-      cancelAnimationFrame(raf);
-      msg.textContent = text;
-      msg.hidden = false;
-      shoot.hidden = true;
-      video.parentElement!.hidden = true;
-      hint.hidden = true;
-      fileBtn.hidden = false;
-    };
-
     // «Снять» активна только когда пошло видео, иначе кадр будет пустым.
     shoot.disabled = true;
     video.addEventListener('loadeddata', () => { shoot.disabled = false; startedAt = performance.now(); }, { once: true });
@@ -132,9 +105,7 @@ function liveCamera(target: Target): Promise<Captured | null> {
     const needDetector = !target.color || !!target.words?.length; // для чистых заданий на цвет нейросеть не нужна
     preloadModels();
     let detectorReady = !needDetector || modelStatus().coco >= 1;
-    let modelPct = Math.round(modelStatus().coco * 100);
     const unsub = onModelStatus((s) => {
-      modelPct = Math.round(s.coco * 100);
       if (s.coco >= 1) detectorReady = true;
     });
     if (needDetector) loadCoco().then(() => { detectorReady = true; }).catch(() => { detectorReady = false; });
@@ -243,8 +214,9 @@ function liveCamera(target: Target): Promise<Captured | null> {
     const setHint = (locked: boolean, hasBox: boolean, now: number) => {
       if (now - lastHintAt < 150) return;
       lastHintAt = now;
+      hint.classList.toggle('quiet', !(needDetector && !detectorReady));
       hint.textContent = needDetector && !detectorReady
-        ? `Загружаю умное зрение… ${modelPct}%`
+        ? ''
         : liveOk() ? 'Нашёл! Нажми «Снять»'
         : locked ? 'Нашёл! Нажми «Снять»'
         : hasBox ? 'Держи ровно…'
@@ -283,8 +255,10 @@ function liveCamera(target: Target): Promise<Captured | null> {
         if (!f.box || liveOk()) brackets(ctx, w, h, liveOk());
         shoot.classList.toggle('ready', liveOk());
         if (f.box && video.videoWidth) {
-          const kx = w / video.videoWidth, ky = h / video.videoHeight;
-          const x = f.box.x * kx, y = f.box.y * ky, bw = f.box.w * kx, bh = f.box.h * ky;
+          // видео заполняет экран с обрезкой (object-fit: cover): масштаб один на обе оси, плюс сдвиг по центру
+          const sc = Math.max(w / video.videoWidth, h / video.videoHeight);
+          const offX = (w - video.videoWidth * sc) / 2, offY = (h - video.videoHeight * sc) / 2;
+          const x = f.box.x * sc + offX, y = f.box.y * sc + offY, bw = f.box.w * sc, bh = f.box.h * sc;
           ctx.globalAlpha = f.ghost ? 0.5 : 1;
           ctx.lineWidth = 5;
           ctx.strokeStyle = locked ? '#22c55e' : '#ffffff';
@@ -293,15 +267,7 @@ function liveCamera(target: Target): Promise<Captured | null> {
           ctx.roundRect(x, y, bw, bh, 14);
           ctx.stroke();
           ctx.setLineDash([]);
-          ctx.font = '800 22px "Factor A", system-ui, sans-serif';
-          const tw = ctx.measureText(current.label).width + 24;
-          const tx = Math.min(Math.max(4, x), w - tw - 4), ty = Math.max(4, y - 38);
-          ctx.fillStyle = locked ? '#22c55e' : '#ffffff';
-          ctx.beginPath();
-          ctx.roundRect(tx, ty, tw, 32, 16);
-          ctx.fill();
-          ctx.fillStyle = locked ? '#ffffff' : '#1e1b4b';
-          ctx.fillText(current.label, tx + 12, ty + 23);
+          // Название предмета на экране не показываем: ребёнок ищет сам, подсказкой остаётся только цвет рамки.
           ctx.globalAlpha = 1;
         }
         setHint(locked, !!f.box, now);
@@ -339,11 +305,7 @@ function liveCamera(target: Target): Promise<Captured | null> {
       const el = overlay.querySelector('.dbg-copy'); if (el) el.textContent = 'Скопировано';
     });
 
-    overlay.querySelector('.cam-cancel')!.addEventListener('click', () => done(null));
-    fileBtn.addEventListener('click', async () => {
-      const f = await pickPhotoFile();
-      done(f ? { blob: f, cropped: false } : null);
-    });
+    overlay.querySelector('.cam-back')!.addEventListener('click', () => done(null));
     shoot.addEventListener('click', () => {
       const vw = video.videoWidth, vh = video.videoHeight;
       if (!vw) return;
@@ -364,24 +326,33 @@ function liveCamera(target: Target): Promise<Captured | null> {
       c.toBlob((b) => done(b ? { blob: b, cropped: !!crop, skipCrop: !crop, liveClass: crop ? current.className : undefined } : null), 'image/jpeg', 0.92);
     });
 
-    navigator.mediaDevices
-      .getUserMedia({ video: { facingMode: 'environment', width: { ideal: 1280 }, height: { ideal: 720 } }, audio: false })
-      .then((s) => {
+    // Запуск камеры; при отказе или ошибке показываем экран с причиной, оттуда можно попробовать снова.
+    overlay.hidden = false;
+    const start = async () => {
+      try {
+        const s = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment', width: { ideal: 1280 }, height: { ideal: 720 } }, audio: false });
+        if (!alive) { stop(s); return; }
         stream = s;
         video.srcObject = s;
-      })
-      .catch((err: DOMException) =>
-        fail(err.name === 'NotAllowedError'
-          ? 'Нет доступа к камере. Разреши её в настройках браузера или выбери фото из файла.'
-          : 'Камера не найдена. Можно выбрать фото из файла.'),
-      );
+        overlay.hidden = false;
+      } catch (err) {
+        if (!alive) return;
+        overlay.hidden = true; // пока открыт экран ошибки, чёрный экран камеры не показываем
+        const act = await showCameraProblem(classifyCameraError(err));
+        if (!alive) return;
+        if (act === 'retry') { overlay.hidden = false; void start(); } else done(null);
+      }
+    };
+    void start();
   });
 }
 
-// Если браузер разрешает живую камеру (https или localhost) — используем её везде, в том числе на телефоне:
-// так можно искать предмет в реальном времени. Иначе — системная камера и ручная обрезка.
+// Только живая камера (нужен https или localhost). Если её нельзя включить, показываем экран с причиной, фото из файла не берём.
 export async function takePhoto(target: Target = {}): Promise<Captured | null> {
-  if (canUseLiveCamera()) return liveCamera(target);
-  const f = await pickPhotoFile();
-  return f ? { blob: f, cropped: false } : null;
+  while (!canUseLiveCamera()) {
+    const act = await showCameraProblem(unavailableReason());
+    if (act !== 'retry') return null;
+  }
+  await explainCameraAccess();
+  return liveCamera(target);
 }

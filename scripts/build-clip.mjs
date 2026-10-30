@@ -1,5 +1,7 @@
 // Одноразовая сборка файлов CLIP для игры: public/models/clip/{vision.onnx,text.json}.
-// Запуск: node scripts/build-clip.mjs  (нужен интернет, скачивает модель с Hugging Face).
+// Пакет @huggingface/transformers в зависимости проекта не входит (он тянет тяжёлый onnxruntime-node), ставим на время запуска:
+//   ONNXRUNTIME_NODE_INSTALL=skip npm i --no-save @huggingface/transformers
+//   node scripts/build-clip.mjs   (нужен интернет, скачивает модель с Hugging Face)
 import { mkdirSync, writeFileSync, copyFileSync, readdirSync, statSync } from 'node:fs';
 import { join } from 'node:path';
 import { env, AutoTokenizer, CLIPTextModelWithProjection } from '@huggingface/transformers';

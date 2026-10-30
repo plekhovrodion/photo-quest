@@ -1,7 +1,5 @@
 import type { Task } from '../data/tasks';
 
-export const MAX_ATTEMPTS = 2;
-
 export type Phase = 'task' | 'camera' | 'checking' | 'result' | 'finish';
 
 export interface GameState {
@@ -21,6 +19,7 @@ export type Action =
   | { type: 'verified'; match: boolean }
   | { type: 'check-failed' }
   | { type: 'cancel-camera' }
+  | { type: 'skip' }
   | { type: 'next' };
 
 export function createGame(tasks: Task[]): GameState {
@@ -36,16 +35,11 @@ export function createGame(tasks: Task[]): GameState {
   };
 }
 
-// 3 звезды с первой попытки, 2 — со второй.
-export const starsFor = (attempt: number): number => Math.max(0, MAX_ATTEMPTS + 2 - attempt);
+// Звёзд за найденное задание: попыток нет, ребёнок ищет сколько нужно.
+export const STARS_PER_TASK = 3;
 
 export function currentTask(s: GameState): Task | undefined {
   return s.tasks[s.index];
-}
-
-// После MAX_ATTEMPTS неудачных попыток задание можно пропустить.
-export function canSkip(s: GameState): boolean {
-  return s.phase === 'result' && s.lastMatch === false && s.attempts >= MAX_ATTEMPTS;
 }
 
 export function reduce(s: GameState, a: Action): GameState {
@@ -67,22 +61,27 @@ export function reduce(s: GameState, a: Action): GameState {
         lastMatch: a.match,
         attempts: s.attempts + 1,
         score: a.match ? s.score + 1 : s.score,
-        stars: a.match ? s.stars + starsFor(s.attempts + 1) : s.stars,
+        stars: a.match ? s.stars + STARS_PER_TASK : s.stars,
       };
     case 'next': {
       if (s.phase !== 'result') return s;
-      if (s.lastMatch === false && !canSkip(s)) {
-        return { ...s, phase: 'task', lastMatch: null };
-      }
-      const index = s.index + 1;
-      return {
-        ...s,
-        index,
-        results: [...s.results, s.lastMatch === true],
-        phase: index >= s.tasks.length ? 'finish' : 'task',
-        attempts: 0,
-        lastMatch: null,
-      };
+      if (s.lastMatch === false) return { ...s, phase: 'task', lastMatch: null }; // снова то же задание
+      return advance(s);
     }
+    case 'skip':
+      // «Другое задание»: после неудачной попытки или прямо с экрана задания
+      return (s.phase === 'result' && s.lastMatch === false) || s.phase === 'task' ? advance(s) : s;
   }
+}
+
+function advance(s: GameState): GameState {
+  const index = s.index + 1;
+  return {
+    ...s,
+    index,
+    results: [...s.results, s.lastMatch === true],
+    phase: index >= s.tasks.length ? 'finish' : 'task',
+    attempts: 0,
+    lastMatch: null,
+  };
 }

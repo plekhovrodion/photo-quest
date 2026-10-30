@@ -29,14 +29,14 @@ const t = (kind: Kind, id: string, prompt: string, criterion: string, hint?: str
 });
 
 const color = (id: string, name: string, gen: string, hint: string) =>
-  t('color', id, `Найди предмет с ${name} цветом!`,
+  t('color', id, `Найди предмет с ${name} цветом`,
     `На фото виден предмет ${gen} цвета, и этот цвет — основной цвет предмета.`, hint,
     { kind: 'color', color: id as import('../vision/color').ColorName });
 
 // Конкретный предмет. words — английские названия классов ImageNet (MobileNet) и COCO (детектор):
 // достаточно, чтобы любая из моделей назвала один из них. Проверено по реальным спискам классов.
 const thing = (id: string, accusative: string, hint: string, ...words: string[]) =>
-  t('object', id, `Найди ${accusative}!`, `На фото виден предмет: ${accusative}.`, hint, { kind: 'labels', words, clip: CLIP_OF[id] });
+  t('object', id, `Найди ${accusative}`, `На фото виден предмет: ${accusative}.`, hint, { kind: 'labels', words, clip: CLIP_OF[id] });
 
 // Название предмета для CLIP по id задания.
 const CLIP_OF: Record<string, string> = {

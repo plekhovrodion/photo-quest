@@ -4,3 +4,5 @@ dist
 .env.*.local
 .claude/launch.json
 .hf-cache
+.env.voice
+.DS_Store

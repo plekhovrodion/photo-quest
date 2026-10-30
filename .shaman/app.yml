@@ -1,0 +1,49 @@
+kind: "app"
+schema_version: "v1"
+spec:
+  # заполнить по маске "{{имя-курса}}-ui"
+  name: "photo-quest-ui"
+  name.production: "main"
+  desc: 'UI для приложения "Фото-квест" | https://gitlab.corp.mail.ru/uchiru/product/0-8/content/playground/projects/photo-quest'
+  desc.production: '[PROD] Приложение "Фото-квест" | https://gitlab.corp.mail.ru/uchiru/product/0-8/content/playground/projects/photo-quest'
+  store_logs: true
+  service_mesh: true
+  nat: false
+  nat.production: true
+  env:
+    - key: "APP_NAME"
+      value: "${{ values.env.APP_NAME }}"
+    - key: "FEEDBACK_API_URL"
+      value: "${{ values.env.FEEDBACK_API_URL }}"
+    - key: "CLICKSTREAM_HOST"
+      value: "${{ values.CLICKSTREAM_HOST }}"
+    - key: "CONTENT_PAYWALL_URL"
+      value: "${{ values.env.CONTENT_PAYWALL_URL }}"
+    - key: CDN_HOST
+      value: "${{ values.SPA_BASE_CDN_HOST }}"
+    - key: S3_HOST
+      value: "${{ values.SPA_BASE_S3_HOST }}"
+    - key: S3_ID
+      value: "${{ values.SPA_BASE_S3_ID }}"
+    - key: S3_KEY
+      value: "${{ values.SPA_BASE_S3_KEY }}"
+    - key: S3_BUCKET
+      value: "${{ values.SPA_BASE_S3_BUCKET }}"
+    - key: "SPA_ASSETS_CDN_HOST"
+      value: "${{ values.SPA_ASSETS_CDN_HOST }}"
+
+  pre:
+    - mem: "${{ values.pre.upload.mem_mb }}"
+      command: "/entrypoint.sh upload"
+
+  services:
+    - name: "main"
+      mem: "${{ values.services.main.mem_mb }}"
+      constraint: "role=node"
+      amount: "${{ values.services.main.amount }}"
+      max_parallel: "${{ values.services.main.max_parallel }}"
+      endpoints:
+        - name: "main"
+          port: 80
+          type: "http"
+          max_conns: 1000

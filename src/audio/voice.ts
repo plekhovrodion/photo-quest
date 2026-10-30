@@ -1,36 +1,52 @@
-// Записанная озвучка: фраза -> файл в public/voice. Нет файла — говорит голос браузера.
-// Новые записи: положить mp3 в public/voice и добавить строку сюда (коды из voice-level1.txt).
-export const RECORDED: Record<string, string> = {
-  'Найди предмет с красным цветом!': 'task-red',
-  'Найди предмет с синим цветом!': 'task-blue',
-};
+// Записанная озвучка (ElevenLabs): текст -> файл в public/voice. Нет файла — говорит голос браузера.
+// Список и файлы создаёт `node scripts/build-voice.mjs` (см. README), он же обновляет data/voice-manifest.json.
+import manifest from '../data/voice-manifest.json';
 
-let current: HTMLAudioElement | null = null;
+const SAY = manifest.say as Record<string, string>;
+const EN = manifest.en as Record<string, string>;
 
-export function recordedFor(text: string): string | null {
-  const id = RECORDED[text];
-  return id ? `/voice/${id}.mp3` : null;
+const urlOf = (file: string) => `${import.meta.env.BASE_URL}voice/${file}.mp3`;
+
+// Русская фраза и английское слово лежат в разных таблицах: слово «red» не должно совпасть с фразой.
+export function recordedFor(text: string, english = false): string | null {
+  const file = (english ? EN : SAY)[text];
+  return file ? urlOf(file) : null;
 }
 
+interface Item { url: string; text: string; english: boolean }
+let queue: Item[] = [];
+let current: HTMLAudioElement | null = null;
+
 export function stopRecorded() {
+  queue = [];
   if (!current) return;
   current.pause();
   current = null;
 }
 
-// true — запись пошла; false — файла нет или браузер не дал проиграть (тогда нужен запасной голос).
-export function playRecorded(text: string): boolean {
-  stopRecorded();
-  const url = recordedFor(text);
-  if (!url) return false;
-  const a = new Audio(url);
+function next() {
+  const item = queue.shift();
+  if (!item) { current = null; return; }
+  const a = new Audio(item.url);
   current = a;
+  a.onended = () => { if (current === a) next(); };
   a.play().catch(() => {
-    if (current === a) current = null;
-    fallback?.(text);
+    // браузер не дал проиграть: остаток очереди бросаем, эту фразу говорит запасной голос
+    if (current === a) { current = null; queue = []; }
+    fallback?.(item.text, item.english);
   });
+}
+
+// true — запись поставлена (или пошла); false — файла нет (тогда нужен запасной голос).
+// queue = true: дождаться, пока договорит предыдущая запись.
+export function playRecorded(text: string, queued = false, english = false): boolean {
+  const url = recordedFor(text, english);
+  if (!url) return false;
+  if (!queued) stopRecorded();
+  queue.push({ url, text, english });
+  if (!current) next();
   return true;
 }
 
-let fallback: ((t: string) => void) | null = null;
-export const onRecordedFail = (fn: (t: string) => void) => { fallback = fn; };
+let fallback: ((t: string, english: boolean) => void) | null = null;
+export const onRecordedFail = (fn: (t: string, english: boolean) => void) => { fallback = fn; };
