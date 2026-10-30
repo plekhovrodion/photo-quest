@@ -1,0 +1,44 @@
+<svg width="132" height="96" viewBox="-14 0 132 96" fill="none" xmlns="http://www.w3.org/2000/svg">
+<g>
+<rect width="132" height="96" rx="28" fill="#EFE6FF"/>
+<g id="&#208;&#152;&#208;&#187;&#208;&#187;&#209;&#142;&#209;&#129;&#209;&#130;&#209;&#128;&#208;&#176;&#209;&#134;&#208;&#184;&#209;&#143; / &#208;&#168;&#208;&#186;&#208;&#190;&#208;&#187;&#208;&#176;" clip-path="url(#clip1_4826_17019)">
+<rect width="256" height="96" transform="translate(-64)" fill="#FFE59A"/>
+<rect id="wall tile" x="92.4453" y="5.33398" width="28.4444" height="12.4444" rx="3.2" fill="#FFF0BB"/>
+<rect id="board frame" x="-10.666" y="17.7773" width="124.444" height="58.6667" rx="3.91111" fill="#1F5A48"/>
+<rect id="board" x="-6.75586" y="21.6895" width="116.622" height="50.8444" rx="2.48889" fill="#2F6B57"/>
+<rect id="chalk tray" x="-10.666" y="75.377" width="124.444" height="3.2" rx="1.42222" fill="#C98A5A"/>
+<circle id="clock rim" cx="141.333" cy="27.5556" r="11.5556" fill="#FF8F5A"/>
+<circle id="clock face" cx="141.332" cy="27.555" r="9.42222" fill="#FFF4DC"/>
+<g id="obj desk">
+<g id="Group">
+<g id="Group_2">
+<path id="Vector" d="M128.144 87.002H132.315C132.734 87.002 133.147 87.0871 133.539 87.2442C133.926 87.4014 134.279 87.6371 134.574 87.9383C134.869 88.233 135.104 88.5866 135.268 88.9729C135.425 89.3592 135.51 89.7783 135.51 90.1908H124.955C124.955 89.7717 125.04 89.3592 125.197 88.9729C125.355 88.5866 125.59 88.233 125.891 87.9383C126.186 87.6437 126.54 87.4079 126.926 87.2442C127.312 87.0805 127.731 87.002 128.15 87.002H128.144Z" fill="#BAB9FF"/>
+</g>
+<path id="Vector_2" d="M128.347 88.8953C125.231 79.4007 128.007 69.2644 138.012 65.7285L138.647 67.3C130.043 70.8949 128.203 79.643 131.36 87.7625L128.347 88.9018V88.8953Z" fill="#BAB9FF"/>
+</g>
+<g id="Group_3">
+<path id="Vector_3" d="M168.284 99.2815H127.725L126.213 93.2246H169.796L168.284 99.2815Z" fill="#EDA7FF"/>
+<path id="Vector_4" d="M135.398 97.5518C135.398 97.5518 131.567 95.5365 129.721 98.9597C127.87 102.371 129.984 105.753 131.607 107.43C132.794 108.653 133.07 111.12 133.159 112.1L129.721 112.1C129.657 111.189 129.4 109.932 128.544 109.096C127.109 107.689 123.828 104.304 124.201 98.9597C125.137 94.4816 127.102 92.8094 127.102 92.8094L133.135 91.602L135.408 97.5482L135.398 97.5518Z" fill="#EDA7FF"/>
+<path id="Vector_5" d="M172.775 90.1328H122.336C121.537 90.1328 120.889 90.7811 120.889 91.5799V93.8324C120.889 94.6313 121.537 95.2795 122.336 95.2795H172.775C173.574 95.2795 174.222 94.6313 174.222 93.8324V91.5799C174.222 90.7811 173.574 90.1328 172.775 90.1328Z" fill="#CEA7FF"/>
+</g>
+</g>
+</g>
+</g>
+<defs>
+<filter id="filter0_d_4826_17019" x="-8" y="-8" width="148" height="154" filterUnits="userSpaceOnUse" color-interpolation-filters="sRGB">
+<feFlood flood-opacity="0" result="BackgroundImageFix"/>
+<feColorMatrix in="SourceAlpha" type="matrix" values="0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 127 0" result="hardAlpha"/>
+<feOffset dy="6"/>
+<feComposite in2="hardAlpha" operator="out"/>
+<feColorMatrix type="matrix" values="0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0.1 0"/>
+<feBlend mode="normal" in2="BackgroundImageFix" result="effect1_dropShadow_4826_17019"/>
+<feBlend mode="normal" in="SourceGraphic" in2="effect1_dropShadow_4826_17019" result="shape"/>
+</filter>
+<clipPath id="clip0_4826_17019">
+<rect width="132" height="96" rx="28" fill="white"/>
+</clipPath>
+<clipPath id="clip1_4826_17019">
+<rect width="256" height="96" fill="white" transform="translate(-64)"/>
+</clipPath>
+</defs>
+</svg>
