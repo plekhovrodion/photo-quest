@@ -793,6 +793,9 @@ button.pw-back:not(.level):not(.stop):not(.cube-btn) { position: absolute; top: 
   #app.screen-map button.mp-tile, #app.screen-map button.mp-tile.left, #app.screen-map button.mp-tile.right { padding: 8px; gap: 8px; border-radius: 22px; }
   .mp .mp-track { height: 22px; }
 }
+/* квадратные плашки на всех экранах: без растяжения по строке, иначе aspect-ratio не работает */
+#app.screen-map button.mp-tile, #app.screen-map button.mp-tile.left, #app.screen-map button.mp-tile.right { aspect-ratio: 1; align-self: start; }
+.mp .mp-win { flex: 1 1 0; min-height: 0; aspect-ratio: auto; }
 @media (min-width: 900px) {
   .mp-bg-wide { display: block; } .mp-bg-tall { display: none; }
   #app.screen-map .loc-body { padding: 0 64px 64px; align-items: center; } /* на высоком экране сетка по центру, а не растягивается */

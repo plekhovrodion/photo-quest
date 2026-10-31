@@ -10,6 +10,8 @@ export const STAGE_AT = [0, 4, 10, 20, 35];
 export const MAX_STAGE = STAGE_AT.length;
 
 // Что открывается на каком уровне.
+// true — пока всё открыто: все места, задания, цвета, шапки и значки питомцев; false — открывать по очереди и по уровням.
+export const UNLOCK_ALL = true;
 export const UNLOCK_STAGE = { color: 2, hat: 3, badge: 4, crown: 5 } as const;
 
 export interface Look {
@@ -51,8 +53,8 @@ export function feed(p: Progress, id: ZavrikId): { progress: Progress; levelUp: 
 }
 
 // Применяем выбор внешнего вида, только если предмет уже открыт.
-export function setLook(p: Progress, id: ZavrikId, patch: Partial<Look>): Progress {
-  const stage = stageOf(fedOf(p, id)).stage;
+export function setLook(p: Progress, id: ZavrikId, patch: Partial<Look>, unlockAll = UNLOCK_ALL): Progress {
+  const stage = unlockAll ? MAX_STAGE : stageOf(fedOf(p, id)).stage;
   const cur = lookOf(p, id);
   const next = { ...cur };
   if (patch.hue !== undefined && stage >= UNLOCK_STAGE.color && HUES.includes(patch.hue)) next.hue = patch.hue;

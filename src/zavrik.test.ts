@@ -29,11 +29,11 @@ describe('заврики', () => {
 
   it('одежда открывается только с нужного уровня', () => {
     const p = P({ fed: { grisha: 0, sonya: 0 } });
-    expect(lookOf(setLook(p, 'sonya', { hat: 'party' }), 'sonya').hat).toBeNull();
+    expect(lookOf(setLook(p, 'sonya', { hat: 'party' }, false), 'sonya').hat).toBeNull();
     const big = P({ fed: { grisha: 0, sonya: STAGE_AT[2] } });
-    expect(lookOf(setLook(big, 'sonya', { hat: 'party', hue: 120 }), 'sonya')).toMatchObject({ hat: 'party', hue: 120 });
-    expect(lookOf(setLook(big, 'sonya', { hat: 'crown' }), 'sonya').hat).toBeNull(); // корона с 5 уровня
-    expect(lookOf(setLook(big, 'sonya', { hue: 7 }), 'sonya').hue).toBe(0); // нет такого цвета
+    expect(lookOf(setLook(big, 'sonya', { hat: 'party', hue: 120 }, false), 'sonya')).toMatchObject({ hat: 'party', hue: 120 });
+    expect(lookOf(setLook(big, 'sonya', { hat: 'crown' }, false), 'sonya').hat).toBeNull(); // корона с 5 уровня
+    expect(lookOf(setLook(big, 'sonya', { hue: 7 }, false), 'sonya').hue).toBe(0); // нет такого цвета
   });
 
   it('вспышки считаются с учётом скормленного, при слиянии берём максимум', () => {

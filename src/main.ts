@@ -24,7 +24,7 @@ import { playSfx, wireSfx, startSfxLoad } from './audio/sfx';
 import { wireMusic, startMusicLoad } from './audio/music';
 import { bootFirstStep, bootSecondStep } from './ui/boot';
 import { SLIDES, isOnboarded, markOnboarded } from './onboarding';
-import { feed, setLook, stageOf, fedOf, lookOf, ZAVRIKS, ZAVRIK_NAME, HUES, HATS, BADGES, UNLOCK_STAGE, MAX_STAGE, zavrikOfArt, type ZavrikId } from './zavrik';
+import { feed, setLook, stageOf, fedOf, lookOf, ZAVRIKS, ZAVRIK_NAME, HUES, HATS, BADGES, UNLOCK_STAGE, UNLOCK_ALL, MAX_STAGE, zavrikOfArt, type ZavrikId } from './zavrik';
 import { hatSvg, badgeSvg } from './ui/accessories';
 import { objectSvg, colorBallSvg, fitObject } from './map/objects';
 import { album, toSticker, type Sticker } from './album';
@@ -427,18 +427,19 @@ function renderZavrik(quiet = false) {
   const id = zv;
   const fed = fedOf(progress, id);
   const st = stageOf(fed);
+  const stg = UNLOCK_ALL ? MAX_STAGE : st.stage; // для замков внешнего вида
   const look = lookOf(progress, id);
   const pct = st.need ? Math.round((st.into / st.need) * 100) : 100;
   const tabs = ZAVRIKS.map((z) => `<button class="zv-tab ${z === id ? 'on' : ''}" data-z="${z}" aria-pressed="${z === id}">${ZAVRIK_NAME[z]}<small>ур. ${stageOf(fedOf(progress, z)).stage}</small></button>`).join('');
   const lock = (need: number) => `<span class="zv-lock">${lockIcon()}ур. ${need}</span>`;
   const chip = (kind: string, val: string, on: boolean, ok: boolean, inner: string, label: string) =>
     `<button class="zv-chip ${on ? 'on' : ''}" data-k="${kind}" data-v="${val}" ${ok ? '' : 'disabled'} aria-label="${label}${ok ? '' : ', закрыто'}" aria-pressed="${on}">${inner}</button>`;
-  const hues = HUES.map((h) => chip('hue', String(h), look.hue === h, st.stage >= UNLOCK_STAGE.color,
+  const hues = HUES.map((h) => chip('hue', String(h), look.hue === h, stg >= UNLOCK_STAGE.color,
     `<span class="zv-dot" style="filter:hue-rotate(${h}deg)"></span>`, 'Цвет')).join('');
   const hats = [chip('hat', '', look.hat === null, true, '—', 'Без шапки'), ...HATS.map((h) =>
-    chip('hat', h.id, look.hat === h.id, st.stage >= h.stage, hatSvg(h.id, 'zv-mini'), h.name))].join('');
+    chip('hat', h.id, look.hat === h.id, stg >= h.stage, hatSvg(h.id, 'zv-mini'), h.name))].join('');
   const badges = [chip('badge', '', look.badge === null, true, '—', 'Без значка'), ...BADGES.map((b) =>
-    chip('badge', b.id, look.badge === b.id, st.stage >= b.stage, badgeSvg(b.id, 'zv-mini'), b.name))].join('');
+    chip('badge', b.id, look.badge === b.id, stg >= b.stage, badgeSvg(b.id, 'zv-mini'), b.name))].join('');
   const next = st.need ? `${st.into} из ${st.need}` : 'самый большой';
   show(`${hud(`<button id="back" class="secondary small" aria-label="Назад">${backIcon()}</button>`)}
     <h1>Заврики</h1>
@@ -452,9 +453,9 @@ function renderZavrik(quiet = false) {
       <small>${st.need ? `До следующего уровня: ${next}` : 'Выросли до самого большого уровня!'}</small></div>
     <button id="feed" class="breathe" ${progress.flashes < 1 ? 'disabled' : ''}>${flashIcon()}Покормить за 1 вспышку</button>
     <div class="zv-wardrobe">
-      <div class="zv-row"><span>Цвет ${st.stage >= UNLOCK_STAGE.color ? '' : lock(UNLOCK_STAGE.color)}</span><div>${hues}</div></div>
-      <div class="zv-row"><span>Шапка ${st.stage >= UNLOCK_STAGE.hat ? '' : lock(UNLOCK_STAGE.hat)}</span><div>${hats}</div></div>
-      <div class="zv-row"><span>Значок ${st.stage >= UNLOCK_STAGE.badge ? '' : lock(UNLOCK_STAGE.badge)}</span><div>${badges}</div></div>
+      <div class="zv-row"><span>Цвет ${stg >= UNLOCK_STAGE.color ? '' : lock(UNLOCK_STAGE.color)}</span><div>${hues}</div></div>
+      <div class="zv-row"><span>Шапка ${stg >= UNLOCK_STAGE.hat ? '' : lock(UNLOCK_STAGE.hat)}</span><div>${hats}</div></div>
+      <div class="zv-row"><span>Значок ${stg >= UNLOCK_STAGE.badge ? '' : lock(UNLOCK_STAGE.badge)}</span><div>${badges}</div></div>
     </div>`, 'screen-zavrik');
   on('back', () => { goBack(); view = null; render(); });
   root.querySelectorAll<HTMLButtonElement>('.zv-tab').forEach((b) =>
@@ -589,7 +590,6 @@ const LOC_ORDER = ['kitchen', 'colors', 'room', 'school', 'bath', 'hall', 'food'
 // (LOC_ORDER выше нельзя менять: по нему устроены спрайты иконок и шапок.)
 const MAP_ORDER = ['colors', 'kitchen', 'room', 'school', 'bath', 'hall', 'food', 'outdoor'];
 const levelFull = (l: Level) => l.tasks.length > 0 && l.tasks.every((t) => progress.found[t.id] !== undefined);
-const UNLOCK_ALL = false; // true — все места открыты; false — открывать по очереди
 function isUnlocked(l: Level): boolean {
   if (UNLOCK_ALL) return true;
   const i = MAP_ORDER.indexOf(l.id);
@@ -697,7 +697,7 @@ function renderMap(l: Level) {
   const nextI = l.tasks.findIndex((t) => progress.found[t.id] === undefined); // это задание пульсирует
   const cards = l.tasks.map((t, i) => {
     const done = progress.found[t.id] !== undefined;
-    const locked = nextI >= 0 && i > nextI; // задания идут по порядку: следующее открывается, когда найдено предыдущее
+    const locked = !UNLOCK_ALL && nextI >= 0 && i > nextI; // задания идут по порядку: следующее открывается, когда найдено предыдущее
     return `<button class="loc-card ${done ? 'done' : ''}${locked ? ' locked' : ''}${i === nextI ? ' pulse' : ''}" data-i="${i}" style="--i:${i}" ${locked ? 'aria-disabled="true"' : ''} aria-label="${taskName(t)}${done ? ', найдено' : ''}${locked ? ', закрыто: сначала найди предыдущее' : ''}">${taskIcon(l, t)}${done ? `<img class="loc-check" src="${base}/check.svg" alt="">` : ''}</button>`;
   }).join('');
   const pct = n ? Math.round((found / n) * 100) : 0;
@@ -727,11 +727,13 @@ function renderLevelDone() {
   show(`${hud('')}${hero}<div class="trophy">${objectSvg('trophy')}</div><h1>Все найдено!</h1>
     <p>Ты справился со всей категорией «${level!.title}»</p>
     <div class="reward">${flashIcon()}бонус +${LEVEL_BONUS}</div>
-    <button id="map" class="green">К заданиям</button>`);
+    <button id="map" class="green">К заданиям</button>
+    <button id="home" class="secondary">На главную</button>`);
   confetti(2200);
   const seq = screenSeq;
   setTimeout(() => { if (seq === screenSeq && root.querySelector('#map')) speak(doneLine.text, false, doneLine.who); }, 700); // озвучка после фанфар
   on('map', toMap);
+  on('home', toMenu);
 }
 
 function render() {
