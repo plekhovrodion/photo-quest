@@ -1,4 +1,5 @@
 import { CLIP_OBJECTS } from '../data/clip';
+import { heavyModelsAllowed, fetchWithProgress, setClipReady } from './models';
 
 // CLIP (ViT-B/32, квантованный): сравниваем фото с описаниями всех предметов игры и смотрим, на каком месте нужный.
 // Описания посчитаны заранее (scripts/build-clip.mjs), в браузере считается только картинка.
@@ -21,6 +22,7 @@ interface Ready {
 let readyP: Promise<Ready> | null = null;
 
 export function loadClip(): Promise<Ready> {
+  if (!readyP && !heavyModelsAllowed()) return Promise.reject(new Error('CLIP отключён: слабое соединение')); // вызывающие уже умеют работать без CLIP
   readyP ??= (async () => {
     const worker = new Worker(new URL('./clipWorker.ts', import.meta.url), { type: 'module' });
     const waiting = new Map<number, { ok: (v: Float32Array) => void; fail: (e: Error) => void }>();
@@ -36,7 +38,8 @@ export function loadClip(): Promise<Ready> {
       });
       worker.addEventListener('error', (e) => fail(new Error(e.message)));
     });
-    worker.postMessage({ type: 'init', modelUrl: CLIP_URL });
+    const bytes = await fetchWithProgress(CLIP_URL, 'clip'); // сами качаем файл, чтобы показать ребёнку полоску загрузки
+    worker.postMessage({ type: 'init', bytes }, [bytes]);
     const [textRaw] = await Promise.all([
       fetch(TEXT_URL).then((r) => r.json() as Promise<Record<'ens' | 'bg', Record<string, number[]>>>),
       ready,
@@ -48,6 +51,7 @@ export function loadClip(): Promise<Ready> {
         worker.postMessage({ type: 'run', id, pixels }, [pixels.buffer]);
       });
     const table = (o: Record<string, number[]>): Table => Object.entries(o).map(([k, v]) => [k, Float32Array.from(v)] as [string, Float32Array]);
+    setClipReady();
     return { run, sets: { ens: table(textRaw.ens) }, bg: table(textRaw.bg) };
   })();
   readyP.catch(() => { readyP = null; });

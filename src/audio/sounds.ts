@@ -1,7 +1,6 @@
 import { playRecorded, onRecordedFail, stopRecorded } from './voice';
 import { playSfx, setSfxGate } from './sfx';
 import { setMusicEnabled } from './music';
-let ctx: AudioContext | null = null;
 
 // Звук можно выключить кнопкой на главной; выбор помнится в браузере.
 let muted = false;
@@ -17,31 +16,6 @@ export function setMuted(m: boolean) {
   if (!m) playSfx('toggle-on');
   try { localStorage.setItem('pq-muted', m ? '1' : '0'); } catch { /* ignore */ }
   if (m) { stopRecorded(); if ('speechSynthesis' in window) speechSynthesis.cancel(); }
-}
-
-function tone(freq: number, start: number, dur: number, type: OscillatorType = 'sine') {
-  ctx ??= new AudioContext();
-  const osc = ctx.createOscillator();
-  const gain = ctx.createGain();
-  osc.type = type;
-  osc.frequency.value = freq;
-  const t = ctx.currentTime + start;
-  gain.gain.setValueAtTime(0.2, t);
-  gain.gain.exponentialRampToValueAtTime(0.001, t + dur);
-  osc.connect(gain).connect(ctx.destination);
-  osc.start(t);
-  osc.stop(t + dur);
-}
-
-export function playSuccess() {
-  if (muted) return;
-  [523, 659, 784, 1047].forEach((f, i) => tone(f, i * 0.12, 0.25));
-}
-
-export function playTryAgain() {
-  if (muted) return;
-  tone(330, 0, 0.2, 'triangle');
-  tone(262, 0.18, 0.3, 'triangle');
 }
 
 // Озвучка заданий (Web Speech API); чтобы выключить, поставьте false.

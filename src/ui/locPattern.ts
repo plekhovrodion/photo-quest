@@ -29,10 +29,13 @@ function shape(kind: Shape, x: number, y: number): string {
   }
 }
 
+// Насыщенный жёлтый фон «Еды» даёт слишком яркий узор: там он вдвое бледнее.
+const OPACITY: Record<string, number> = { food: 0.1 };
+
 // CSS-значение для background-image (url с inline-SVG)
 export function locPattern(id: string, color: string): string {
   const set = SETS[id] ?? SETS.kitchen;
   const body = SLOTS.map(([x, y], i) => shape(set[i % set.length], x, y)).join('');
-  const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="320" height="320" viewBox="0 0 180 180"><g fill="${color}" stroke="${color}" opacity=".2">${body}</g></svg>`;
+  const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="320" height="320" viewBox="0 0 180 180"><g fill="${color}" stroke="${color}" opacity="${OPACITY[id] ?? 0.2}">${body}</g></svg>`;
   return `url('data:image/svg+xml,${encodeURIComponent(svg)}')`;
 }

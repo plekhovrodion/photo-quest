@@ -15,7 +15,6 @@ export interface Progress {
   look?: Record<string, { hue: number; hat: string | null; badge: string | null }>; // внешний вид заврика
 }
 
-export const CURRENCY = { name: 'вспышки' };
 export const LEVEL_BONUS = 5;
 
 // Места открываются за вспышки: «Цвета» бесплатны, остальные покупаются (цена — в data/tasks.ts).

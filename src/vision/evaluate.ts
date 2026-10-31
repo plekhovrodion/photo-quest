@@ -3,7 +3,7 @@ import { COLOR_SHARE_MIN, hasColor, type ColorName } from './color';
 import { matchesLabels, type Prediction } from './labels';
 import { clipAccepts, type ClipRank } from './clip';
 
-// Ленивый контекст: цвета и предсказания MobileNet считаются только если нужны.
+// Ленивый контекст: цвета и предсказания детектора считаются только если нужны.
 export interface Ctx {
   shares(): Record<ColorName, number> | Promise<Record<ColorName, number>>;
   predictions(): Prediction[] | Promise<Prediction[]>;
@@ -39,7 +39,7 @@ export async function evaluate(check: LocalCheck, ctx: Ctx): Promise<boolean> {
 }
 
 // «Не уверен»: фото почти подошло. Тогда игра не отказывает, а спрашивает ребёнка.
-export const PROB_MAYBE = 0.015; // MobileNet/COCO видят нужный класс, но совсем слабо
+export const PROB_MAYBE = 0.015; // детектор видит нужный класс, но совсем слабо
 export const COLOR_MAYBE = COLOR_SHARE_MIN / 2;
 
 export async function isMaybe(check: LocalCheck, ctx: Ctx): Promise<boolean> {

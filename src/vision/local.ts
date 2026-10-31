@@ -3,7 +3,7 @@ import { colorShares, type ColorName } from './color';
 import { evaluate, isMaybe, type Ctx } from './evaluate';
 import { matchesLabels, PROB_MIN, type Prediction } from './labels';
 import { COLOR_RU, ruName } from './names';
-import { loadCoco, loadMobilenet } from './models';
+import { loadCoco } from './models';
 import { rankObjects, clipAccepts, clipProb, type ClipRank } from './clip';
 import { CLIP_OBJECTS } from '../data/clip';
 
@@ -18,8 +18,6 @@ async function toCanvas(photo: Blob): Promise<HTMLCanvasElement> {
   bmp.close();
   return canvas;
 }
-
-export { preloadModels as preloadModel } from './models';
 
 // Все слова-метки, участвующие в проверке (для выбора подписи найденного предмета).
 function wordsOf(check: LocalCheck): string[] {
@@ -86,15 +84,12 @@ export async function localVerify(
     }
     return cache.shares;
   };
-  // Сигналы: MobileNet по снимку (top-10), детектор COCO по тому же снимку (80 классов, знает вилку, ножницы,
-  // зубную щётку, птицу, морковку) и класс, найденный живой камерой.
+  // Сигналы: детектор COCO по снимку (80 классов, знает вилку, ножницы, зубную щётку, птицу, морковку)
+  // и класс, найденный живой камерой.
   const getPreds = async () => {
     if (!cache.preds) {
-      const [top, dets] = await Promise.all([
-        loadMobilenet().then((m) => m.classify(canvas, 10)),
-        loadCoco().then((m) => m.detect(canvas, 6, 0.3)).catch(() => []),
-      ]);
-      cache.preds = fusePredictions([...top, ...dets.map((d) => ({ className: d.class, probability: d.score }))], opts.liveClass);
+      const dets = await loadCoco().then((m) => m.detect(canvas, 6, 0.3)).catch(() => []);
+      cache.preds = fusePredictions(dets.map((d) => ({ className: d.class, probability: d.score })), opts.liveClass);
     }
     return cache.preds;
   };
@@ -109,7 +104,7 @@ export async function localVerify(
   if (match) {
     const byPreds = pickLabel(cache.preds, check);
     const viaClip = check.kind === 'labels' && check.clip && (opts.liveClip || (clipRanks && clipAccepts(clipRanks, check.clip)));
-    // Если предмет узнал только CLIP, называем его по заданию, а не по случайному классу MobileNet.
+    // Если предмет узнал только CLIP, называем его по заданию, а не по случайному классу детектора.
     return { match, reason, label: viaClip ? CLIP_OBJECTS[check.clip!] : byPreds };
   }
 

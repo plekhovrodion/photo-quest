@@ -3,10 +3,10 @@ export interface Prediction {
   probability: number;
 }
 
-// Минимальная уверенность MobileNet, чтобы засчитать класс.
+// Минимальная уверенность детектора, чтобы засчитать класс.
 export const PROB_MIN = 0.05;
 
-// MobileNet отдаёт классы ImageNet вида «coffee mug, mug»; сравниваем по целым словам.
+// Названия классов сравниваем по целым словам («cup» не совпадёт с «cupboard»).
 export function matchesLabels(predictions: Prediction[], words: string[]): boolean {
   return predictions.some(
     (p) =>

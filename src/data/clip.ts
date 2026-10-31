@@ -13,6 +13,11 @@ export const CLIP_OBJECTS: Record<string, string> = {
   cat: 'кошка', bird: 'птица', towel: 'полотенце', sock: 'носок', bench: 'скамейка', flower: 'цветок',
   mushroom: 'гриб', eraser: 'ластик', toothbrush: 'зубная щётка', butterfly: 'бабочка', cake: 'торт',
   'orange fruit': 'апельсин', ball: 'мяч', 'pencil case': 'пенал', 'hair dryer': 'фен', toilet: 'унитаз',
+  kettle: 'чайник', pot: 'кастрюля', toaster: 'тостер', knife: 'нож', 'wine glass': 'бокал',
+  lamp: 'лампа', mirror: 'зеркало', 'picture frame': 'картина', 'remote control': 'пульт', guitar: 'гитара', pillow: 'подушка',
+  pencil: 'карандаш', 'glue stick': 'клей', calculator: 'калькулятор', globe: 'глобус', notebook: 'тетрадь',
+  soap: 'мыло', 'shampoo bottle': 'шампунь', hairbrush: 'расчёска', bathtub: 'ванна', toothpaste: 'зубная паста', 'rubber duck': 'уточка', sponge: 'губка',
+  suitcase: 'чемодан', necktie: 'галстук', jacket: 'куртка', boots: 'сапоги', hat: 'шапка', gloves: 'перчатки', scarf: 'шарф', helmet: 'шлем',
+  'hot dog': 'хот-дог', donut: 'пончик', strawberry: 'клубника', watermelon: 'арбуз', egg: 'яйцо', tomato: 'помидор', bread: 'хлеб', cheese: 'сыр', lemon: 'лимон',
+  kite: 'воздушный змей', airplane: 'самолёт', train: 'поезд', horse: 'лошадь', sheep: 'овца',
 };
-
-export const clipPrompt = (en: string) => `a photo of a ${en}.`;

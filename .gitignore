@@ -6,3 +6,4 @@ dist
 .hf-cache
 .env.voice
 .DS_Store
+public/models/yolox/

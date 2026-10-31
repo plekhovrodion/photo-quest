@@ -1,5 +1,8 @@
-// Объясняем, зачем нужна камера, ДО системного запроса браузера (по макету «Саундчек»): тёмный размытый фон,
-// затем появляется карточка, и только после кнопки «Далее» вызывается getUserMedia. Если доступ уже есть или запрещён, экран не показываем.
+// Запрос камеры по макету «Саундчек» (то же, что для микрофона, только с камерой).
+// Компьютер: пока браузер показывает своё окошко с вопросом, поверх размытого фона лиса указкой показывает на это окошко,
+// а внизу (в Safari вверху) карточка «Разрешите доступ к камере»; место лисы зависит от браузера, потому что окошко у них в разных местах.
+// Телефон: сначала карточка с кнопкой «Далее», и только после неё вызываем браузер; пока он спрашивает, остаётся размытый фон.
+// Если доступ уже есть или запрещён, экран не показываем.
 import { speak } from '../audio/sounds';
 import { playSfx } from '../audio/sfx';
 import { ASK_CAMERA } from '../data/phrases';
@@ -15,27 +18,56 @@ async function permissionState(): Promise<PermissionState | 'unknown'> {
   }
 }
 
-export async function explainCameraAccess(): Promise<void> {
+// Где браузер рисует своё окошко с вопросом: слева сверху (Chrome, Firefox, Edge, Opera), справа сверху (Яндекс), по центру (Safari).
+export type PromptSide = 'left' | 'right' | 'center';
+export function promptSide(ua = navigator.userAgent): PromptSide {
+  if (/YaBrowser/i.test(ua)) return 'right';
+  if (/Safari/i.test(ua) && !/Chrome|Chromium|CriOS|FxiOS|Edg|OPR|Android/i.test(ua)) return 'center';
+  return 'left';
+}
+
+const base = () => `${import.meta.env.BASE_URL}art/perm`;
+const TITLE = 'Разрешите доступ к камере';
+
+function desktopHtml(side: PromptSide): string {
+  const fox = `<img class="pm-fox pm-fox-${side}" src="${base()}/fox-${side}.svg" alt="">`;
+  return `${fox}<div class="pm-card"><h2>${TITLE}</h2><p>Тогда ты сможешь <span class="pm-tag">искать предметы</span></p></div>`;
+}
+
+const mobileHtml = () => `<div class="pm-mcard"><img class="pm-fox-mobile" src="${base()}/fox-mobile.svg" alt="">
+  <h2>${TITLE}</h2><p>Тогда ты сможешь <b>искать предметы</b></p>
+  <button class="pm-next" type="button"><i class="pm-next-shadow"></i><i class="pm-next-bg"></i><span>Далее</span></button></div>`;
+
+// Выполняет запрос камеры (getUserMedia) и пока он ждёт ответа, показывает подсказку.
+export async function withCameraPrompt<T>(request: () => Promise<T>): Promise<T> {
   const st = await permissionState();
-  if (st === 'granted' || st === 'denied') return;
-  if (st === 'unknown' && shownThisSession) return;
+  if (st === 'granted' || st === 'denied' || (st === 'unknown' && shownThisSession)) return request();
   shownThisSession = true;
 
-  await new Promise<void>((resolve) => {
-    const el = document.createElement('div');
-    el.className = 'cam-ask';
-    el.setAttribute('role', 'dialog');
-    el.setAttribute('aria-modal', 'true');
-    el.setAttribute('aria-label', 'Разреши доступ к камере');
-    el.innerHTML = `<div class="ca-card">
-      <h2>Разреши доступ к камере</h2>
-      <p>Тогда ты сможешь фотографировать предметы и находить их</p>
-      <button class="ca-btn" type="button">Далее</button></div>`;
-    document.body.appendChild(el);
-    playSfx('modal-open');
-    const btn = el.querySelector<HTMLButtonElement>('.ca-btn')!;
-    btn.addEventListener('click', () => { el.remove(); resolve(); });
-    // кнопка доступна, когда закончилась анимация появления: фон 500 мс, пауза 300 мс, карточка 500 мс
-    setTimeout(() => { btn.focus({ preventScroll: true }); speak(ASK_CAMERA.text, false, ASK_CAMERA.who); }, 1300);
-  });
+  const el = document.createElement('div');
+  el.className = 'perm-ask';
+  el.setAttribute('role', 'dialog');
+  el.setAttribute('aria-modal', 'true');
+  el.setAttribute('aria-label', TITLE);
+  const mobile = matchMedia('(pointer: coarse)').matches || innerWidth < 700;
+  const side = promptSide();
+  el.classList.add(mobile ? 'pm-mobile' : `pm-side-${side}`);
+  el.innerHTML = mobile ? mobileHtml() : desktopHtml(side);
+  document.body.appendChild(el);
+  playSfx('modal-open');
+  const say = () => speak(ASK_CAMERA.text, false, ASK_CAMERA.who);
+
+  if (mobile) {
+    await new Promise<void>((resolve) => {
+      const btn = el.querySelector<HTMLButtonElement>('.pm-next')!;
+      btn.addEventListener('click', () => { el.querySelector('.pm-mcard')?.remove(); resolve(); });
+      setTimeout(() => { btn.focus({ preventScroll: true }); say(); }, 400);
+    });
+  } else say();
+
+  try {
+    return await request();
+  } finally {
+    el.remove();
+  }
 }

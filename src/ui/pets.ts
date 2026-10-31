@@ -111,11 +111,24 @@ async function mount(el: HTMLElement) {
   next();
 }
 
+// Питомцы грузят свои анимации, только когда попадают в экран (на главной их восемь, а видно два-три): меньше трафика и работы на телефоне.
+let observer: IntersectionObserver | null = null;
 export function mountPets(scope: ParentNode) {
-  scope.querySelectorAll<HTMLElement>('.pet[data-pet]').forEach((el) => { void mount(el); });
+  const els = scope.querySelectorAll<HTMLElement>('.pet[data-pet]');
+  if (!('IntersectionObserver' in window)) { els.forEach((el) => { void mount(el); }); return; }
+  observer ??= new IntersectionObserver((entries) => {
+    for (const e of entries) {
+      if (!e.isIntersecting) continue;
+      observer?.unobserve(e.target);
+      void mount(e.target as HTMLElement);
+    }
+  }, { rootMargin: '200px' });
+  els.forEach((el) => observer!.observe(el));
 }
 
 export function unmountPets() {
+  observer?.disconnect();
+  observer = null;
   for (const st of live.splice(0)) {
     st.dead = true;
     st.anims.forEach((a) => a.destroy());

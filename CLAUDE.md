@@ -37,7 +37,7 @@ node scripts/fetch-sfx.mjs   # звуки интерфейса из Uchi Sound L
 - `src/main.ts`: все экраны и логика (карта мест, место, задание, успех, ошибка) на HTML-шаблонах. Экраны рисует `show(html, cls)`, оболочка места: `.loc`, `locHeader`, `taskScreen`, `bigBtn`.
 - `src/game/`: чистая логика игры (конечный автомат заданий), без DOM, покрыта тестами.
 - `src/camera/`: живая камера (`capture.ts`), рамка предмета, состояния ошибок камеры с инструкциями (`problems.ts`), объяснение перед запросом камеры (`prepermission.ts`). Фото из файла не берём.
-- `src/vision/`: проверка фото на устройстве: цвет (HSV), MobileNet, COCO-SSD, CLIP в `clipWorker.ts`.
+- `src/vision/`: проверка фото на устройстве: цвет (HSV), COCO-SSD, CLIP в `clipWorker.ts`.
 - `src/data/`: задания и места (`tasks.ts`), английские слова (`english.ts`), фразы заврика (`phrases.ts`), манифест озвучки (`voice-manifest.json`).
 - `src/audio/`: озвучка (`voice.ts` очередь записей, `sounds.ts` запасной голос браузера, `speak`/`speakEnglish`) и звуки интерфейса (`sfx.ts`, Web Audio).
 - `src/api/economy.ts`: бусины (баланс, списание за новую находку через сервер, `canAfford`); `src/ui/notice.ts`: окно с сообщением («Бусины закончились»).

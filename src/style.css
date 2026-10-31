@@ -98,15 +98,9 @@ button.stop { position: absolute; transform: translate(-50%, -50%); width: 72px;
 button.stop.done { background: var(--ok); border-color: var(--ok-d); color: #fff; }
 button.stop.next { animation: pulse 1.6s ease-in-out infinite; }
 @keyframes pulse { 50% { transform: translate(-50%, -50%) scale(1.12); } }
-button.stop:active:not(:disabled) { transform: translate(-50%, -50%) scale(.94); box-shadow: none; }
-
-/* Живая камера на ноутбуках и компьютерах */
-.cam-overlay { position: fixed; inset: 0; z-index: 30; display: flex; flex-direction: column; align-items: center;
-  justify-content: center; gap: 18px; padding: 16px; background: rgba(10, 20, 40, .92); }
+button.stop:active:not(:disabled) { transform: translate(-50%, -50%) scale(.94); box-shadow: none; }/* Живая камера на ноутбуках и компьютерах */
 .cam-video { max-width: min(100%, 880px); max-height: 70vh; border-radius: 24px; border: 6px solid #fff;
   background: #000; transform: scaleX(-1); /* зеркало только в предпросмотре, снимок не отражается */ }
-.cam-msg { color: #fff; max-width: 460px; }
-.cam-actions { display: flex; gap: 14px; flex-wrap: wrap; justify-content: center; }
 
 /* Тема «инопланетный мир»: светлый текст на тёмном фоне, светлые панели с тёмным текстом */
 p { text-shadow: 0 2px 0 rgba(20, 10, 60, .5); }
@@ -196,7 +190,6 @@ button.stop.done { animation: stop-in .55s calc(var(--i, 0) * 60ms + .25s) var(-
 /* Онбординг и камера */
 .dot.on { animation: dot-pulse 1.2s ease-in-out infinite; }
 @keyframes dot-pulse { 50% { transform: scale(1.6); } }
-.cam-overlay { animation: fade-in .3s ease; }
 .cam-video { animation: pop-in .45s var(--spring) backwards; }
 @keyframes fade-in { from { opacity: 0; } }
 
@@ -229,7 +222,6 @@ button.level small { font-size: 18px; }
 #app.ghost, .ghost { position: fixed; inset: 0; z-index: 8; pointer-events: none; overflow: hidden; min-height: 0; }
 .ghost, .ghost * { animation: none !important; }
 @media (prefers-reduced-motion: reduce) { .ghost { display: none; } }
-.cam-actions { flex-direction: column; align-items: center; }
 
 /* ===== Изометрическая карта ===== */
 .map { position: relative; width: min(100%, 380px); }
@@ -274,34 +266,11 @@ button.stop.next { border-color: #f59e0b; box-shadow: 0 5px 0 #b45309; }
 
 /* ===== Однотонные иконки ===== */
 .ico-flash { filter: none; }
-.hint .ico { color: #92400e; }
-
-/* ===== Обрезка снимка ===== */
-.crop-overlay { position: fixed; inset: 0; z-index: 40; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 14px;
-  padding: calc(14px + var(--safe-top)) 16px 20px; background: rgba(20, 8, 60, .94); animation: fade-in .3s ease; touch-action: none; }
-.crop-close { position: absolute; top: calc(12px + var(--safe-top)); left: 12px; }
-.crop-title { color: #fff; font-size: 24px; font-weight: 800; margin: 0; text-align: center; padding: 0 76px; }
-.crop-stage { position: relative; max-width: 100%; user-select: none; -webkit-user-select: none; }
-.crop-img { display: block; max-width: min(100vw - 32px, 720px); max-height: calc(100dvh - 330px); width: auto; height: auto;
-  border-radius: 18px; pointer-events: none; }
-.crop-box { position: absolute; border: 4px solid #fff; border-radius: 10px; cursor: move; touch-action: none;
-  box-shadow: 0 0 0 9999px rgba(20, 8, 60, .62); }
-.crop-box .h { position: absolute; width: 38px; height: 38px; background: #ec4899; border: 4px solid #fff; border-radius: 50%; touch-action: none; }
-.crop-box .nw { left: -21px; top: -21px; cursor: nwse-resize; } .crop-box .ne { right: -21px; top: -21px; cursor: nesw-resize; }
-.crop-box .sw { left: -21px; bottom: -21px; cursor: nesw-resize; } .crop-box .se { right: -21px; bottom: -21px; cursor: nwse-resize; }
-.crop-actions { display: flex; flex-direction: column; gap: 16px; align-items: center; width: 100%; }
-/* тень рамки обрезки не должна затемнять заголовок и кнопки */
-.crop-title, .crop-actions { position: relative; z-index: 3; }
-.crop-close { z-index: 4; }
-
-/* ===== Живая камера с поиском предмета ===== */
-.cam-stage { position: relative; display: inline-block; max-width: 100%; line-height: 0; }
-.cam-stage .cam-video { transform: none; max-height: calc(100dvh - 360px); }
+.hint .ico { color: #92400e; }/* ===== Обрезка снимка ===== *//* тень рамки обрезки не должна затемнять заголовок и кнопки *//* ===== Живая камера с поиском предмета ===== */
 .cam-boxes { position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none; }
 .cam-hint { color: #fff; font-size: 24px; font-weight: 800; text-align: center; min-height: 1.4em; margin: 0; text-shadow: 0 2px 0 rgba(20, 10, 60, .55); }
 /* общий стиль кнопок не должен перебивать атрибут hidden */
 button[hidden] { display: none !important; }
-.cam-actions { width: min(100%, 380px); }
 
 /* ===== Плашка вспышек: розовая, как кнопки, с белой молнией ===== */
 .chip.coin, .reward { background: var(--btn2); color: #fff; text-shadow: 0 2px 0 rgba(131, 24, 67, .55);
@@ -350,20 +319,7 @@ button.level small .ico-flash { color: var(--btn); }
 
 /* ===== Галочки и круглый прогресс ===== */
 button.stop.done .ico { width: 62%; height: 62%; }
-
-.cube-ring { position: absolute; right: calc(var(--du) * 2); top: calc(var(--du) * -2); width: calc(var(--du) * 54); height: calc(var(--du) * 54);
-  display: grid; place-items: center; border-radius: 50%; background: #fff; color: var(--ink); box-shadow: 0 calc(var(--du) * 3) 0 rgba(10, 5, 40, .25);
-  animation: pop-in .5s .6s var(--spring) backwards; }
-.cube-ring svg { position: absolute; inset: 0; width: 100%; height: 100%; filter: none; }
-.cube-ring .ring-track { fill: none; stroke: #e9defa; stroke-width: 5; }
-.cube-ring .ring-arc { fill: none; stroke: var(--btn); stroke-width: 5; stroke-linecap: round; stroke-dasharray: var(--pct) 100;
-  animation: ring-fill .9s .7s ease-out backwards; }
 @keyframes ring-fill { from { stroke-dasharray: 0 100; } }
-.cube-ring b { position: relative; font-size: calc(var(--du) * 14); font-weight: 900; line-height: 1; letter-spacing: -.02em; }
-.cube-ring.full { background: #16a34a; color: #fff; }
-.cube-ring.full .ring-track { stroke: rgba(255, 255, 255, .35); }
-.cube-ring.full .ring-arc { stroke: #fff; }
-.cube-ring.full .ico { position: relative; width: 52%; height: 52%; vertical-align: 0; }
 
 /* ===== Альбом находок ===== */
 .hud-right { display: flex; align-items: center; gap: 10px; }
@@ -372,7 +328,7 @@ button.stop.done .ico { width: 62%; height: 62%; }
 .album-sec h2 span { font-size: 18px; background: rgba(255, 255, 255, .22); border-radius: 999px; padding: 3px 12px; }
 .album-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; }
 :is(#app, .ghost) button.sticker { position: relative; display: flex; flex-direction: column; align-items: center; gap: 6px; padding: 7px 7px 8px; border: 0; cursor: pointer;
-  background: #fff; color: var(--ink); border-radius: 18px; box-shadow: 0 5px 0 rgba(10, 5, 40, .3); transform: rotate(var(--tilt, 0deg));
+  background: #fff; color: var(--ink); border-radius: 18px; box-shadow: 0 7px 0 rgba(10, 5, 40, .3); transform: rotate(var(--tilt, 0deg));
   min-height: 0; min-width: 0; width: auto; height: auto; font: inherit; font-size: 14px; text-shadow: none; animation: pop-in .45s calc(var(--i, 0) * 40ms) var(--spring) backwards; }
 :is(#app, .ghost) .sticker img { display: block; width: 100%; aspect-ratio: 1; object-fit: cover; border-radius: 12px; background: #e9defa; }
 :is(#app, .ghost) .sticker small { font-size: 14px; font-weight: 800; line-height: 1.1; text-align: center; overflow-wrap: anywhere; }
@@ -448,25 +404,13 @@ button.stop.done .ico { width: 62%; height: 62%; }
 .chip.coin, .reward { background: rgba(255, 255, 255, .16); border: 2px solid rgba(255, 255, 255, .4); box-shadow: none; text-shadow: none; color: #fff; }
 .chip.coin .ico-flash, .reward .ico-flash { color: #fde047; filter: none; }
 
-/* --- Верхняя панель главной: иконка с подписью, у каждой свой цвет --- */
-:is(#app, .ghost) button.hud-btn { width: 76px; min-width: 76px; height: 82px; min-height: 82px; padding: 6px 2px 4px; display: flex; flex-direction: column; align-items: center;
+/* --- Верхняя панель главной: иконка с подписью{ width: 76px; min-width: 76px; height: 82px; min-height: 82px; padding: 6px 2px 4px; display: flex; flex-direction: column; align-items: center;
   justify-content: center; gap: 3px; border-radius: 22px; background: rgba(255, 255, 255, .14); border: 2px solid rgba(255, 255, 255, .4);
   box-shadow: none; font-size: 14px; font-weight: 800; color: #fff; text-shadow: none; }
 
-.hud-right { gap: 8px; }
-
-/* --- Экран задания --- */
-
-:is(#app, .ghost) button.say-btn { flex: none; width: 60px; min-width: 60px; height: 60px; min-height: 60px; padding: 0; border-radius: 50%; display: grid; place-items: center;
-  background: #fff; color: var(--btn); box-shadow: 0 5px 0 rgba(10, 5, 40, .3); }
-:is(#app, .ghost) button.say-btn .ico { width: 30px; height: 30px; vertical-align: 0; margin: 0; }
+.hud-right { gap: 8px; }/* --- Экран задания --- */
 .task-card { flex: none; width: 150px; height: 150px; border-radius: 34px; display: grid; place-items: center; color: #fff;
   background: rgba(255, 255, 255, .12); border: 3px solid rgba(255, 255, 255, .45); animation: pop-in .45s .2s var(--spring) backwards; }
-
-:is(#app, .ghost) button.primary-xl { width: min(100%, 440px); min-height: 92px; font-size: 28px; padding: 0 14px; white-space: nowrap; border-radius: 30px; gap: 12px; display: inline-flex; align-items: center; justify-content: center;
-  background: var(--btn); box-shadow: 0 10px 0 var(--btn-d), 0 0 0 4px rgba(255, 255, 255, .3); }
-:is(#app, .ghost) button.primary-xl .ico { width: 1.15em; height: 1.15em; vertical-align: 0; margin: 0; }
-:is(#app, .ghost) button.primary-xl:active:not(:disabled) { transform: translateY(6px) scale(.98); box-shadow: 0 4px 0 var(--btn-d), 0 0 0 4px rgba(255, 255, 255, .3); }
 
 /* --- Движение: только появление, нажатие, награда --- */
 .char { animation: char-in .5s ease-out backwards; }
@@ -548,9 +492,7 @@ body::before, body::after { animation: none; }
   .map button.stop .ico { width: 62%; height: 62%; }
 }
 
-/* Реплика строго по центру под заврика, динамик справа в своей колонке */
-
-:is(#app, .ghost) button.say-btn { grid-column: 3; justify-self: end; }
+/* Реплика строго по центру под заврика{ grid-column: 3; justify-self: end; }
 
 /* Места на главной: нажатие чувствуется, но кнопка не убегает из-под курсора */
 
@@ -598,50 +540,19 @@ body::before, body::after { animation: none; }
 }
 .sticker.empty .q .obj3d.sil-color { filter: saturate(.6) brightness(.62); opacity: .7; }
 
-/* Камера и обрезка: действия разного веса и цвета. Главное — зелёное, остальное контурное */
-.cam-overlay button.cam-shoot:not(.level):not(.stop):not(.cube-btn):not(.x),
-.crop-overlay button.crop-done:not(.level):not(.stop):not(.cube-btn):not(.x) {
+/* Камера и обрезка: действия разного веса и цвета. Главное — зелёное{
   background: #16a34a; color: #fff; min-height: 84px; font-size: 28px; border-radius: 28px;
-  box-shadow: 0 9px 0 #166534, 0 0 0 4px rgba(255, 255, 255, .3); text-shadow: none; display: inline-flex; align-items: center; justify-content: center; gap: 10px; }
-.cam-overlay button.cam-shoot:not(.level):not(.stop):not(.cube-btn):not(.x) .ico { width: 1.15em; height: 1.15em; vertical-align: 0; margin: 0; }
-.cam-overlay button.cam-shoot:not(.level):not(.stop):not(.cube-btn):not(.x):active:not(:disabled),
-.crop-overlay button.crop-done:not(.level):not(.stop):not(.cube-btn):not(.x):active:not(:disabled) { transform: translateY(6px); box-shadow: 0 3px 0 #166534, 0 0 0 4px rgba(255, 255, 255, .3); }
-/* отмена и «весь кадр» — белый контур */
-.cam-overlay button.cam-cancel:not(.level):not(.stop):not(.cube-btn):not(.x),
-.crop-overlay button.crop-all:not(.level):not(.stop):not(.cube-btn):not(.x) {
-  background: transparent; color: #fff; border: 3px solid rgba(255, 255, 255, .85); box-shadow: none; text-shadow: none; min-height: 60px; font-size: 22px; }
-/* выбрать файл — голубой контур, отличается от отмены */
-.cam-overlay button.cam-file:not(.level):not(.stop):not(.cube-btn):not(.x) {
+  box-shadow: 0 9px 0 #166534, 0 0 0 4px rgba(255, 255, 255, .3); text-shadow: none; display: inline-flex; align-items: center; justify-content: center; gap: 10px; }/* отмена и «весь кадр» — белый контур */
+/* выбрать файл — голубой контур{
   background: rgba(14, 165, 233, .18); color: #e0f2fe; border: 3px solid #38bdf8; box-shadow: none; text-shadow: none; min-height: 60px; font-size: 22px; display: inline-flex; align-items: center; justify-content: center; gap: 8px; }
-.cam-overlay button.cam-file .ico { width: 1.1em; height: 1.1em; vertical-align: 0; margin: 0; }
-.cam-overlay button.cam-cancel:active:not(:disabled), .crop-overlay button.crop-all:active:not(:disabled), .cam-overlay button.cam-file:active:not(:disabled) { transform: scale(.97); box-shadow: none; }
-.crop-overlay button.crop-close:not(.level):not(.stop):not(.cube-btn):not(.x) {
-  width: 56px; min-width: 56px; height: 56px; min-height: 56px; padding: 0; border-radius: 50%; display: grid; place-items: center;
-  background: rgba(255, 255, 255, .12); border: 3px solid rgba(255, 255, 255, .85); box-shadow: none; }
-.crop-overlay button.crop-close .ico { width: 28px; height: 28px; vertical-align: 0; }
 
-/* «Снять» оживает, когда предмет узнан */
-.cam-overlay button.cam-shoot.ready { box-shadow: 0 9px 0 #166534, 0 0 0 6px rgba(134, 239, 172, .75); animation: ready-pulse 1s ease-in-out infinite; }
+/* «Снять» оживает{ box-shadow: 0 9px 0 #166534, 0 0 0 6px rgba(134, 239, 172, .75); animation: ready-pulse 1s ease-in-out infinite; }
 @keyframes ready-pulse { 50% { transform: scale(1.04); } }
 
 /* Вспышки временно скрыты: счётчик, награда за предмет и бонус, цены на местах.
    Чтобы вернуть, удалите этот блок. */
 :is(#app, .ghost) .chip.coin,
-:is(#app, .ghost) .reward,
-:is(#app, .ghost) .cube-price,
-:is(#app, .ghost) .cube-lock { display: none !important; }
-
-/* Карточка английского слова на экране находки */
-:is(#app, .ghost) button.word-card { position: relative; display: grid; justify-items: center; gap: 2px; width: min(100%, 360px); margin: 6px auto 4px;
-  height: auto; min-height: 0; padding: 12px 56px 12px 20px; border: 0; border-radius: 24px; background: #fff; color: var(--ink); text-align: center;
-  box-shadow: 0 6px 0 rgba(60, 30, 140, .35), 0 10px 24px rgba(20, 8, 70, .3); cursor: pointer; }
-:is(#app, .ghost) .word-card .wc-tag { font-size: 13px; font-weight: 800; letter-spacing: .08em; text-transform: uppercase; color: #7c3aed; }
-:is(#app, .ghost) .word-card .wc-en { font-size: clamp(36px, 11vw, 52px); font-weight: 900; line-height: 1.05; }
-:is(#app, .ghost) .word-card .wc-ru { font-size: 18px; font-weight: 700; color: #5b4b8a; }
-:is(#app, .ghost) .word-card .wc-say { position: absolute; right: 14px; top: 50%; translate: 0 -50%; width: 38px; height: 38px; border-radius: 50%;
-  display: grid; place-items: center; background: #7c3aed; color: #fff; }
-:is(#app, .ghost) .word-card .wc-say .ico { width: 22px; height: 22px; margin: 0; vertical-align: 0; }
-:is(#app, .ghost) .word-card:active { transform: translateY(3px); }
+:is(#app, .ghost) .reward{ display: none !important; }/* Карточка английского слова на экране находки */
 
 /* ===== Главная: карточки мест (макет Figma) ===== */
 
@@ -652,7 +563,7 @@ body::before, body::after { animation: none; }
 .loc-art { position: absolute; left: 50%; top: 0; width: 576px; height: 216px; margin-left: -288px; background-size: 576px 1728px; background-position: 0 var(--hy); background-repeat: no-repeat; }
 /* Кнопки шапки: цвет значка и нижней кромки свой у каждого места (как у «назад» в макетах) */
 #app.screen-loc button.loc-btn { position: absolute; top: calc(24px + var(--safe-top)); width: 56px; min-width: 56px; height: 56px; min-height: 56px; padding: 0; border: 0; border-radius: 20px; background: #fff;
-  box-shadow: 0 6px 0 var(--lbtns); display: grid; place-items: center; cursor: pointer; transition: transform .2s cubic-bezier(.22, 1, .36, 1), box-shadow .2s cubic-bezier(.22, 1, .36, 1); }
+  box-shadow: 0 8px 0 var(--lbtns); display: grid; place-items: center; cursor: pointer; transition: transform .2s cubic-bezier(.22, 1, .36, 1), box-shadow .2s cubic-bezier(.22, 1, .36, 1); }
 .loc-i { display: block; width: 24px; height: 24px; background: var(--lbtn); -webkit-mask: var(--m) center / contain no-repeat; mask: var(--m) center / contain no-repeat; }
 #app.screen-loc #back { left: 24px; }
 #app.screen-loc .loc-tools { position: absolute; inset: 0; pointer-events: none; }
@@ -673,16 +584,16 @@ body::before, body::after { animation: none; }
 .loc-fill[style*="--w:0%"] { display: none; }
 .loc-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 24px 16px; }
 @media (min-width: 600px) { .loc-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 24px; } }
-#app.screen-loc button.loc-card { position: relative; width: 100%; aspect-ratio: 1; min-height: 0; height: auto; padding: 20px; border: 0; border-radius: 32px; background: #fff; box-shadow: 0 8px 0 var(--lshadow);
+#app.screen-loc button.loc-card { position: relative; width: 100%; aspect-ratio: 1; min-height: 0; height: auto; padding: 20px; border: 0; border-radius: 32px; background: #fff; box-shadow: 0 10px 0 var(--lshadow);
   display: grid; place-items: center; cursor: pointer; overflow: clip; transition: transform .2s cubic-bezier(.22, 1, .36, 1), box-shadow .2s cubic-bezier(.22, 1, .36, 1); }
 #app.screen-loc button.loc-card:hover { transform: translateY(-2px); box-shadow: 0 10px 0 var(--lshadow); }
 #app.screen-loc button.loc-card:active { transform: translateY(5px); box-shadow: 0 3px 0 var(--lshadow); }
-.loc-ico { width: 104px; height: 104px; background-size: 800% 800%; background-repeat: no-repeat; display: block; }
+.loc-ico { width: 104px; height: 104px; background-size: 800% 1200%; background-repeat: no-repeat; display: block; }
 @media (min-width: 600px) { .loc-ico { width: 128px; height: 128px; } }
 .loc-check { position: absolute; top: 8px; right: 8px; width: 56px; height: 56px; }
 /* «Играть» прибита к низу экрана, карточки прокручиваются под ней */
 .loc-bar { position: sticky; bottom: 0; z-index: 5; display: flex; justify-content: center; padding: 16px 24px calc(24px + env(safe-area-inset-bottom, 0px)); background: linear-gradient(to top, var(--lbg) 62%, transparent); }
-#app.screen-loc button.loc-play { width: 100%; max-width: 600px; min-height: 64px; height: 64px; padding: 16px 24px; border: 0; border-radius: 24px; background: #8a5eff; box-shadow: 0 6px 0 #6e46da; display: grid; place-items: center; cursor: pointer; transition: transform .2s cubic-bezier(.22, 1, .36, 1), box-shadow .2s cubic-bezier(.22, 1, .36, 1); }
+#app.screen-loc button.loc-play { width: 100%; max-width: 600px; min-height: 64px; height: 64px; padding: 16px 24px; border: 0; border-radius: 24px; background: #8a5eff; box-shadow: 0 8px 0 #6e46da; display: grid; place-items: center; cursor: pointer; transition: transform .2s cubic-bezier(.22, 1, .36, 1), box-shadow .2s cubic-bezier(.22, 1, .36, 1); }
 #app.screen-loc button.loc-play:active { transform: translateY(4px); box-shadow: 0 2px 0 #6e46da; }
 #app.screen-loc button.loc-play img { width: 32px; height: 32px; display: block; }
 @media (prefers-reduced-motion: reduce) { .loc-fill { animation: none; } }
@@ -696,7 +607,7 @@ body::before, body::after { animation: none; }
 /* ===== Экраны заданий по макету Figma ===== */
 .loc { position: relative; }
 .tk-body { align-items: flex-start; }
-.tk-card { position: relative; z-index: 2; background: #fff; border-radius: 32px; box-shadow: 0 8px 0 var(--lshadow); padding: var(--tkpad); display: flex; flex-direction: column; align-items: center; gap: 16px; text-align: center; color: #221c5f; font-family: 'Factor A', system-ui, sans-serif; --tkpad: 32px; --tkico: 128px; }
+.tk-card { position: relative; z-index: 2; background: #fff; border-radius: 32px; box-shadow: 0 10px 0 var(--lshadow); padding: var(--tkpad); display: flex; flex-direction: column; align-items: center; gap: 16px; text-align: center; color: #221c5f; font-family: 'Factor A', system-ui, sans-serif; --tkpad: 32px; --tkico: 128px; }
 @media (min-width: 600px) { .tk-card { --tkpad: 40px; } }
 @media (min-width: 1024px) { .tk-card { --tkpad: 48px; --tkico: 160px; } }
 .tk-ico .loc-ico { width: var(--tkico); height: var(--tkico); display: block; }
@@ -713,7 +624,7 @@ body::before, body::after { animation: none; }
 @keyframes star-pop { from { opacity: 0; scale: 0; rotate: -60deg; } }
 .tk-try { width: var(--tkico); height: var(--tkico); display: block; }
 
-.screen-tk .hint { background: #fff; border-radius: 20px; padding: 12px 16px; display: flex; gap: 10px; align-items: center; color: #221c5f; font-weight: 700; box-shadow: 0 5px 0 var(--lshadow); }
+.screen-tk .hint { background: #fff; border-radius: 20px; padding: 12px 16px; display: flex; gap: 10px; align-items: center; color: #221c5f; font-weight: 700; box-shadow: 0 7px 0 var(--lshadow); }
 .screen-tk .hint .ico { width: 24px; height: 24px; flex: none; color: #ffb400; }
 .screen-tk .notice { text-align: center; color: #221c5f; font-weight: 700; }
 .screen-tk .loc-play img { width: 32px; height: 32px; display: block; }
@@ -739,34 +650,18 @@ body::before, body::after { animation: none; }
 /* Десктоп: заголовок задания 40/48 */
 @media (min-width: 1024px) { .tk-text { font-size: 40px; line-height: 48px; } }
 
-/* ===== Камера по макету Figma: видео на весь экран, «назад» сверху, большая кнопка снизу ===== */
-.cam-overlay { display: block; padding: 0; gap: 0; background: #1a1235; --lbtn: #7a5ad0; --lbtns: #977eda; }
-.cam-overlay .cam-stage { position: absolute; inset: 0; display: block; max-width: none; }
-.cam-overlay .cam-video, .cam-overlay .cam-stage .cam-video { position: absolute; inset: 0; width: 100%; height: 100%; max-width: none; max-height: none; border: 0; border-radius: 0; object-fit: cover; animation: none; transform: none; background: #1a1235; }
-.cam-overlay button.cam-back:not(.level):not(.stop):not(.cube-btn):not(.x) { position: absolute; z-index: 3; top: calc(24px + env(safe-area-inset-top, 0px)); left: 24px; width: 56px; min-width: 56px; height: 56px; min-height: 56px; padding: 0; border: 0; border-radius: 20px; background: #fff;
-  box-shadow: 0 6px 0 var(--lbtns); display: grid; place-items: center; cursor: pointer; transition: transform .2s cubic-bezier(.22, 1, .36, 1), box-shadow .2s cubic-bezier(.22, 1, .36, 1); }
-.cam-overlay button.cam-back:not(.level):not(.stop):not(.cube-btn):not(.x):active { transform: translateY(4px); box-shadow: 0 2px 0 var(--lbtns); }
-.cam-overlay .cam-hint { position: absolute; z-index: 2; top: calc(32px + env(safe-area-inset-top, 0px)); left: 96px; right: 24px; margin: 0; padding: 10px 16px; border-radius: 20px; background: #fff; color: #221c5f; font-size: 16px; line-height: 20px; font-weight: 700; text-shadow: none; text-align: center; box-shadow: 0 5px 0 var(--lbtns); }
-.cam-overlay .cam-hint.quiet { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; border: 0; box-shadow: none; background: none; left: 0; right: auto; }
-.cam-overlay .cam-msg { position: absolute; z-index: 2; left: 24px; right: 24px; top: 40%; transform: translateY(-50%); max-width: none; text-align: center; color: #fff; font-size: 22px; line-height: 28px; font-weight: 700; }
-.cam-overlay .cam-actions { position: absolute; z-index: 3; left: 0; right: 0; bottom: 0; width: auto; flex-direction: column; flex-wrap: nowrap; align-items: center; gap: 12px; padding: 24px 24px calc(24px + env(safe-area-inset-bottom, 0px)); }
-.cam-overlay button.cam-shoot:not(.level):not(.stop):not(.cube-btn):not(.x) { width: 100%; max-width: 600px; height: 64px; min-height: 64px; padding: 16px 24px; border-radius: 24px; background: #8a5eff; color: #fff; box-shadow: 0 6px 0 #6e46da; display: grid; place-items: center; font-size: 0; }
-.cam-overlay button.cam-shoot img { width: 32px; height: 32px; display: block; }
-.cam-overlay button.cam-shoot:not(.level):not(.stop):not(.cube-btn):not(.x):active:not(:disabled) { transform: translateY(4px); box-shadow: 0 2px 0 #6e46da; }
-.cam-overlay button.cam-shoot:disabled { opacity: .6; }
-.cam-overlay button.cam-shoot.ready { box-shadow: 0 6px 0 #6e46da, 0 0 0 6px rgba(255, 255, 255, .7); animation: ready-pulse 1.2s ease-in-out infinite; }
-.cam-overlay[hidden] { display: none !important; }
+/* ===== Камера по макету Figma: видео на весь экран, «назад» сверху{ display: block; padding: 0; gap: 0; background: #1a1235; --lbtn: #7a5ad0; --lbtns: #977eda; }
 
 /* ===== Экраны «камера не включилась» по макету Figma «Ошибки» ===== */
 .cam-problem { position: fixed; inset: 0; z-index: 40; display: flex; flex-direction: column; background: #f5efff; color: #221c5f; font-family: 'Factor A', system-ui, sans-serif; animation: fade-in .3s ease; }
 .cam-problem button.cp-back:not(.level):not(.stop):not(.cube-btn):not(.x) { position: absolute; top: calc(24px + env(safe-area-inset-top, 0px)); left: 24px; width: 56px; min-width: 56px; height: 56px; min-height: 56px; padding: 0; border: 0; border-radius: 20px; background: #fff;
-  box-shadow: 0 6px 0 #977eda; display: grid; place-items: center; cursor: pointer; transition: transform .2s cubic-bezier(.22, 1, .36, 1), box-shadow .2s cubic-bezier(.22, 1, .36, 1); }
+  box-shadow: 0 8px 0 #977eda; display: grid; place-items: center; cursor: pointer; transition: transform .2s cubic-bezier(.22, 1, .36, 1), box-shadow .2s cubic-bezier(.22, 1, .36, 1); }
 .cam-problem button.cp-back:not(.level):not(.stop):not(.cube-btn):not(.x):active { transform: translateY(4px); box-shadow: 0 2px 0 #977eda; }
 .cam-problem .loc-i { background: #7a5ad0; }
 .cp-main { flex: 1; display: flex; padding: 96px 16px 120px; overflow: auto; }
 .cp-main > .cp-card { margin: auto; } /* по центру, а если не влезает, не обрезается сверху */
-.cp-card { width: 100%; max-width: 600px; background: #fff; border-radius: 32px; box-shadow: 0 8px 0 #cbb7ff; padding: 32px; display: flex; flex-direction: column; align-items: center; gap: 16px; text-align: center; animation: tk-in .8s cubic-bezier(.22, 1, .36, 1) backwards; }
-.cp-ico { width: 108px; height: 108px; display: block; animation: tk-pop .9s cubic-bezier(.22, 1.3, .36, 1) .15s backwards, tk-float 3.8s ease-in-out .95s infinite; }
+.cp-card { width: 100%; max-width: 600px; background: #fff; border-radius: 32px; box-shadow: 0 10px 0 #cbb7ff; padding: 32px; display: flex; flex-direction: column; align-items: center; gap: 16px; text-align: center; animation: tk-in .8s cubic-bezier(.22, 1, .36, 1) backwards; }
+.cp-ico { width: 88px; height: 88px; display: block; animation: tk-pop .9s cubic-bezier(.22, 1.3, .36, 1) .15s backwards, tk-float 3.8s ease-in-out .95s infinite; }
 .cp-card h2 { margin: 0; font-size: 28px; line-height: 36px; font-weight: 700; color: #221c5f; text-shadow: none; text-wrap: balance; }
 .cp-card p { margin: 0; font-size: 20px; line-height: 30px; font-weight: 400; color: #221c5f; text-shadow: none; text-wrap: balance; }
 .cp-card.cp-steps { align-items: stretch; text-align: left; gap: 24px; padding: 40px 32px; }
@@ -777,12 +672,12 @@ body::before, body::after { animation: none; }
 .cpm-gif img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
 .cp-steps ol { margin: 0; padding-left: 28px; display: grid; gap: 16px; font-size: 20px; line-height: 28px; font-weight: 400; color: #221c5f; }
 .cp-bar { position: absolute; left: 0; right: 0; bottom: 0; display: flex; justify-content: center; padding: 16px 16px calc(24px + env(safe-area-inset-bottom, 0px)); }
-.cam-problem button.cp-btn:not(.level):not(.stop):not(.cube-btn):not(.x) { width: 100%; max-width: 600px; height: 64px; min-height: 64px; padding: 16px 24px; border: 0; border-radius: 24px; background: #8a5eff; color: #fff; font: 700 20px/24px 'Factor A', system-ui, sans-serif; text-shadow: none;
-  box-shadow: 0 6px 0 #6e46da; display: grid; place-items: center; cursor: pointer; transition: transform .2s cubic-bezier(.22, 1, .36, 1), box-shadow .2s cubic-bezier(.22, 1, .36, 1); }
+.cam-problem button.cp-btn:not(.level):not(.stop):not(.cube-btn):not(.x) { width: 100%; max-width: 600px; height: 64px; min-height: 64px; padding: 16px 24px; border: 0; border-radius: 24px; background: #8a5eff; color: #fff; font: 700 22px/26px 'Factor A', system-ui, sans-serif; text-shadow: none;
+  box-shadow: 0 8px 0 #6e46da; display: grid; place-items: center; cursor: pointer; transition: transform .2s cubic-bezier(.22, 1, .36, 1), box-shadow .2s cubic-bezier(.22, 1, .36, 1); }
 .cam-problem button.cp-btn:not(.level):not(.stop):not(.cube-btn):not(.x):active { transform: translateY(4px); box-shadow: 0 2px 0 #6e46da; }
 @media (min-width: 1024px) {
   .cp-card { padding: 48px; }
-  .cp-ico { width: 160px; height: 160px; }
+  .cp-ico { width: 128px; height: 128px; }
   .cp-card h2 { font-size: 40px; line-height: 48px; }
   .cp-card p { font-size: 24px; line-height: 32px; }
   .cp-steps ol { font-size: 24px; line-height: 32px; }
@@ -791,11 +686,6 @@ body::before, body::after { animation: none; }
 @media (prefers-reduced-motion: reduce) { .cp-card, .cp-ico { animation: none; } }
 
 /* Стрелка из макета над главной кнопкой: подсказывает, куда нажимать (появляется через секунду и покачивается) */
-.tap-arrow { position: absolute; left: 50%; bottom: calc(24px + 64px + 6px + env(safe-area-inset-bottom, 0px)); width: 48px; height: auto; translate: -50% 0; pointer-events: none; z-index: 6;
-  animation: tap-in .5s ease 1.1s backwards, tap-bob 1.1s ease-in-out 1.6s infinite; filter: drop-shadow(0 4px 0 rgba(110, 70, 218, .25)); }
-@keyframes tap-in { from { opacity: 0; translate: -50% -14px; } }
-@keyframes tap-bob { 0%, 100% { translate: -50% 0; } 50% { translate: -50% 12px; } }
-@media (prefers-reduced-motion: reduce) { .tap-arrow { animation: none; } }
 
 /* ===== Анимация экрана задания ===== */
 .tk-task .tk-card { animation: tk-in .8s cubic-bezier(.22, 1, .36, 1) backwards; }
@@ -814,7 +704,7 @@ body::before, body::after { animation: none; }
 .loc-art { animation: loc-art-sway 12s ease-in-out infinite alternate; will-change: transform; }
 @keyframes loc-art-sway { from { transform: translateX(-7px) scale(1.015); } to { transform: translateX(7px) scale(1.03); } }
 .loc-fx { position: absolute; inset: 0; z-index: 1; pointer-events: none; overflow: hidden; }
-.loc-head .loc-btn { z-index: 2; }
+.loc-head .loc-btn { z-index: 30; } /* кнопки «назад», звук и «на весь экран» поверх всего на экране: стрелок, карточек, камеры */
 .loc-fx i { position: absolute; left: var(--x); width: var(--s); height: var(--s); opacity: 0; will-change: transform, opacity; animation-duration: var(--t); animation-delay: var(--d); animation-iteration-count: infinite; animation-timing-function: ease-in-out; }
 
 @media (prefers-reduced-motion: reduce) { .loc-art, .tk-task .tk-card, .tk-task .tk-ico, .tk-ok .tk-ico, .tk-task .tk-text, .tk-ok .tk-en, .tk-ok .tk-ru, .tk-bad .tk-text, .tk-task .loc-play { animation: none; } .loc-fx { display: none; } }
@@ -822,7 +712,7 @@ body::before, body::after { animation: none; }
 /* Объяснение перед запросом камеры (макет «Саундчек»): размытый тёмный фон → пауза → выезжает герой */
 .cam-ask { position: fixed; inset: 0; z-index: 45; display: flex; align-items: center; justify-content: center; padding: 16px; font-family: 'Factor A', system-ui, sans-serif;
   background: rgba(34, 28, 95, .72); -webkit-backdrop-filter: blur(12px); backdrop-filter: blur(12px); animation: ca-fade .5s ease backwards; }
-.ca-card { position: relative; width: min(100%, 480px); background: #fff; color: #221c5f; border-radius: 32px; box-shadow: 0 8px 0 #cbb7ff; padding: 40px 32px 32px;
+.ca-card { position: relative; width: min(100%, 480px); background: #fff; color: #221c5f; border-radius: 32px; box-shadow: 0 10px 0 #cbb7ff; padding: 40px 32px 32px;
   display: flex; flex-direction: column; align-items: stretch; gap: 12px; text-align: center; animation: ca-card .5s cubic-bezier(.22, 1, .36, 1) .8s backwards; }
 .cam-ask h2 { margin: 0; font-size: 32px; line-height: 40px; font-weight: 700; color: #221c5f; text-shadow: none; text-wrap: balance; }
 .cam-ask p { margin: 0; font-size: 22px; line-height: 30px; font-weight: 400; color: #221c5f; text-shadow: none; text-wrap: balance; }
@@ -835,7 +725,7 @@ body::before, body::after { animation: none; }
 button.pw-back:not(.level):not(.stop):not(.cube-btn) { position: absolute; top: max(16px, env(safe-area-inset-top)); left: max(16px, env(safe-area-inset-left)); z-index: 1; display: flex; align-items: center; justify-content: center; width: 48px; height: 48px; min-width: 0; min-height: 0; box-shadow: none; padding: 0; border: 0; border-radius: 50%; color: #fff; background: rgb(0 0 0 / 30%); cursor: pointer; appearance: none; }
 .pw-back svg { width: 28px; height: 28px; fill: none; stroke: currentcolor; stroke-width: 2.5; stroke-linecap: round; stroke-linejoin: round; }
 .cam-ask button.ca-btn:not(.level):not(.stop):not(.cube-btn):not(.x) { width: 100%; height: 64px; min-height: 64px; margin-top: 8px; padding: 16px 24px; border: 0; border-radius: 24px; background: #8a5eff; color: #fff;
-  font: 700 20px/24px 'Factor A', system-ui, sans-serif; box-shadow: 0 6px 0 #6e46da; cursor: pointer; }
+  font: 700 20px/24px 'Factor A', system-ui, sans-serif; box-shadow: 0 8px 0 #6e46da; cursor: pointer; }
 .cam-ask button.ca-btn:not(.level):not(.stop):not(.cube-btn):not(.x):active { transform: translateY(4px); box-shadow: 0 2px 0 #6e46da; }
 @media (min-width: 768px) {
   .ca-card { width: 560px; padding: 56px 48px 48px; gap: 16px; }
@@ -871,7 +761,7 @@ button.pw-back:not(.level):not(.stop):not(.cube-btn) { position: absolute; top: 
 .mp-track { display: block; height: 24px; margin: 8px 4px 4px; padding: 4px; border-radius: 999px; background: rgba(102, 211, 133, .2); overflow: hidden; }
 #app.screen-map .mp-track .loc-fill { display: block; }
 #app.screen-map .mp-track .loc-fill[style*="--w:0%"] { display: none; }
-#app.screen-map button.loc-play { background: #ff6170; box-shadow: 0 6px 0 #c1414d; }
+#app.screen-map button.loc-play { background: #ff6170; box-shadow: 0 8px 0 #c1414d; }
 #app.screen-map button.loc-play:active { box-shadow: 0 2px 0 #c1414d; }
 @media (min-width: 600px) {
   .mp-road { max-width: 480px; }
@@ -892,7 +782,7 @@ button.pw-back:not(.level):not(.stop):not(.cube-btn) { position: absolute; top: 
 #app.screen-map .loc-body { position: relative; z-index: 1; padding: 0 16px 32px; align-items: flex-start; }
 .mp-road { max-width: 720px; width: 100%; margin: 0 auto; display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; }
 .mp-path, .mp-decor { display: none; }
-#app.screen-map button.mp-tile, #app.screen-map button.mp-tile.left, #app.screen-map button.mp-tile.right { width: auto; align-self: stretch; justify-self: stretch; padding: 12px; gap: 12px; border-radius: 28px; box-shadow: 0 8px 0 #cbb7ff; }
+#app.screen-map button.mp-tile, #app.screen-map button.mp-tile.left, #app.screen-map button.mp-tile.right { width: auto; align-self: stretch; justify-self: stretch; padding: 12px; gap: 12px; border-radius: 28px; box-shadow: 0 10px 0 #cbb7ff; }
 #app.screen-map button.mp-tile:hover { box-shadow: 0 10px 0 #cbb7ff; }
 #app.screen-map button.mp-tile:active { box-shadow: 0 3px 0 #cbb7ff; }
 .mp .mp-win { flex: none; aspect-ratio: 1 / 0.92; border-radius: 16px; }
@@ -907,7 +797,7 @@ button.pw-back:not(.level):not(.stop):not(.cube-btn) { position: absolute; top: 
   .mp-bg-wide { display: block; } .mp-bg-tall { display: none; }
   #app.screen-map .loc-body { padding: 0 64px 64px; align-items: center; } /* на высоком экране сетка по центру, а не растягивается */
   .mp-road { max-width: 1312px; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 32px; }
-  #app.screen-map button.mp-tile, #app.screen-map button.mp-tile.left, #app.screen-map button.mp-tile.right { padding: 16px; gap: 16px; border-radius: 32px; box-shadow: 0 8px 0 #cbb7ff; }
+  #app.screen-map button.mp-tile, #app.screen-map button.mp-tile.left, #app.screen-map button.mp-tile.right { padding: 16px; gap: 16px; border-radius: 32px; box-shadow: 0 10px 0 #cbb7ff; }
   #app.screen-map button.mp-tile:hover { box-shadow: 0 10px 0 #cbb7ff; }
   #app.screen-map button.mp-tile:active { box-shadow: 0 3px 0 #cbb7ff; }
   #app.screen-map button.mp-tile, #app.screen-map button.mp-tile.left, #app.screen-map button.mp-tile.right { aspect-ratio: 1; align-self: start; } /* квадратные плашки: без растяжения по строке, иначе aspect-ratio не работает */
@@ -936,19 +826,19 @@ button.pw-back:not(.level):not(.stop):not(.cube-btn) { position: absolute; top: 
 /* Шапка карты: баланс бусин, счётчик бесплатных заданий и кнопка доступа */
 .mp-hud { position: absolute; left: 92px; right: 160px; top: calc(24px + var(--safe-top)); display: flex; flex-wrap: wrap; align-items: center; gap: 12px; z-index: 2; }
 .mp-chip { height: 56px; padding: 0 20px 0 16px; display: flex; align-items: center; gap: 10px; border-radius: 20px;
-  background: #fff; box-shadow: 0 6px 0 #cbb7ff; color: #221c5f; font: 700 24px/1 'Factor A', system-ui, sans-serif; }
+  background: #fff; box-shadow: 0 8px 0 #cbb7ff; color: #221c5f; font: 700 24px/1 'Factor A', system-ui, sans-serif; }
 .mp-hud2 { left: 24px; right: 24px; top: calc(96px + var(--safe-top)); flex-wrap: nowrap; }
-#app.screen-map button.mp-beads { width: auto; min-width: 0; min-height: 0; height: 56px; padding: 0 20px 0 16px; border: 0; border-radius: 20px; background: #fff; color: #221c5f; box-shadow: 0 6px 0 #cbb7ff; font: 700 24px/1 'Factor A', system-ui, sans-serif; cursor: pointer; }
+#app.screen-map button.mp-beads { width: auto; min-width: 0; min-height: 0; height: 56px; padding: 0 20px 0 16px; border: 0; border-radius: 20px; background: #fff; color: #221c5f; box-shadow: 0 8px 0 #cbb7ff; font: 700 24px/1 'Factor A', system-ui, sans-serif; cursor: pointer; }
 #app.screen-map button.mp-beads:active { transform: translateY(4px); box-shadow: 0 2px 0 #cbb7ff; }
 .mp-beads b { color: #7a4fe8; }
 .mp-free { padding: 0 18px; gap: 8px; }
 .mp-free span { font-size: 16px; line-height: 1.1; max-width: 110px; }
-#app.screen-map .mp-access { width: auto; flex: none; min-width: 0; min-height: 0; height: 56px; padding: 0 22px; border: 0; border-radius: 20px; background: #ff6170; box-shadow: 0 6px 0 #c2424f; color: #fff; font: 800 18px/1 'Factor A', system-ui, sans-serif; cursor: pointer; }
+#app.screen-map .mp-access { width: auto; flex: none; min-width: 0; min-height: 0; height: 56px; padding: 0 22px; border: 0; border-radius: 20px; background: #ff6170; box-shadow: 0 8px 0 #c2424f; color: #fff; font: 800 18px/1 'Factor A', system-ui, sans-serif; cursor: pointer; }
 #app.screen-map .mp-access:active { transform: translateY(4px); box-shadow: 0 2px 0 #c2424f; }
 .mp-beads .bead { width: 20px; height: 20px; border-radius: 50%; background: radial-gradient(circle at 35% 30%, #fff 0 12%, transparent 13%), linear-gradient(140deg, #b69cff, #7a4fe8); box-shadow: inset 0 -3px 0 rgba(60, 20, 150, .25); }
 
 /* «Купить игру» в левом нижнем углу карты: размер и стиль как у кнопки «Играть» */
-#app.screen-map .mp-buy { position: fixed; left: 24px; bottom: calc(24px + var(--safe-bottom, 0px)); z-index: 3; width: auto; min-width: 0; min-height: 64px; height: 64px; padding: 16px 32px; border: 0; border-radius: 24px; background: #ff6170; box-shadow: 0 6px 0 #bf3a47; color: #fff; font: 700 24px/1 'Factor A', system-ui, sans-serif; cursor: pointer; transition: transform .2s cubic-bezier(.22, 1, .36, 1), box-shadow .2s cubic-bezier(.22, 1, .36, 1); }
+#app.screen-map .mp-buy { position: fixed; left: 24px; bottom: calc(24px + var(--safe-bottom, 0px)); z-index: 3; width: auto; min-width: 0; min-height: 64px; height: 64px; padding: 16px 32px; border: 0; border-radius: 24px; background: #ff6170; box-shadow: 0 8px 0 #bf3a47; color: #fff; font: 700 24px/1 'Factor A', system-ui, sans-serif; cursor: pointer; transition: transform .2s cubic-bezier(.22, 1, .36, 1), box-shadow .2s cubic-bezier(.22, 1, .36, 1); }
 #app.screen-map .mp-buy:active { transform: translateY(4px); box-shadow: 0 2px 0 #bf3a47; }
 @media (min-width: 480px) { #app.screen-map .loc-body { padding-bottom: 120px; } } /* кнопка «Купить игру» внизу слева: карточки заканчиваются выше неё */
 
@@ -979,16 +869,280 @@ button.pw-back:not(.level):not(.stop):not(.cube-btn) { position: absolute; top: 
 }
 .loc-art.loc-room > * + * { margin-left: -1px; } /* стыки копий внахлёст: без светлой полоски на шве */
 /* Экран «Все найдено»: зверёнок места радуется в своей комнате */
-.done-room { position: relative; width: min(520px, 90vw); aspect-ratio: 368 / 200; border-radius: 28px; overflow: hidden; box-shadow: 0 8px 0 rgba(0, 0, 0, .18); flex: none; }
+.done-room { position: relative; width: min(520px, 90vw); aspect-ratio: 368 / 200; border-radius: 28px; overflow: hidden; box-shadow: 0 10px 0 rgba(0, 0, 0, .18); flex: none; }
 
 /* Закрытые места и стрелка-подсказка на главной */
 #app.screen-map button.mp-tile.locked { cursor: not-allowed; }
 .mp-tile.locked .mp-win { filter: grayscale(.85) brightness(.9); }
 .mp-tile.locked .mp-track { opacity: .5; }
-.mp-lock { position: absolute; right: -8px; top: -8px; width: 44px; height: 44px; border-radius: 50%; background: rgba(60, 40, 120, .72); display: grid; place-items: center; z-index: 2; pointer-events: none; }
-.mp-lock svg { width: 24px; height: 24px; }
 .mp-tile.shake { animation: mp-shake .45s ease; }
 @keyframes mp-shake { 0%, 100% { translate: 0; } 20% { translate: -8px; } 40% { translate: 8px; } 60% { translate: -5px; } 80% { translate: 5px; } }
-.tut-arrow { position: absolute; left: 50%; top: -44px; width: 44px; height: auto; translate: -50% 0; z-index: 3; pointer-events: none; animation: tut-bob 1.1s ease-in-out infinite; filter: drop-shadow(0 4px 0 rgba(110, 70, 218, .25)); }
-@keyframes tut-bob { 0%, 100% { translate: -50% 0; } 50% { translate: -50% 10px; } }
-@media (prefers-reduced-motion: reduce) { .mp-tile.shake, .tut-arrow { animation: none; } }
+@media (prefers-reduced-motion: reduce) { .mp-tile.shake { animation: none; } }
+
+/* Закрытые задания внутри места */
+#app.screen-loc button.loc-card.locked { cursor: not-allowed; }
+.loc-card.locked .loc-ico, .loc-card.locked > svg, .loc-card.locked > span { filter: grayscale(.9); opacity: .45; }
+.loc-card.shake { animation: mp-shake .45s ease; }
+@media (prefers-reduced-motion: reduce) { .loc-card.shake { animation: none; } }
+
+/* Камера на экране задания: видео прямо в карточке под текстом задания */
+.tk-card.tk-live { --tkico: 72px; --tkpad: 16px; display: flex; flex-direction: column; gap: 12px; padding: 16px; }
+.tk-live .tk-head { display: flex; align-items: center; gap: 12px; cursor: pointer; }
+.tk-live .tk-head .tk-ico { flex: none; }
+.tk-live .tk-head .tk-text { margin: 0; text-align: left; }
+.tk-cam { position: relative; width: 100%; aspect-ratio: 3 / 4; max-height: calc(100dvh - 250px); min-height: 260px; border-radius: 20px; overflow: hidden; background: #1a1235; line-height: 0; }
+.tk-cam .cam-video { position: absolute; inset: 0; width: 100%; height: 100%; max-width: none; max-height: none; object-fit: cover; border: 0; border-radius: 0; transform: none; animation: none; }
+.tk-cam .cam-boxes { position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none; }
+.tk-cam .cam-hint { position: absolute; z-index: 2; left: 8px; right: 8px; bottom: 8px; margin: 0; padding: 8px 12px; border-radius: 14px; background: rgba(26, 18, 53, .62); color: #fff; font-size: 16px; line-height: 20px; font-weight: 700; text-align: center; text-shadow: none; min-height: 0; }
+.tk-cam .cam-hint:empty, .tk-cam .cam-hint.quiet { display: none; }
+.tk-cam .cam-debug { position: absolute; z-index: 3; left: 4px; right: 4px; top: 4px; margin: 0; font-size: 10px; line-height: 12px; }
+
+/* Предмет узнан: зелёная подсветка карточки камеры и галочка, снимок уходит на проверку сам */
+.tk-cam::before { content: ''; position: absolute; inset: 0; z-index: 2; border-radius: 20px; box-shadow: inset 0 0 0 0 #22c55e; pointer-events: none; transition: box-shadow .35s ease; }
+.tk-cam.found::before { box-shadow: inset 0 0 0 10px #22c55e, inset 0 0 60px rgba(34, 197, 94, .55); animation: cam-found-glow 1s ease-out; }
+.tk-cam.found::after { content: ''; position: absolute; z-index: 3; left: 50%; top: 50%; width: 88px; height: 88px; translate: -50% -50%; border-radius: 50%; background: #22c55e url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='white' stroke-width='3.2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M5.5 12.5l4.2 4.2L18.5 7.6'/%3E%3C/svg%3E") center / 62% no-repeat; box-shadow: 0 6px 0 #15803d; animation: cam-found-pop .6s cubic-bezier(.22, 1.4, .36, 1) .15s backwards; }
+.tk-cam.found .cam-hint { background: rgba(21, 128, 61, .85); }
+@keyframes cam-found-glow { 0% { box-shadow: inset 0 0 0 0 #22c55e, inset 0 0 0 rgba(34, 197, 94, 0); } 40% { box-shadow: inset 0 0 0 14px #22c55e, inset 0 0 80px rgba(34, 197, 94, .7); } 100% { box-shadow: inset 0 0 0 10px #22c55e, inset 0 0 60px rgba(34, 197, 94, .55); } }
+@keyframes cam-found-pop { from { scale: 0; opacity: 0; } }
+@media (prefers-reduced-motion: reduce) { .tk-cam.found::before, .tk-cam.found::after { animation: none; } }
+@media (max-width: 479px) { /* на телефоне звёзды на экране находки поменьше */
+  .tk-stars { height: 52px; }
+  .tk-stars-svg { width: 143px; height: 53px; }
+}
+
+/* Экран с камерой: сверху без питомца, только кнопки и задание; камера занимает всё остальное */
+#app.screen-tk.tk-task .loc-head { height: 88px; background: var(--lbg); }
+#app.screen-tk.tk-task .loc-head .loc-art, #app.screen-tk.tk-task .loc-head .loc-fx { display: none; }
+#app.screen-tk.tk-task .tk-card.tk-live { padding: 16px; }
+#app.screen-tk.tk-task .tk-cam { aspect-ratio: auto; max-height: none; height: calc(100dvh - 275px); min-height: 260px; } /* камера тянется до низа экрана */
+/* Задание над камерой: иконка сверху по центру, текст по центру; отступы от края белой карточки 16px, на десктопе 32px */
+.tk-live .tk-head { flex-direction: column; justify-content: center; gap: 8px; text-align: center; }
+.tk-live .tk-head .tk-text { text-align: center; }
+#app.screen-tk.tk-task .tk-card.tk-live { padding: 16px; --tkico: 72px; }
+#app.screen-tk.tk-task .tk-cam { height: calc(100dvh - 330px); }
+@media (min-width: 900px) {
+  #app.screen-tk.tk-task .tk-card.tk-live { padding: 32px; gap: 16px; }
+  #app.screen-tk.tk-task .tk-cam { height: calc(100dvh - 400px); }
+}
+/* Иконка предмета над камерой крупнее */
+#app.screen-tk.tk-task .tk-card.tk-live { --tkico: 112px; }
+#app.screen-tk.tk-task .tk-cam { height: calc(100dvh - 370px); }
+@media (min-width: 900px) {
+  #app.screen-tk.tk-task .tk-card.tk-live { --tkico: 144px; }
+  #app.screen-tk.tk-task .tk-cam { height: calc(100dvh - 472px); }
+}
+/* Больше воздуха между заданием и камерой, текст задания на телефоне крупнее */
+#app.screen-tk.tk-task .tk-card.tk-live { gap: 24px; }
+#app.screen-tk.tk-task .tk-live .tk-head .tk-text { font-size: 28px; line-height: 34px; }
+#app.screen-tk.tk-task .tk-cam { height: calc(100dvh - 412px); }
+@media (min-width: 900px) {
+  #app.screen-tk.tk-task .tk-card.tk-live { gap: 32px; }
+  #app.screen-tk.tk-task .tk-live .tk-head .tk-text { font-size: 40px; line-height: 48px; }
+  #app.screen-tk.tk-task .tk-cam { height: calc(100dvh - 500px); }
+}
+/* Камера занимает всё место под заданием, каким бы длинным ни был текст */
+#app.screen-tk.tk-task .tk-card.tk-live { min-height: calc(100dvh - 128px); }
+#app.screen-tk.tk-task .tk-cam { height: auto; flex: 1 1 200px; min-height: 200px; }
+@media (min-width: 900px) { #app.screen-tk.tk-task .tk-cam { height: auto; } }
+/* Иконка предмета над камерой чуть меньше */
+#app.screen-tk.tk-task .tk-card.tk-live { --tkico: 88px; }
+@media (min-width: 900px) { #app.screen-tk.tk-task .tk-card.tk-live { --tkico: 112px; } }
+
+/* Камера на телефоне (макет «Камера»): кадр на весь экран, кнопки поверх него, задание — белая панель снизу */
+@media (max-width: 599px) {
+  #app.screen-tk.tk-task .loc-head { position: absolute; top: 0; left: 0; right: 0; z-index: 5; height: 88px; background: transparent; overflow: visible; }
+  #app.screen-tk.tk-task .tk-card.tk-live { display: contents; }
+  #app.screen-tk.tk-task .tk-cam { position: fixed; inset: 0; z-index: 0; width: auto; height: auto; min-height: 0; max-height: none; border-radius: 0; flex: none; }
+  #app.screen-tk.tk-task .tk-cam::before { border-radius: 0; }
+  #app.screen-tk.tk-task .tk-cam .cam-hint { top: 96px; bottom: auto; }
+  #app.screen-tk.tk-task .tk-live .tk-head { position: fixed; z-index: 4; left: 0; right: 0; bottom: 0; max-width: 600px; margin: 0 auto; padding: 32px; gap: 16px; background: #fff; border-radius: 32px 32px 0 0; box-shadow: 0 10px 0 #cbb7ff; }
+  #app.screen-tk.tk-task .tk-card.tk-live { --tkico: 108px; }
+  #app.screen-tk.tk-task .tk-live .tk-head .tk-text { font-size: 28px; line-height: 36px; color: #221c5f; }
+  #app.screen-tk.tk-task .loc-head { --lbtn: #7a5ad0; --lbtns: #977eda; }
+}
+
+/* Кнопки «назад», звук и «на весь экран» на десктопе крупнее */
+@media (min-width: 900px) {
+  #app.screen-loc button.loc-btn { top: calc(32px + var(--safe-top)); width: 72px; min-width: 72px; height: 72px; min-height: 72px; border-radius: 24px; }
+  #app.screen-loc .loc-btn .loc-i { width: 32px; height: 32px; }
+  #app.screen-loc #back { left: 32px; }
+  #app.screen-loc .loc-tools .loc-btn { right: 32px; }
+  #app.screen-loc .loc-tools #snd { right: 116px; }
+}
+
+/* Экран места: внизу больше нет большой кнопки, последнему ряду карточек нужен запас под тень */
+#app.screen-loc:not(.screen-map):not(.screen-tk) .loc-body { padding-bottom: calc(48px + env(safe-area-inset-bottom, 0px)); }
+
+/* Экран «нет доступа к камере»: «назад» такого же размера, как на остальных экранах */
+@media (min-width: 900px) {
+  .cam-problem button.cp-back:not(.level):not(.stop):not(.cube-btn):not(.x) { top: calc(32px + env(safe-area-inset-top, 0px)); left: 32px; width: 72px; min-width: 72px; height: 72px; min-height: 72px; border-radius: 24px; }
+  .cam-problem button.cp-back .loc-i { width: 32px; height: 32px; }
+  .cam-problem button.cp-btn:not(.level):not(.stop):not(.cube-btn):not(.x) { height: 72px; min-height: 72px; font-size: 26px; line-height: 30px; }
+}
+
+/* Главная на десктопе: кнопки вверху стали крупнее (72px), карточки начинаются ниже них */
+@media (min-width: 900px) { .mp .mp-head { height: 144px; } }
+
+/* Круглее углы у кнопок «назад», звук и «на весь экран» */
+#app.screen-loc button.loc-btn, .cam-problem button.cp-back:not(.level):not(.stop):not(.cube-btn):not(.x) { border-radius: 24px; }
+@media (min-width: 900px) {
+  #app.screen-loc button.loc-btn, .cam-problem button.cp-back:not(.level):not(.stop):not(.cube-btn):not(.x) { border-radius: 32px; }
+}
+
+/* Углы у кнопок «назад», звук и «на весь экран» чуть меньше */
+#app.screen-loc button.loc-btn, .cam-problem button.cp-back:not(.level):not(.stop):not(.cube-btn):not(.x) { border-radius: 16px; }
+@media (min-width: 900px) {
+  #app.screen-loc button.loc-btn, .cam-problem button.cp-back:not(.level):not(.stop):not(.cube-btn):not(.x) { border-radius: 20px; }
+}
+
+/* Иконки в кнопках «назад», звук и «на весь экран» крупнее */
+#app.screen-loc .loc-btn .loc-i, .cam-problem button.cp-back .loc-i { width: 32px; height: 32px; }
+@media (min-width: 900px) {
+  #app.screen-loc .loc-btn .loc-i, .cam-problem button.cp-back .loc-i { width: 40px; height: 40px; }
+}
+
+/* Скругление кнопок «назад», звук и «на весь экран» больше прежнего */
+#app.screen-loc button.loc-btn, .cam-problem button.cp-back:not(.level):not(.stop):not(.cube-btn):not(.x) { border-radius: 20px; }
+@media (min-width: 900px) {
+  #app.screen-loc button.loc-btn, .cam-problem button.cp-back:not(.level):not(.stop):not(.cube-btn):not(.x) { border-radius: 28px; }
+}
+
+/* При наведении мыши кнопки вжимаются, как при нажатии */
+@media (hover: hover) {
+  #app.screen-loc button.loc-btn:hover { transform: translateY(4px); box-shadow: 0 2px 0 var(--lbtns); }
+  .cam-problem button.cp-back:not(.level):not(.stop):not(.cube-btn):not(.x):hover { transform: translateY(4px); box-shadow: 0 2px 0 #977eda; }
+  .cam-problem button.cp-btn:not(.level):not(.stop):not(.cube-btn):not(.x):hover { transform: translateY(4px); box-shadow: 0 2px 0 #6e46da; }
+}
+
+/* Карточки при наведении вжимаются, как при нажатии, и не светлеют */
+@media (hover: hover) {
+  button:hover:not(:disabled) { filter: none; }
+  #app.screen-loc button.loc-card:not(.locked):hover { transform: translateY(5px); box-shadow: 0 3px 0 var(--lshadow); }
+  #app.screen-map button.mp-tile:not(.locked):hover { transform: translateY(4px); box-shadow: 0 3px 0 #cbb7ff; }
+  :is(#app, .ghost) button.sticker:hover { transform: rotate(var(--tilt, 0deg)) translateY(3px); box-shadow: 0 2px 0 rgba(10, 5, 40, .3); }
+}
+
+/* Экран с камерой на десктопе: шапка выше, чтобы крупные кнопки (72px и тень) не обрезались */
+@media (min-width: 900px) {
+  #app.screen-tk.tk-task .loc-head { height: 144px; }
+  #app.screen-tk.tk-task .tk-card.tk-live { min-height: calc(100dvh - 184px); }
+}
+
+/* Нажатие и наведение вжимают кнопки и карточки до конца: сдвиг равен высоте тени, тени не остаётся */
+#app.screen-loc button.loc-btn:active, #app.screen-loc button.loc-play:active { transform: translateY(8px); box-shadow: 0 0 0 transparent; }
+#app.screen-loc button.loc-card:not(.locked):active { transform: translateY(10px); box-shadow: 0 0 0 transparent; }
+#app.screen-map button.mp-tile:not(.locked):active { transform: translateY(10px); box-shadow: 0 0 0 transparent; }
+.cam-problem button.cp-back:not(.level):not(.stop):not(.cube-btn):not(.x):active, .cam-problem button.cp-btn:not(.level):not(.stop):not(.cube-btn):not(.x):active { transform: translateY(8px); box-shadow: 0 0 0 transparent; }
+:is(#app, .ghost) button.sticker:active { transform: rotate(var(--tilt, 0deg)) translateY(7px); box-shadow: 0 0 0 transparent; }
+@media (hover: hover) {
+  #app.screen-loc button.loc-btn:hover { transform: translateY(8px); box-shadow: 0 0 0 transparent; }
+  #app.screen-loc button.loc-card:not(.locked):hover { transform: translateY(10px); box-shadow: 0 0 0 transparent; }
+  #app.screen-map button.mp-tile:not(.locked):hover { transform: translateY(10px); box-shadow: 0 0 0 transparent; }
+  .cam-problem button.cp-back:not(.level):not(.stop):not(.cube-btn):not(.x):hover, .cam-problem button.cp-btn:not(.level):not(.stop):not(.cube-btn):not(.x):hover { transform: translateY(8px); box-shadow: 0 0 0 transparent; }
+  :is(#app, .ghost) button.sticker:hover { transform: rotate(var(--tilt, 0deg)) translateY(7px); box-shadow: 0 0 0 transparent; }
+}
+
+/* Карточки мест на главной круглее */
+#app.screen-map button.mp-tile, #app.screen-map button.mp-tile.left, #app.screen-map button.mp-tile.right { border-radius: 20px; }
+.mp .mp-win { border-radius: 12px; }
+@media (min-width: 480px) { #app.screen-map button.mp-tile, #app.screen-map button.mp-tile.left, #app.screen-map button.mp-tile.right { border-radius: 36px; } .mp .mp-win { border-radius: 24px; } }
+@media (min-width: 900px) { #app.screen-map button.mp-tile, #app.screen-map button.mp-tile.left, #app.screen-map button.mp-tile.right { border-radius: 40px; } .mp .mp-win { border-radius: 28px; } }
+
+/* Экран с камерой на десктопе: белая карточка с заданием по центру экрана, кнопки поверх */
+@media (min-width: 900px) {
+  #app.screen-tk.tk-task .loc-head { position: absolute; top: 0; left: 0; right: 0; z-index: 5; height: 144px; background: transparent; overflow: visible; }
+  #app.screen-tk.tk-task .loc-body { align-items: center; padding: 120px 24px; }
+  #app.screen-tk.tk-task .tk-card.tk-live { min-height: 420px; height: calc(100dvh - 240px); }
+}
+
+/* Десктоп: верхние кнопки в 16px от краёв экрана */
+@media (min-width: 900px) {
+  #app.screen-loc button.loc-btn { top: calc(16px + var(--safe-top)); }
+  #app.screen-loc #back { left: 16px; }
+  #app.screen-loc .loc-tools .loc-btn { right: 16px; }
+  #app.screen-loc .loc-tools #snd { right: 100px; }
+  .cam-problem button.cp-back:not(.level):not(.stop):not(.cube-btn):not(.x) { top: calc(16px + env(safe-area-inset-top, 0px)); left: 16px; }
+}
+
+/* Остальные кнопки тоже вжимаются до конца (тень выросла на 2px) */
+.cam-ask button.ca-btn:not(.level):not(.stop):not(.cube-btn):not(.x):active, #app.screen-map .mp-access:active, #app.screen-map .mp-buy:active, #app.screen-map button.mp-beads:active { transform: translateY(8px); box-shadow: 0 0 0 transparent; }
+#app.screen-map button.loc-play:active { transform: translateY(8px); box-shadow: 0 0 0 transparent; }
+
+/* Десктоп: верхние кнопки в 24px от краёв экрана */
+@media (min-width: 900px) {
+  #app.screen-loc button.loc-btn { top: calc(24px + var(--safe-top)); }
+  #app.screen-loc #back { left: 24px; }
+  #app.screen-loc .loc-tools .loc-btn { right: 24px; }
+  #app.screen-loc .loc-tools #snd { right: 108px; }
+  .cam-problem button.cp-back:not(.level):not(.stop):not(.cube-btn):not(.x) { top: calc(24px + env(safe-area-inset-top, 0px)); left: 24px; }
+}
+
+/* Подсказка «сюда нажми»: цель пульсирует (стрелок больше нет) */
+@keyframes pulse-scale { 0%, 100% { scale: 1; } 50% { scale: 1.1; } }
+#app.screen-map button.mp-tile.pulse:not(.locked) { animation: pulse-scale 1s ease-in-out infinite; }
+#app.screen-loc button.loc-card.pulse { animation: loc-pop .8s cubic-bezier(.22, 1, .36, 1) backwards, pulse-scale 1s ease-in-out 1.2s infinite; animation-delay: calc(var(--i, 0) * 90ms + 200ms), 1.2s; }
+#app.screen-loc button.loc-play.pulse { animation: pulse-scale 1s ease-in-out infinite; }
+@media (prefers-reduced-motion: reduce) {
+  #app.screen-map button.mp-tile.pulse, #app.screen-loc button.loc-card.pulse, #app.screen-loc button.loc-play.pulse { animation: none; }
+}
+
+/* Экран «Загружаем игру»: во весь экран, полоска как на экране места */
+.loading-screen { position: fixed; inset: 0; z-index: 80; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 32px;
+  padding: 24px; background: #fff; --lfill: #66d385; animation: ca-fade .3s ease backwards; }
+.loading-screen h2 { margin: 0; font-size: 28px; line-height: 36px; font-weight: 700; color: #221c5f; text-align: center; text-shadow: none; }
+.loading-screen .loc-track { background: #e9e0ff; }
+.loading-screen .loc-progress { width: min(100%, 560px); }
+.loading-screen .loc-fill { width: var(--w, 0%); transition: width .25s ease-out; animation: loc-stripes 2.4s linear infinite; }
+.loading-screen .loc-fill[style*="--w:0%"] { display: block; width: 0; }
+@media (min-width: 900px) { .loading-screen h2 { font-size: 40px; line-height: 48px; } }
+
+/* Запрос камеры по макету «Саундчек» (то же, что для микрофона) */
+.perm-ask { position: fixed; inset: 0; z-index: 45; font-family: 'Factor A', system-ui, sans-serif; background: rgba(34, 28, 95, .55);
+  -webkit-backdrop-filter: blur(10px); backdrop-filter: blur(10px); animation: ca-fade .3s ease backwards; }
+.perm-ask h2, .perm-ask p { margin: 0; text-shadow: none; letter-spacing: 0; color: #221c5f; }
+/* компьютер: лиса показывает указкой на окошко браузера, карточка внизу (в Safari вверху) */
+.pm-fox { position: absolute; display: block; max-width: none; pointer-events: none; }
+.pm-fox-left { left: 0; top: 0; width: 230px; height: 477px; }
+.pm-fox-right { right: 0; top: 0; width: 230px; height: 477px; }
+.pm-fox-center { left: 134px; bottom: 0; width: 405px; height: 428px; }
+.pm-card { position: absolute; left: 50%; bottom: 0; transform: translateX(-50%); width: min(896px, calc(100% - 32px)); height: 194px; box-sizing: border-box;
+  padding: 40px 24px; background: #fff; border-radius: 32px 32px 0 0; display: flex; flex-direction: column; align-items: center; gap: 7px; text-align: center;
+  animation: pm-rise .45s cubic-bezier(.22, 1, .36, 1) .15s backwards; }
+.pm-side-center .pm-card { top: 0; bottom: auto; border-radius: 0 0 32px 32px; animation-name: pm-drop; }
+.perm-ask .pm-card h2 { font-size: 44px; line-height: normal; font-weight: 700; white-space: nowrap; }
+.perm-ask .pm-card p { display: flex; align-items: center; gap: 12px; font-size: 24px; line-height: 32px; font-weight: 400; white-space: nowrap; }
+.pm-tag { background: #ffed72; border-radius: 16px; padding: 5px 10px; }
+@media (max-width: 1000px) { .perm-ask .pm-card h2 { font-size: 36px; } .perm-ask .pm-card p { font-size: 20px; line-height: 28px; } }
+@keyframes pm-rise { from { opacity: 0; transform: translate(-50%, 24px); } }
+@keyframes pm-drop { from { opacity: 0; transform: translate(-50%, -24px); } }
+/* телефон: карточка с лисой и кнопкой «Далее» по центру */
+.pm-mobile { display: flex; align-items: center; justify-content: center; }
+.pm-mcard { position: relative; width: min(413px, calc(100% - 32px)); box-sizing: border-box; padding: 32px 42px; background: #fff; border-radius: 35px;
+  display: flex; flex-direction: column; align-items: center; gap: 12px; text-align: center; transform: translateY(144px); animation: pm-pop .45s cubic-bezier(.22, 1, .36, 1) .1s backwards; }
+.pm-fox-mobile { position: absolute; left: 50%; bottom: 100%; width: 268px; height: 288px; max-width: none; transform: translateX(-50%); pointer-events: none; }
+.perm-ask .pm-mcard h2 { font-size: 36px; line-height: 42px; font-weight: 700; color: rgba(9, 21, 38, .85); text-wrap: balance; }
+.perm-ask .pm-mcard p { font-size: 20px; line-height: 24px; font-weight: 400; margin-bottom: 12px; }
+.perm-ask .pm-mcard p b { font-weight: 700; }
+.perm-ask button.pm-next:not(.level):not(.stop):not(.cube-btn):not(.x) { position: relative; width: 208px; min-width: 0; height: 80px; min-height: 0; padding: 0; border: 0; border-radius: 24px; overflow: hidden;
+  background: none; box-shadow: none; cursor: pointer; font: 700 24px/32px 'Factor A', system-ui, sans-serif; color: #fff; text-shadow: none; }
+.pm-next i { position: absolute; left: 0; right: 0; height: 72px; border-radius: 24px; }
+.pm-next-shadow { top: 8px; background: #4cbc6c; }
+.pm-next-bg { top: 0; background: #66d385; }
+.pm-next span { position: absolute; left: 0; right: 0; top: 20px; text-align: center; }
+.perm-ask button.pm-next:not(.level):not(.stop):not(.cube-btn):not(.x):active { transform: translateY(8px); }
+.pm-next:active .pm-next-shadow { opacity: 0; }
+@media (hover: hover) { .perm-ask button.pm-next:not(.level):not(.stop):not(.cube-btn):not(.x):hover { transform: translateY(8px); } .pm-next:hover .pm-next-shadow { opacity: 0; } }
+.pm-next:focus-visible { outline: 4px solid #fde68a; outline-offset: 4px; }
+@keyframes pm-pop { from { opacity: 0; transform: translateY(168px); } }
+@media (max-height: 700px) { .pm-mcard { transform: translateY(115px) scale(.8); } }
+@media (max-height: 560px) { .pm-mcard { transform: translateY(86px) scale(.6); } }
+@media (max-height: 440px) { .pm-mcard { transform: translateY(65px) scale(.45); } }
+@media (max-width: 440px) { .pm-mcard { padding: 32px 20px; } .perm-ask .pm-mcard h2 { font-size: 32px; line-height: 38px; } }
+@media (prefers-reduced-motion: reduce) { .perm-ask, .pm-card, .pm-mcard { animation: none; } }
+/* Десктоп: камера и задание крупнее */
+@media (min-width: 900px) {
+  #app.screen-tk.tk-task .loc-box { max-width: min(960px, 100%); }
+  #app.screen-tk.tk-task .loc-body { padding: 104px 24px 32px; }
+  #app.screen-tk.tk-task .tk-card.tk-live { --tkico: 120px; padding: 32px; gap: 24px; min-height: calc(100dvh - 136px); }
+  #app.screen-tk.tk-task .tk-live .tk-head .tk-text { font-size: 44px; line-height: 52px; max-width: none; }
+}

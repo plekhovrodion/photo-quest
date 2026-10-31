@@ -8,16 +8,13 @@ export interface Beads {
 export type Claim = 'ok' | 'insufficient' | 'offline';
 
 let beads: Beads = { cost: 0 };
-const listeners = new Set<(b: Beads) => void>();
 
 export const getBeads = (): Beads => beads;
-export const onBeads = (fn: (b: Beads) => void) => { listeners.add(fn); return () => { listeners.delete(fn); }; };
 
 // Принять состояние бусин из ответа сервера (поля beads_cost и beads_remaining)
 export function applyBeads(data: { beads_cost?: number; beads_remaining?: number } | null | undefined): void {
   if (!data) return;
   beads = { cost: data.beads_cost ?? 0, remaining: data.beads_remaining };
-  listeners.forEach((fn) => fn(beads));
 }
 
 // Можно ли открыть задание: найденные открыты всегда, новое только если бусин хватает (неизвестный баланс не мешает играть)

@@ -15,6 +15,7 @@ export default defineConfig(({ mode }) => {
         // Телефон ходит только на Vite; запросы к API проксируются на бэкенд photo-quest-api (как шлюз Учи: префикс /photo_quest срезается).
         proxy: { '/photo_quest/api': { target: process.env.API_PROXY_TARGET || 'http://localhost:8081', rewrite: (p: string) => p.replace(/^\/photo_quest/, '') } },
       },
+      build: { rollupOptions: { input: { main: 'index.html', demo: 'demo.html' } } },
       preview: { host: true, port: 4173, allowedHosts },
     }
 });

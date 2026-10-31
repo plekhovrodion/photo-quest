@@ -1,20 +1,14 @@
-import type { Prediction } from './labels';
-
 // Модели лежат в public/models (скачаны с официальных адресов Google), поэтому грузятся с нашего же сайта:
 // быстро, кэшируются браузером и работают без интернета.
 const BASE = import.meta.env.BASE_URL ?? '/';
 export const COCO_URL = `${BASE}models/ssdlite_mobilenet_v2/model.json`;
-export const MOBILENET_URL = `${BASE}models/mobilenet_v2/model.json`;
 
 export interface CocoModel {
   detect(img: HTMLVideoElement | HTMLCanvasElement, maxBoxes?: number, minScore?: number): Promise<Array<{ bbox: number[]; class: string; score: number }>>;
 }
-export interface MobilenetModel {
-  classify(img: HTMLCanvasElement | HTMLVideoElement, topk: number): Promise<Prediction[]>;
-}
 
-export interface ModelStatus { coco: number; mobilenet: number; backend: string }
-const status: ModelStatus = { coco: 0, mobilenet: 0, backend: '' };
+export interface ModelStatus { coco: number; clip: number; backend: string }
+const status: ModelStatus = { coco: 0, clip: 0, backend: '' };
 const listeners = new Set<(s: ModelStatus) => void>();
 const emit = () => listeners.forEach((l) => l({ ...status }));
 
@@ -25,8 +19,31 @@ export function onModelStatus(cb: (s: ModelStatus) => void): () => void {
   return () => { listeners.delete(cb); };
 }
 
+// Скачиваем один файл с подсчётом процентов (для CLIP) и отдаём его байты.
+export async function fetchWithProgress(url: string, key: 'clip'): Promise<ArrayBuffer> {
+  const res = await fetch(url);
+  if (!res.ok) throw new Error(`${url}: ${res.status}`);
+  const total = Number(res.headers.get('content-length')) || 0;
+  const reader = res.body?.getReader();
+  if (!reader) return res.arrayBuffer();
+  const chunks: Uint8Array[] = [];
+  let got = 0;
+  for (;;) {
+    const { done, value } = await reader.read();
+    if (done) break;
+    chunks.push(value);
+    got += value.length;
+    if (total) { status[key] = Math.min(0.95, got / total); emit(); }
+  }
+  const out = new Uint8Array(got);
+  let at = 0;
+  for (const c of chunks) { out.set(c, at); at += c.length; }
+  return out.buffer;
+}
+export function setClipReady(): void { status.clip = 1; emit(); }
+
 // Скачиваем model.json и все куски весов с подсчётом процентов; потом загрузчик tfjs берёт их из кэша браузера.
-async function prefetch(modelUrl: string, key: 'coco' | 'mobilenet'): Promise<void> {
+async function prefetch(modelUrl: string, key: 'coco'): Promise<void> {
   const base = modelUrl.slice(0, modelUrl.lastIndexOf('/') + 1);
   const manifest = await (await fetch(modelUrl)).json();
   const paths: string[] = manifest.weightsManifest.flatMap((g: { paths: string[] }) => g.paths);
@@ -84,25 +101,34 @@ export function loadCoco(): Promise<CocoModel> {
   return cocoP;
 }
 
-let mnP: Promise<MobilenetModel> | null = null;
-export function loadMobilenet(): Promise<MobilenetModel> {
-  mnP ??= (async () => {
-    const [, mobilenet] = await Promise.all([loadTf().then(() => prefetch(MOBILENET_URL, 'mobilenet')), import('@tensorflow-models/mobilenet')]);
-    const model = (await mobilenet.load({ version: 2, alpha: 1.0, modelUrl: MOBILENET_URL })) as unknown as MobilenetModel;
-    try { await model.classify(blank(224, 224), 1); } catch { /* прогрев не обязателен */ }
-    status.mobilenet = 1;
-    emit();
-    return model;
-  })();
-  mnP.catch(() => { mnP = null; status.mobilenet = 0; emit(); });
-  return mnP;
+// Слабое соединение или режим экономии трафика: тяжёлую модель CLIP (~90 МБ) не качаем, проверка идёт на лёгких моделях.
+export function heavyModelsAllowed(): boolean {
+  const c = (navigator as Navigator & { connection?: { saveData?: boolean; effectiveType?: string }; deviceMemory?: number });
+  if (c.connection?.saveData) return false;
+  if (c.connection?.effectiveType && c.connection.effectiveType !== '4g') return false;
+  if (c.deviceMemory !== undefined && c.deviceMemory < 4) return false;
+  return true;
 }
 
-// Запускаем загрузку обеих моделей в фоне (при старте игры и при входе в категорию).
+// Запускаем загрузку моделей в фоне (при старте игры и при входе в категорию).
 export function preloadModels(withClip = true): void {
-  // CLIP тяжелее (~90 МБ) и запускается на основном потоке, поэтому грузится после лёгких моделей и только когда игрок уже в игре.
-  // Он необязателен: без него проверка работает на MobileNet и COCO.
-  const light = Promise.all([loadMobilenet(), loadCoco()]);
-  if (withClip) light.then(() => import('./clip')).then((m) => m.loadClip()).catch(() => {});
+  // CLIP тяжелее (~90 МБ), поэтому грузится после лёгкого детектора и только когда игрок уже в игре.
+  // Он необязателен: без него проверка работает на COCO.
+  const light = loadCoco();
+  if (withClip && heavyModelsAllowed()) light.then(() => import('./clip')).then((m) => m.loadClip()).catch(() => {});
   else light.catch(() => {});
+}
+
+// Всё нужное для проверки фото уже загружено (CLIP нужен только там, где он разрешён).
+export const modelsReady = (): boolean => status.coco >= 1 && (!heavyModelsAllowed() || status.clip >= 1);
+
+// Грузит обе модели и сообщает общий прогресс 0…1 (по размеру файлов: COCO ~18 МБ, CLIP ~89 МБ). Ошибки не бросает:
+// игра работает и с тем, что удалось загрузить.
+export async function whenModelsReady(onProgress: (p: number) => void): Promise<void> {
+  const clipOn = heavyModelsAllowed();
+  const off = onModelStatus((s) => onProgress(clipOn ? 0.17 * s.coco + 0.83 * s.clip : s.coco));
+  try {
+    await loadCoco().catch(() => {});
+    if (clipOn) await import('./clip').then((m) => m.loadClip()).catch(() => {});
+  } finally { off(); }
 }

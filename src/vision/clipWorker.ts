@@ -12,14 +12,13 @@ const normalize = (v: Float32Array): Float32Array => {
   return v.map((x) => x / n);
 };
 
-self.onmessage = async (e: MessageEvent<{ type: 'init'; modelUrl: string } | { type: 'run'; id: number; pixels: Float32Array }>) => {
+self.onmessage = async (e: MessageEvent<{ type: 'init'; bytes: ArrayBuffer } | { type: 'run'; id: number; pixels: Float32Array }>) => {
   const m = e.data;
   try {
     if (m.type === 'init') {
       ort.env.wasm.wasmPaths = { wasm: wasmUrl };
       ort.env.wasm.numThreads = 1;
-      const bytes = await fetch(m.modelUrl).then((r) => r.arrayBuffer());
-      session = await ort.InferenceSession.create(new Uint8Array(bytes), { executionProviders: ['wasm'] });
+      session = await ort.InferenceSession.create(new Uint8Array(m.bytes), { executionProviders: ['wasm'] });
       await session.run({ pixel_values: new ort.Tensor('float32', new Float32Array(3 * SIZE * SIZE), [1, 3, SIZE, SIZE]) }); // прогрев
       (self as unknown as Worker).postMessage({ type: 'ready' });
     } else if (session) {

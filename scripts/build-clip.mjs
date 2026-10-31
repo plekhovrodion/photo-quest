@@ -5,7 +5,7 @@
 import { mkdirSync, writeFileSync, copyFileSync, readdirSync, statSync } from 'node:fs';
 import { join } from 'node:path';
 import { env, AutoTokenizer, CLIPTextModelWithProjection } from '@huggingface/transformers';
-import { CLIP_OBJECTS, clipPrompt } from '../src/data/clip.ts';
+import { CLIP_OBJECTS } from '../src/data/clip.ts';
 
 const ID = 'Xenova/clip-vit-base-patch32';
 const OUT = 'public/models/clip';

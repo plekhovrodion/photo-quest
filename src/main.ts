@@ -1,14 +1,15 @@
 import './style.css';
-import { LEVELS, type Level, type Task } from './data/tasks';
+import { LEVELS, ICON_INDEX, ICON_ABS, type Level, type Task } from './data/tasks';
 import { createGame, currentTask, reduce, STARS_PER_TASK, type Action, type GameState } from './game/state';
-import { PRAISE, INTRO_EN, TRY_AGAIN, TROUBLE, LEVEL_DONE, LOCKED_HINT, type Phrase, HINT_PLACE, HINT_ITEM, pickPhrase } from './data/phrases';
+import { PRAISE, INTRO_EN, TRY_AGAIN, TROUBLE, LEVEL_DONE, LOCKED_HINT, TASK_LOCKED, TASK_AIM, type Phrase, HINT_PLACE, HINT_ITEM, pickPhrase } from './data/phrases';
 import { starsSvg } from './ui/stars';
-import { takePhoto, compressPhoto } from './camera/capture';
+import { takePhoto, compressPhoto, stopCamera, type Captured } from './camera/capture';
 import { targetOf } from './camera/target';
+import { ensureModelsLoaded } from './ui/loading';
 import { verifyPhoto } from './api/verify';
 import { COLOR_RU } from './vision/names';
 import { englishFor } from './data/english';
-import { preloadModels } from './vision/models';
+import { preloadModels, heavyModelsAllowed } from './vision/models';
 import { confetti, confettiBehind } from './fx/confetti';
 import { typeText, stopTyping } from './fx/typewriter';
 import { speak, speakEnglish, stopSpeech, isMuted, setMuted } from './audio/sounds';
@@ -79,6 +80,7 @@ let quietNext = false;
 let lastShown = ''; // что нарисовано сейчас: если экран перерисовывается тем же (например, возврат с камеры), он не листается заново
 let screenSeq = 0;
 function show(html: string, cls = '') {
+  stopCamera(); // экран перерисовывается: живая камера прежнего экрана закрывается
   stopTyping();
   const dir = navDir;
   navDir = 'fwd';
@@ -157,11 +159,30 @@ function finishTask(): boolean {
   return res.levelDone;
 }
 
-async function capture() {
-  const task = currentTask(state!)!;
+// Живая камера открыта прямо на экране задания, кнопки нет: предмет узнан — камера снимает сама.
+// Если камеру не включили (отказ, нет https), возвращаем к заданиям места.
+let camOn = false;
+async function openCamera(task: Task) {
+  const host = root.querySelector<HTMLElement>('#tkcam');
+  if (!host) return;
+  camOn = true;
+  const target = targetOf(task);
+  // Нейросети (~100 МБ) могли не успеть загрузиться: показываем «Загружаем игру» с полоской и только потом включаем камеру
+  if (target.words?.length || !target.color) await ensureModelsLoaded();
+  if (!host.isConnected) { camOn = false; return; } // пока грузилось, ребёнок ушёл с экрана
+  void takePhoto(target, host).then((cap) => {
+    camOn = false;
+    if (!cap) {
+      if (!host.isConnected) return;
+      toMap(); // камеры нет (отказ, нет https): играть нечем, возвращаем ребёнка к заданиям места
+      return;
+    }
+    void processCapture(task, cap);
+  });
+}
+
+async function processCapture(task: Task, cap: Captured) {
   dispatch({ type: 'start-camera' });
-  const cap = await takePhoto(targetOf(task));
-  if (!cap) return dispatch({ type: 'cancel-camera' });
   // живая камера уже вырезала предмет или отдала целый кадр
   const wasCropped = cap.cropped;
   try {
@@ -272,18 +293,22 @@ function renderOnboarding(i = 0) {
 }
 
 // Главная по макету: карта-дорожка из мест, плитки идут зигзагом, у каждой своя полоса прогресса; красная «Играть» прибита к низу.
-const ROOM_IDS = new Set(['colors', 'kitchen', 'room', 'school', 'bath', 'outdoor', 'food', 'hall']);
-let targetPlace: Level | undefined; // место, на которое показывает стрелка
+// Закрыто: качаем плашку и подсказываем голосом, что сначала нужно пройти предыдущее.
+function shakeLocked(b: HTMLElement, list: Phrase[]) {
+  b.classList.remove('shake'); void b.offsetWidth; b.classList.add('shake');
+  const line = pickPhrase(list);
+  speak(line.text, false, line.who);
+}
+let targetPlace: Level | undefined; // место, которое пульсирует
 function mapTile(l: Level, i: number): string {
   const total = l.tasks.length;
   const found = l.tasks.filter((t) => progress.found[t.id] !== undefined).length;
   const pct = total ? Math.round((found / total) * 100) : 0;
-  const art = `${import.meta.env.BASE_URL}art/${ROOM_IDS.has(l.id) ? 'rooms' : 'map'}/${l.id}.svg`; // комнаты с питомцами из Figma, где они есть; у остальных прежняя картинка
   const full = total > 0 && found >= total;
   const locked = !isUnlocked(l);
   const target = !locked && !full && l === targetPlace;
-  return `<button class="mp-tile ${i % 2 ? 'right' : 'left'}${full ? ' done' : ''}${locked ? ' locked' : ''}" role="listitem" data-i="${i}" style="--i:${i}" ${locked ? 'aria-disabled="true"' : ''} aria-label="${l.title}: найдено ${found} из ${total}${full ? ', всё найдено' : ''}${locked ? ', закрыто: сначала пройди предыдущее место' : ''}">${target ? `<img class="tut-arrow" src="${import.meta.env.BASE_URL}art/arrow-tutorial.svg" alt="" aria-hidden="true">` : ''}${locked ? '<span class="mp-lock" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M7 10V7a5 5 0 0 1 10 0v3h1.5A1.5 1.5 0 0 1 20 11.5v8a1.5 1.5 0 0 1-1.5 1.5h-13A1.5 1.5 0 0 1 4 19.5v-8A1.5 1.5 0 0 1 5.5 10H7Zm2.5 0h5V7a2.5 2.5 0 0 0-5 0v3Z" fill="#fff"/></svg></span>' : ''}
-    <span class="mp-win${ROOM_IDS.has(l.id) ? ' is-room' : ''}">${hasRoom(l.id) ? roomHtml(l.id, true, 'head-', full ? 'happy-loop' : 'sad-loop') : `<img src="${art}" alt="">`}</span>${full ? `<img class="loc-check mp-check" src="${LOC_BASE()}/check.svg" alt="">` : ''}
+  return `<button class="mp-tile ${i % 2 ? 'right' : 'left'}${full ? ' done' : ''}${locked ? ' locked' : ''}${target ? ' pulse' : ''}" role="listitem" data-i="${i}" style="--i:${i}" ${locked ? 'aria-disabled="true"' : ''} aria-label="${l.title}: найдено ${found} из ${total}${full ? ', всё найдено' : ''}${locked ? ', закрыто: сначала пройди предыдущее место' : ''}">
+    <span class="mp-win is-room">${roomHtml(l.id, true, 'head-', full ? 'happy-loop' : 'sad-loop')}</span>${full ? `<img class="loc-check mp-check" src="${LOC_BASE()}/check.svg" alt="">` : ''}
     <span class="mp-track" role="progressbar" aria-valuemin="0" aria-valuemax="${total}" aria-valuenow="${found}"><span class="loc-fill" style="--w:${pct}%;background-image:url(${LOC_BASE()}/stripe-a.svg)"></span></span></button>`;
 }
 
@@ -372,9 +397,7 @@ function renderLevels() {
   root.querySelectorAll<HTMLButtonElement>('.mp-tile').forEach((b) => b.addEventListener('click', () => {
     const pl = places[Number(b.dataset.i)];
     if (isUnlocked(pl)) return startLevel(pl);
-    b.classList.remove('shake'); void b.offsetWidth; b.classList.add('shake'); // закрыто: качаем плашку и подсказываем голосом
-    const line = pickPhrase(LOCKED_HINT);
-    speak(line.text, false, line.who);
+    shakeLocked(b, LOCKED_HINT);
   }));
   on('play', () => startLevel(next));
   sayHint('.mp-road', HINT_PLACE);
@@ -561,12 +584,15 @@ const LOC_ORDER = ['kitchen', 'colors', 'room', 'school', 'bath', 'hall', 'food'
 // (LOC_ORDER выше нельзя менять: по нему устроены спрайты иконок и шапок.)
 const MAP_ORDER = ['colors', 'kitchen', 'room', 'school', 'bath', 'hall', 'food', 'outdoor'];
 const levelFull = (l: Level) => l.tasks.length > 0 && l.tasks.every((t) => progress.found[t.id] !== undefined);
+const UNLOCK_ALL = true; // пока все места открыты; false — открывать по очереди
 function isUnlocked(l: Level): boolean {
+  if (UNLOCK_ALL) return true;
   const i = MAP_ORDER.indexOf(l.id);
   if (i <= 0) return true;
   const prev = LEVELS.find((x) => x.id === MAP_ORDER[i - 1]);
   return !prev || levelFull(prev);
 }
+// Задания, убранные из мест: в спрайте иконок их картинки остаются, поэтому индексы после них сдвигаем.
 const LOC_COUNTS = [8, 10, 9, 7, 4, 5, 8, 10];
 const LOC_COLORS: Record<string, { bg: string; head: string; fill: string; shadow: string; btn: string; btns: string }> = {
   kitchen: { bg: '#efe6ff', head: '#d9c8ff', fill: '#7a5ad0', shadow: '#cbb7ff', btn: '#7a5ad0', btns: '#977eda' },
@@ -638,15 +664,17 @@ function wireLocTools() {
 }
 // Иконка задания из спрайта макета (порядок: места как в LOC_ORDER, внутри — задания).
 function taskIcon(l: Level, t: Task): string {
-  const li = LOC_ORDER.indexOf(l.id), i = l.tasks.indexOf(t);
+  const li = LOC_ORDER.indexOf(l.id);
+  let i = l.tasks.indexOf(t);
   if (li < 0 || i < 0) return taskArt(t);
-  const idx = LOC_COUNTS.slice(0, li).reduce((a, b) => a + b, 0) + i, col = idx % 8, row = Math.floor(idx / 8);
-  return `<span class="loc-ico" style="background-image:url(${LOC_BASE()}/icons.svg);background-position:${(col / 7) * 100}% ${(row / 7) * 100}%"></span>`;
+  i = ICON_INDEX[t.id] ?? i;
+  const idx = ICON_ABS[t.id] ?? LOC_COUNTS.slice(0, li).reduce((a, b) => a + b, 0) + i, col = idx % 8, row = Math.floor(idx / 8);
+  return `<span class="loc-ico" style="background-image:url(${LOC_BASE()}/icons.svg);background-position:${(col / 7) * 100}% ${(row / 11) * 100}%"></span>`;
 }
 // Экран задания: карточка + нижняя панель с одной большой кнопкой.
-// Над большой кнопкой покачивается стрелка из макета: куда нажимать (на экране места не нужна, там сетка карточек).
-const bigBtn = (id: string, inner: string, label: string, arrow = true) =>
-  `<div class="loc-bar">${arrow ? `<img class="tap-arrow" src="${import.meta.env.BASE_URL}art/arrow-tutorial.svg" alt="" aria-hidden="true">` : ''}<button id="${id}" class="loc-play" aria-label="${label}">${inner}</button></div>`;
+// Большая кнопка пульсирует: куда нажимать (на экране места не нужна, там сетка карточек).
+const bigBtn = (id: string, inner: string, label: string, pulse = true) =>
+  `<div class="loc-bar"><button id="${id}" class="loc-play${pulse ? ' pulse' : ''}" aria-label="${label}">${inner}</button></div>`;
 function taskScreen(l: Level, card: string, extra: string, bar: string, cls: string) {
   show(`<div class="loc" style="${locVars(l)}">${locHeader(l, cls.includes('tk-bad') ? 'sad' : cls.includes('tk-ok') ? 'happy' : undefined)}<main class="loc-body tk-body"><div class="loc-box">${card}${extra}</div></main>${bar}</div>`, `screen-loc screen-tk ${cls}${isMuted() ? ' muted' : ''}`);
   wireLocTools();
@@ -654,7 +682,6 @@ function taskScreen(l: Level, card: string, extra: string, bar: string, cls: str
 }
 const retryIcon = () => `<img src="${LOC_BASE()}/retry.svg" alt="">`;
 const nextIcon = () => `<img src="${LOC_BASE()}/next.svg" alt="">`;
-const cameraBtnIcon = () => `<img src="${LOC_BASE()}/camera.svg" alt="">`;
 const playIcon = () => `<img src="${LOC_BASE()}/play.svg" alt="">`;
 
 // Экран места по макету: шапка с фоном места, полоса прогресса, сетка карточек с иконками и кнопка «играть».
@@ -662,9 +689,11 @@ function renderMap(l: Level) {
   const base = LOC_BASE();
   const n = l.tasks.length;
   const found = l.tasks.filter((t) => progress.found[t.id] !== undefined).length;
+  const nextI = l.tasks.findIndex((t) => progress.found[t.id] === undefined); // это задание пульсирует
   const cards = l.tasks.map((t, i) => {
     const done = progress.found[t.id] !== undefined;
-    return `<button class="loc-card ${done ? 'done' : ''}" data-i="${i}" style="--i:${i}" aria-label="${taskName(t)}${done ? ', найдено' : ''}">${taskIcon(l, t)}${done ? `<img class="loc-check" src="${base}/check.svg" alt="">` : ''}</button>`;
+    const locked = nextI >= 0 && i > nextI; // задания идут по порядку: следующее открывается, когда найдено предыдущее
+    return `<button class="loc-card ${done ? 'done' : ''}${locked ? ' locked' : ''}${i === nextI ? ' pulse' : ''}" data-i="${i}" style="--i:${i}" ${locked ? 'aria-disabled="true"' : ''} aria-label="${taskName(t)}${done ? ', найдено' : ''}${locked ? ', закрыто: сначала найди предыдущее' : ''}">${taskIcon(l, t)}${done ? `<img class="loc-check" src="${base}/check.svg" alt="">` : ''}</button>`;
   }).join('');
   const pct = n ? Math.round((found / n) * 100) : 0;
   show(`<div class="loc" style="${locVars(l)}">${locHeader(l, n > 0 && found >= n ? 'happy-loop' : undefined)}
@@ -672,11 +701,13 @@ function renderMap(l: Level) {
         <div class="loc-progress" role="progressbar" aria-label="Найдено" aria-valuemin="0" aria-valuemax="${n}" aria-valuenow="${found}" aria-valuetext="${found} из ${n}"><div class="loc-track"><div class="loc-fill" style="--w:${pct}%;background-image:url(${base}/stripe-a.svg)"></div></div></div>
         <div class="loc-grid">${cards}</div>
       </div></main>
-      ${bigBtn('play', playIcon(), 'Играть', found < n)}</div>`, `screen-loc${isMuted() ? ' muted' : ''}`);
+    </div>`, `screen-loc screen-places${isMuted() ? ' muted' : ''}`);
   root.querySelectorAll<HTMLButtonElement>('.loc-card').forEach((b) =>
-    b.addEventListener('click', () => startTask(l.tasks[Number(b.dataset.i)])),
+    b.addEventListener('click', () => {
+      if (b.classList.contains('locked')) { shakeLocked(b, TASK_LOCKED); return; }
+      startTask(l.tasks[Number(b.dataset.i)]);
+    }),
   );
-  on('play', () => startTask(l.tasks.find((t) => progress.found[t.id] === undefined) ?? l.tasks[0]));
   on('back', toMenu);
   wireLocTools();
   if (found < n) sayHint('.loc-grid', HINT_ITEM); // у пройденного места подсказка не нужна
@@ -709,11 +740,12 @@ function render() {
     case 'task':
     case 'camera': {
       const L = level!;
-      taskScreen(L, `<section class="tk-card" id="tkcard"><span class="tk-ico">${taskIcon(L, task!)}</span><p class="tk-text">${task!.prompt}</p></section>`,
-        `${notice ? `<div class="notice">${notice}</div>` : ''}`, bigBtn('shoot', cameraBtnIcon(), 'Сфотографировать'), 'tk-task');
-      on('shoot', capture);
-      root.querySelector('#tkcard')?.addEventListener('click', () => speak(task!.prompt)); // нажатие на карточку повторяет задание
-      if (!notice && promptSpoken !== task!.id) { promptSpoken = task!.id; speak(task!.prompt); } // не повторяем при открытии камеры и возврате
+      taskScreen(L, `<section class="tk-card tk-live" id="tkcard"><div class="tk-head" id="tkhead"><span class="tk-ico">${taskIcon(L, task!)}</span><p class="tk-text">${task!.prompt}</p></div><div class="tk-cam" id="tkcam"></div></section>`,
+        `${notice ? `<div class="notice">${notice}</div>` : ''}`, '', 'tk-task');
+      if (s.phase === 'task') void openCamera(task!); // в фазе camera снимок уже сделан и обрабатывается
+      const sayTask = () => { speak(task!.prompt); speak(TASK_AIM.text, true, TASK_AIM.who); }; // задание и следом «наведи камеру»
+      root.querySelector('#tkhead')?.addEventListener('click', sayTask); // нажатие на задание повторяет его
+      if (!notice && promptSpoken !== task!.id) { promptSpoken = task!.id; sayTask(); } // не повторяем при открытии камеры и возврате
       notice = '';
       break;
     }
@@ -729,7 +761,7 @@ function render() {
         taskScreen(L, `<section class="tk-card ok" id="tkcard" ${word ? 'role="button" tabindex="0" aria-label="Послушать слово ещё раз"' : ''}>
             <div class="tk-stars" role="img" aria-label="Звёзд: ${STARS_PER_TASK} из 3">${starsSvg()}</div><span class="tk-ico">${taskIcon(L, task!)}</span>
             <p class="tk-en">${word ? word.en : taskName(task!)}</p>${word ? `<p class="tk-ru">${word.ru}</p>` : ''}</section>`, '',
-          bigBtn('next', nextIcon(), 'Следующее задание'), 'tk-ok');
+          bigBtn('next', nextIcon(), 'Следующее задание', false), 'tk-ok');
         const card = root.querySelector<HTMLElement>('#tkcard')!;
         confettiBehind(root.querySelector<HTMLElement>('.loc')!, card);
         // Универсально: сначала похвала (записывается один раз), потом слово по-английски.
@@ -780,4 +812,5 @@ store.load().then((p) => {
 });
 
 // Готовим умное зрение заранее, пока ребёнок смотрит главный экран: к камере модели уже загружены.
-setTimeout(() => preloadModels(false), 2500); // на главной грузим только лёгкие модели
+// На главной лёгкие модели грузим только при хорошем соединении и в простое: на мобильном интернете они ждут входа в место.
+if (heavyModelsAllowed()) setTimeout(() => preloadModels(false), 2500);

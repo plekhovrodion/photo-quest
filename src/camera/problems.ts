@@ -115,13 +115,13 @@ export function showCameraProblem(kind: CamProblem): Promise<'retry' | 'close'> 
         const media = `<figure class="cp-media"><div class="cpm-gif"><img src="${import.meta.env.BASE_URL}art/help/camera-${helpArt()}.svg" alt="" onerror="this.remove()"></div></figure>`;
         el.setAttribute('aria-label', 'Инструкция');
         el.innerHTML = `${backBtn}<main class="cp-main"><section class="cp-card cp-steps"><h2>Инструкция</h2><div class="cp-steps-body">${media}<ol>${steps}</ol></div></section></main>
-          <div class="cp-bar"><img class="tap-arrow" src="${base}/arrow-tap.svg" alt="" aria-hidden="true"><button class="cp-btn" type="button">Попробовать ещё раз</button></div>`;
+          <div class="cp-bar"><button class="cp-btn" type="button">Попробовать ещё раз</button></div>`;
         el.querySelector('.cp-btn')!.addEventListener('click', () => finish('retry'));
       } else {
         el.setAttribute('aria-label', s.title);
         el.innerHTML = `${backBtn}<main class="cp-main"><section class="cp-card"><img class="cp-ico" src="${base}/camera-big.svg" alt="">
           <h2>${esc(s.title)}</h2><p>${esc(s.body)}</p></section></main>
-          <div class="cp-bar"><img class="tap-arrow" src="${base}/arrow-tap.svg" alt="" aria-hidden="true"><button class="cp-btn" type="button">${esc(s.button)}</button></div>`;
+          <div class="cp-bar"><button class="cp-btn" type="button">${esc(s.button)}</button></div>`;
         el.querySelector('.cp-btn')!.addEventListener('click', () => (s.next === 'instructions' ? render('steps') : finish(s.next)));
       }
       el.querySelector('.cp-back')!.addEventListener('click', back);
