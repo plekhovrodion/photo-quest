@@ -34,21 +34,32 @@ export const setSfxGate = (fn: () => boolean) => { enabled = fn; };
 
 const url = (name: string, i: number) => `${import.meta.env.BASE_URL}sfx/${name}-${i}.m4a`;
 
+// Загружать звуки разрешено только после первого экрана (см. ui/boot.ts): иначе 48 файлов отнимают канал у главного экрана.
+let allowed = false;
+const PARALLEL = 4;
+
 async function load() {
-  if (loading || !ctx) return;
+  if (loading || !ctx || !allowed) return;
   loading = true;
   const c = ctx;
-  await Promise.all(
-    (Object.entries(SFX) as [SfxName, number][]).flatMap(([name, n]) =>
-      Array.from({ length: n }, async (_, i) => {
-        try {
-          const res = await fetch(url(name, i));
-          if (!res.ok) return;
-          buffers.set(`${name}-${i}`, await c.decodeAudioData(await res.arrayBuffer()));
-        } catch { /* нет файла или формат не поддержан: этот звук просто промолчит */ }
-      }),
-    ),
-  );
+  const queue = (Object.entries(SFX) as [SfxName, number][]).flatMap(([name, n]) => Array.from({ length: n }, (_, i) => [name, i] as const));
+  const worker = async () => {
+    for (let item = queue.shift(); item; item = queue.shift()) {
+      const [name, i] = item;
+      try {
+        const res = await fetch(url(name, i), { priority: 'low' } as RequestInit);
+        if (!res.ok) continue;
+        buffers.set(`${name}-${i}`, await c.decodeAudioData(await res.arrayBuffer()));
+      } catch { /* нет файла или формат не поддержан: этот звук просто промолчит */ }
+    }
+  };
+  await Promise.all(Array.from({ length: PARALLEL }, worker));
+}
+
+// Разрешает загрузку звуков (после первого экрана).
+export function startSfxLoad() {
+  allowed = true;
+  try { ctx ??= new AudioContext(); void load(); } catch { /* без Web Audio звуков не будет */ }
 }
 
 // Браузеры разрешают звук только после касания: на первом касании создаём контекст и грузим звуки
@@ -98,7 +109,7 @@ export function sfxForClick(target: Clickable | null): SfxName | null {
 
 export function wireSfx(root: Document = document) {
   // Декодировать звуки можно и без касания (контекст проснётся позже): тогда уже первый клик со звуком
-  try { ctx ??= new AudioContext(); void load(); } catch { /* без Web Audio звуков не будет */ }
+  try { ctx ??= new AudioContext(); } catch { /* без Web Audio звуков не будет */ }
   root.addEventListener('pointerdown', unlockSfx, { capture: true, passive: true });
   root.addEventListener('click', (e) => {
     const name = sfxForClick(e.target as Element | null);

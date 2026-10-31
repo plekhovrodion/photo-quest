@@ -1,6 +1,6 @@
 // Запрос камеры по макету «Саундчек» (то же, что для микрофона, только с камерой).
 // Компьютер: пока браузер показывает своё окошко с вопросом, поверх размытого фона лиса указкой показывает на это окошко,
-// а внизу (в Safari вверху) карточка «Разрешите доступ к камере»; место лисы зависит от браузера, потому что окошко у них в разных местах.
+// а внизу (в Safari вверху) карточка «Разреши доступ к камере»; место лисы зависит от браузера, потому что окошко у них в разных местах.
 // Телефон: сначала карточка с кнопкой «Далее», и только после неё вызываем браузер; пока он спрашивает, остаётся размытый фон.
 // Если доступ уже есть или запрещён, экран не показываем.
 import { speak } from '../audio/sounds';
@@ -27,7 +27,7 @@ export function promptSide(ua = navigator.userAgent): PromptSide {
 }
 
 const base = () => `${import.meta.env.BASE_URL}art/perm`;
-const TITLE = 'Разрешите доступ к камере';
+const TITLE = 'Разреши доступ к камере';
 
 function desktopHtml(side: PromptSide): string {
   const fox = `<img class="pm-fox pm-fox-${side}" src="${base()}/fox-${side}.svg" alt="">`;
@@ -37,6 +37,10 @@ function desktopHtml(side: PromptSide): string {
 const mobileHtml = () => `<div class="pm-mcard"><img class="pm-fox-mobile" src="${base()}/fox-mobile.svg" alt="">
   <h2>${TITLE}</h2><p>Тогда ты сможешь <b>искать предметы</b></p>
   <button class="pm-next" type="button"><i class="pm-next-shadow"></i><i class="pm-next-bg"></i><span>Далее</span></button></div>`;
+
+// Пока окно просьбы говорит само, оно перебивает озвучку задания. Когда окно закрылось, экран задания договаривает (см. main.ts).
+let onClosed: (() => void) | null = null;
+export const onCameraPromptClosed = (fn: () => void) => { onClosed = fn; };
 
 // Выполняет запрос камеры (getUserMedia) и пока он ждёт ответа, показывает подсказку.
 export async function withCameraPrompt<T>(request: () => Promise<T>): Promise<T> {
@@ -69,5 +73,6 @@ export async function withCameraPrompt<T>(request: () => Promise<T>): Promise<T>
     return await request();
   } finally {
     el.remove();
+    onClosed?.();
   }
 }

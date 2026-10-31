@@ -224,21 +224,6 @@ function liveCamera(target: Target, host: HTMLElement): Promise<Captured | null>
         : 'Наведи камеру на предмет';
     };
 
-    function brackets(ctx: CanvasRenderingContext2D, w: number, h: number, ok = false) {
-      // прицел: уголки по центру, куда нужно поместить предмет
-      const bw = w * 0.42, bh = h * 0.42, x = (w - bw) / 2, y = (h - bh) / 2 - (w < 600 ? h * 0.08 : 0), l = Math.min(bw, bh) * 0.22;
-      ctx.save();
-      ctx.strokeStyle = ok ? '#22c55e' : 'rgba(255,255,255,.55)';
-      ctx.lineWidth = ok ? 7 : 4;
-      ctx.lineCap = 'round';
-      ctx.beginPath();
-      for (const [px, py, dx, dy] of [[x, y, 1, 1], [x + bw, y, -1, 1], [x, y + bh, 1, -1], [x + bw, y + bh, -1, -1]] as const) {
-        ctx.moveTo(px, py + dy * l); ctx.lineTo(px, py); ctx.lineTo(px + dx * l, py);
-      }
-      ctx.stroke();
-      ctx.restore();
-    }
-
     const render = (now: number) => {
       if (!alive) return;
       raf = requestAnimationFrame(render);
@@ -260,7 +245,6 @@ function liveCamera(target: Target, host: HTMLElement): Promise<Captured | null>
             if (now - okSince >= (liveOk() ? AUTO_CLIP_MS : AUTO_LOCK_MS) && video.videoWidth) void found();
           }
         }
-        if (!f.box || liveOk() || foundAt) brackets(ctx, w, h, liveOk() || !!foundAt);
         if (f.box && video.videoWidth) {
           // видео заполняет экран с обрезкой (object-fit: cover): масштаб один на обе оси, плюс сдвиг по центру
           const sc = Math.max(w / video.videoWidth, h / video.videoHeight);

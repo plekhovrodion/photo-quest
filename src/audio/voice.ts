@@ -1,4 +1,4 @@
-// Записанная озвучка (ElevenLabs): текст -> файл в public/voice. Нет файла — говорит голос браузера.
+// Записанная озвучка (ElevenLabs): текст -> файл в public/voice. Нет файла — молчим (голос браузера не используем).
 // Список и файлы создаёт `node scripts/build-voice.mjs` (см. README), он же обновляет data/voice-manifest.json.
 import manifest from '../data/voice-manifest.json';
 
@@ -31,13 +31,12 @@ function next() {
   current = a;
   a.onended = () => { if (current === a) next(); };
   a.play().catch(() => {
-    // браузер не дал проиграть: остаток очереди бросаем, эту фразу говорит запасной голос
+    // браузер не дал проиграть (например, нет жеста пользователя): остаток очереди бросаем
     if (current === a) { current = null; queue = []; }
-    fallback?.(item.text, item.english);
   });
 }
 
-// true — запись поставлена (или пошла); false — файла нет (тогда нужен запасной голос).
+// true — запись поставлена (или пошла); false — файла нет.
 // queue = true: дождаться, пока договорит предыдущая запись.
 export function playRecorded(text: string, queued = false, english = false): boolean {
   const url = recordedFor(text, english);
@@ -48,5 +47,3 @@ export function playRecorded(text: string, queued = false, english = false): boo
   return true;
 }
 
-let fallback: ((t: string, english: boolean) => void) | null = null;
-export const onRecordedFail = (fn: (t: string, english: boolean) => void) => { fallback = fn; };

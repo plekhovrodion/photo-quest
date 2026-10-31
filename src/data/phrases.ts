@@ -22,7 +22,7 @@ export const INTRO_EN: Phrase[] = [
 ];
 
 // Перед запросом камеры у браузера (говорит Соня).
-export const ASK_CAMERA: Phrase = P('camera-ask', 'sonya', 'Разрешите доступ к камере. Тогда ты сможешь искать предметы');
+export const ASK_CAMERA: Phrase = P('camera-ask', 'sonya', 'Разреши доступ к камере. Тогда ты сможешь искать предметы');
 
 // Сфотографировал не то (говорит Гриша): без объяснений, что именно в кадре.
 export const TRY_AGAIN: Phrase[] = [
@@ -72,7 +72,14 @@ export const TASK_LOCKED: Phrase[] = [
 // После задания «Найди …»: что делать с камерой (говорит Соня).
 export const TASK_AIM: Phrase = P('aim-1', 'sonya', 'Наведи камеру на предмет!');
 
-export const ALL_PHRASES: Phrase[] = [TASK_AIM, ...PRAISE, ...INTRO_EN, ASK_CAMERA, ...TRY_AGAIN, ...TROUBLE, ...LEVEL_DONE, ...HINT_PLACE, ...HINT_ITEM, ...LOCKED_HINT, ...TASK_LOCKED];
+// После найденного предмета: что делать дальше (говорит Соня).
+export const NEXT_HINT: Phrase = P('next-1', 'sonya', 'Идём дальше! Нажми на кнопку внизу');
+
+// Заврик вырос: «Гриша вырос! Уровень 2!» (говорит Соня); уровни 2..5, имена как в zavrik.ts.
+export const levelUpText = (name: string, level: number) => `${name} ${name === 'Соня' ? 'выросла' : 'вырос'}! Уровень ${level}!`;
+export const LEVEL_UP: Phrase[] = ['Гриша', 'Соня'].flatMap((name) => [2, 3, 4, 5].map((n) => P(`levelup-${name === 'Гриша' ? 'g' : 's'}${n}`, 'sonya', levelUpText(name, n))));
+
+export const ALL_PHRASES: Phrase[] = [TASK_AIM, NEXT_HINT, ...LEVEL_UP, ...PRAISE, ...INTRO_EN, ASK_CAMERA, ...TRY_AGAIN, ...TROUBLE, ...LEVEL_DONE, ...HINT_PLACE, ...HINT_ITEM, ...LOCKED_HINT, ...TASK_LOCKED];
 
 // Случайная фраза, не повторяющая предыдущую из этого же списка.
 const last = new Map<Phrase[], string>();

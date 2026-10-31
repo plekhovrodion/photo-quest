@@ -1,9 +1,10 @@
 import './style.css';
 import { LEVELS, ICON_INDEX, ICON_ABS, type Level, type Task } from './data/tasks';
 import { createGame, currentTask, reduce, STARS_PER_TASK, type Action, type GameState } from './game/state';
-import { PRAISE, INTRO_EN, TRY_AGAIN, TROUBLE, LEVEL_DONE, LOCKED_HINT, TASK_LOCKED, TASK_AIM, type Phrase, HINT_PLACE, HINT_ITEM, pickPhrase } from './data/phrases';
+import { PRAISE, INTRO_EN, TRY_AGAIN, TROUBLE, LEVEL_DONE, LOCKED_HINT, TASK_LOCKED, TASK_AIM, NEXT_HINT, levelUpText, type Phrase, HINT_PLACE, HINT_ITEM, pickPhrase } from './data/phrases';
 import { starsSvg } from './ui/stars';
 import { takePhoto, compressPhoto, stopCamera, type Captured } from './camera/capture';
+import { onCameraPromptClosed } from './camera/prepermission';
 import { targetOf } from './camera/target';
 import { ensureModelsLoaded } from './ui/loading';
 import { verifyPhoto } from './api/verify';
@@ -19,8 +20,9 @@ import { showNotice } from './ui/notice';
 import { locPattern } from './ui/locPattern';
 import { showPaywall } from './ui/paywall';
 import { paywallUrl } from './api/paywall';
-import { playSfx, wireSfx } from './audio/sfx';
-import { wireMusic } from './audio/music';
+import { playSfx, wireSfx, startSfxLoad } from './audio/sfx';
+import { wireMusic, startMusicLoad } from './audio/music';
+import { bootFirstStep, bootSecondStep } from './ui/boot';
 import { SLIDES, isOnboarded, markOnboarded } from './onboarding';
 import { feed, setLook, stageOf, fedOf, lookOf, ZAVRIKS, ZAVRIK_NAME, HUES, HATS, BADGES, UNLOCK_STAGE, MAX_STAGE, zavrikOfArt, type ZavrikId } from './zavrik';
 import { hatSvg, badgeSvg } from './ui/accessories';
@@ -162,6 +164,9 @@ function finishTask(): boolean {
 // Живая камера открыта прямо на экране задания, кнопки нет: предмет узнан — камера снимает сама.
 // Если камеру не включили (отказ, нет https), возвращаем к заданиям места.
 let camOn = false;
+// Окно «Разреши доступ к камере» перебивает озвучку задания: после него говорим задание заново (если ребёнок всё ещё на этом экране).
+let sayCurrentTask: (() => void) | null = null;
+onCameraPromptClosed(() => { if (state?.phase === 'task') setTimeout(() => sayCurrentTask?.(), 250); });
 async function openCamera(task: Task) {
   const host = root.querySelector<HTMLElement>('#tkcam');
   if (!host) return;
@@ -287,7 +292,7 @@ function renderOnboarding(i = 0) {
     <button id="onext" class="green">${last ? 'Поехали!' : 'Дальше'}</button>
     ${last ? '' : '<button id="oskip" class="secondary">Пропустить</button>'}`);
   speak(slide.text, false, slide.who === 'Соня' ? 'sonya' : 'grisha');
-  const done = () => { markOnboarded(); speechSynthesis?.cancel(); renderLevels(); };
+  const done = () => { markOnboarded(); stopSpeech(); renderLevels(); };
   on('onext', () => (last ? done() : renderOnboarding(i + 1)));
   on('oskip', done);
 }
@@ -467,7 +472,7 @@ function renderZavrik(quiet = false) {
     if (res.progress === progress) return;
     progress = res.progress;
     void store.save(progress);
-    if (res.levelUp) { confetti(1600); speak(`${ZAVRIK_NAME[id]} вырос! Уровень ${res.levelUp}!`, false, 'sonya'); }
+    if (res.levelUp) { confetti(1600); speak(levelUpText(ZAVRIK_NAME[id], res.levelUp), false, 'sonya'); }
     renderZavrik(true);
     const stage = root.querySelector('.zv-stage');
     stage?.classList.add('chomp');
@@ -584,7 +589,7 @@ const LOC_ORDER = ['kitchen', 'colors', 'room', 'school', 'bath', 'hall', 'food'
 // (LOC_ORDER выше нельзя менять: по нему устроены спрайты иконок и шапок.)
 const MAP_ORDER = ['colors', 'kitchen', 'room', 'school', 'bath', 'hall', 'food', 'outdoor'];
 const levelFull = (l: Level) => l.tasks.length > 0 && l.tasks.every((t) => progress.found[t.id] !== undefined);
-const UNLOCK_ALL = true; // пока все места открыты; false — открывать по очереди
+const UNLOCK_ALL = false; // true — все места открыты; false — открывать по очереди
 function isUnlocked(l: Level): boolean {
   if (UNLOCK_ALL) return true;
   const i = MAP_ORDER.indexOf(l.id);
@@ -744,6 +749,7 @@ function render() {
         `${notice ? `<div class="notice">${notice}</div>` : ''}`, '', 'tk-task');
       if (s.phase === 'task') void openCamera(task!); // в фазе camera снимок уже сделан и обрабатывается
       const sayTask = () => { speak(task!.prompt); speak(TASK_AIM.text, true, TASK_AIM.who); }; // задание и следом «наведи камеру»
+      sayCurrentTask = s.phase === 'task' ? sayTask : null;
       root.querySelector('#tkhead')?.addEventListener('click', sayTask); // нажатие на задание повторяет его
       if (!notice && promptSpoken !== task!.id) { promptSpoken = task!.id; sayTask(); } // не повторяем при открытии камеры и возврате
       notice = '';
@@ -761,7 +767,7 @@ function render() {
         taskScreen(L, `<section class="tk-card ok" id="tkcard" ${word ? 'role="button" tabindex="0" aria-label="Послушать слово ещё раз"' : ''}>
             <div class="tk-stars" role="img" aria-label="Звёзд: ${STARS_PER_TASK} из 3">${starsSvg()}</div><span class="tk-ico">${taskIcon(L, task!)}</span>
             <p class="tk-en">${word ? word.en : taskName(task!)}</p>${word ? `<p class="tk-ru">${word.ru}</p>` : ''}</section>`, '',
-          bigBtn('next', nextIcon(), 'Следующее задание', false), 'tk-ok');
+          bigBtn('next', nextIcon(), 'Следующее задание'), 'tk-ok');
         const card = root.querySelector<HTMLElement>('#tkcard')!;
         confettiBehind(root.querySelector<HTMLElement>('.loc')!, card);
         // Универсально: сначала похвала (записывается один раз), потом слово по-английски.
@@ -773,6 +779,7 @@ function render() {
           speakEnglish(word.en); speakEnglish(word.en);
           card.addEventListener('click', () => speakEnglish(word.en, false));
         }
+        speak(NEXT_HINT.text, true, NEXT_HINT.who); // «нажми на кнопку внизу»
       } else {
         // Не то: коротко и по-доброму, без объяснений, что оказалось в кадре, и без счётчика попыток; карточка трясётся.
         const line = pickPhrase(TRY_AGAIN);
@@ -800,17 +807,25 @@ function render() {
   }
 }
 
-wireSfx(); // звуки кликов и событий
+wireSfx(); // звуки кликов и событий (файлы звуков грузятся после первого экрана)
 wireMusic(); // фоновая музыка с первого касания
-render();
 
-// Подтягиваем прогресс с сервера (если он настроен) и перерисовываем, не прерывая задание.
-store.load().then((p) => {
-  progress = p;
-  // Перерисовываем только карту и меню: онбординг и игру не сбрасываем.
-  if (!state && /screen-(menu|map)/.test(root.className)) render();
+// Сначала основа главного экрана (заставка «Загружаем игру», если сеть медленная), потом всё остальное по ступеням.
+void bootFirstStep().then(() => {
+  render();
+
+  // Подтягиваем прогресс с сервера (если он настроен) и перерисовываем, не прерывая задание.
+  store.load().then((p) => {
+    progress = p;
+    // Перерисовываем только карту и меню: онбординг и игру не сбрасываем.
+    if (!state && /screen-(menu|map)/.test(root.className)) render();
+  });
+
+  // Дальше в простое: иконки, звуки и музыка, и только потом умное зрение, чтобы к камере модели уже были загружены.
+  // На главной лёгкие модели грузим только при хорошем соединении: на мобильном интернете они отнимают канал у игры.
+  bootSecondStep(() => {
+    startSfxLoad();
+    startMusicLoad();
+    if (heavyModelsAllowed()) setTimeout(() => preloadModels(false), 2500);
+  });
 });
-
-// Готовим умное зрение заранее, пока ребёнок смотрит главный экран: к камере модели уже загружены.
-// На главной лёгкие модели грузим только при хорошем соединении и в простое: на мобильном интернете они ждут входа в место.
-if (heavyModelsAllowed()) setTimeout(() => preloadModels(false), 2500);

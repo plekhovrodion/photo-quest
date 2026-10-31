@@ -59,7 +59,7 @@ async function preload() {
     ctx.addEventListener('statechange', begin); // автоплей разрешён сразу: музыка пойдёт без касания
     for (const name of TRACKS) {
       try {
-        const res = await fetch(url(name));
+        const res = await fetch(url(name), { priority: 'low' } as RequestInit);
         if (!res.ok) continue;
         buffers.push(await c.decodeAudioData(await res.arrayBuffer()));
         begin(); // первый трек готов: если звук уже разрешён, начинаем
@@ -74,8 +74,10 @@ export function setMusicEnabled(on: boolean) {
   applyGate();
 }
 
+// Файлы музыки грузятся после первого экрана (startMusicLoad), слушатели касаний ставятся сразу.
+export const startMusicLoad = () => void preload();
+
 export function wireMusic() {
-  void preload();
   const go = () => {
     if (ctx && ctx.state === 'suspended' && !document.hidden) void ctx.resume().then(begin);
   };

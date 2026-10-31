@@ -56,6 +56,15 @@ const load = (pet: PetName, i: number | Mood) => {
   return p;
 };
 
+// Не больше двух питомцев одновременно создают свои анимации (разбор Lottie тяжёлый для слабого телефона).
+let busy = 0;
+const waiters: (() => void)[] = [];
+const slot = async () => {
+  if (busy >= 2) await new Promise<void>((ok) => waiters.push(ok));
+  busy++;
+  setTimeout(() => { busy--; waiters.shift()?.(); }, 120);
+};
+
 async function mount(el: HTMLElement) {
   const pet = el.dataset.pet as PetName;
   const n = IDLES[pet];
@@ -65,10 +74,12 @@ async function mount(el: HTMLElement) {
   const mood = el.dataset.mood as Mood | undefined; // реакция на ответ: один раз, потом снова ожидание
   let data: object[];
   let emo: object | null = null;
+  const loopMood = mood === 'happy-loop' || mood === 'sad-loop'; // зацикленная реакция сама крутится, ожидание (idle) ей не нужно: на главной экономим 4 файла на питомца
   try {
-    [data, emo] = await Promise.all([Promise.all(Array.from({ length: n }, (_, i) => load(pet, i + 1))), mood ? load(pet, mood).catch(() => null) : Promise.resolve(null)]);
+    [data, emo] = await Promise.all([loopMood ? Promise.resolve([]) : Promise.all(Array.from({ length: n }, (_, i) => load(pet, i + 1))), mood ? load(pet, mood).catch(() => null) : Promise.resolve(null)]);
   } catch { return; }
   if (st.dead || !el.isConnected) return;
+  await slot(); // на телефоне запускаем питомцев по одному-два: восемь Lottie сразу подвешивают страницу
   data.forEach((animationData) => {
     const box = document.createElement('span');
     box.className = 'pet-anim';
