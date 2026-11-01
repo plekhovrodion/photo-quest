@@ -1,7 +1,7 @@
 import './style.css';
 import { LEVELS, ICON_INDEX, ICON_ABS, type Level, type Task } from './data/tasks';
 import { createGame, currentTask, reduce, STARS_PER_TASK, type Action, type GameState } from './game/state';
-import { PRAISE, INTRO_EN, TRY_AGAIN, TROUBLE, LEVEL_DONE, LOCKED_HINT, TASK_LOCKED, TASK_AIM, NEXT_HINT, levelUpText, type Phrase, HINT_PLACE, HINT_ITEM, HINT_COLOR, pickPhrase } from './data/phrases';
+import { PRAISE, INTRO_EN, TRY_AGAIN, TROUBLE, LEVEL_DONE, GAME_DONE, REPEAT_AFTER, QUIZ_ASK, QUIZ_WRONG, LOCKED_HINT, TASK_LOCKED, TASK_AIM, NEXT_HINT, levelUpText, type Phrase, HINT_PLACE, HINT_ITEM, HINT_COLOR, pickPhrase } from './data/phrases';
 import { takePhoto, compressPhoto, stopCamera, type Captured } from './camera/capture';
 import { onCameraPromptClosed } from './camera/prepermission';
 import { targetOf } from './camera/target';
@@ -12,7 +12,7 @@ import { englishFor } from './data/english';
 import { preloadModels, heavyModelsAllowed } from './vision/models';
 import { confetti, confettiBehind } from './fx/confetti';
 import { typeText, stopTyping } from './fx/typewriter';
-import { speak, speakEnglish, stopSpeech, isMuted, setMuted } from './audio/sounds';
+import { speak, speakEnglish, speakPause, stopSpeech, isMuted, setMuted } from './audio/sounds';
 import { hasRoom, roomHtml, mountPets, unmountPets, type Mood } from './ui/pets';
 import { canAfford, claimFound, getBeads } from './api/economy';
 import { showNotice } from './ui/notice';
@@ -715,7 +715,9 @@ function renderMap(l: Level) {
 const SHOW_LEVEL_DONE_SCREEN = false;
 function renderLevelDone() {
   playSfx('level-up');
-  const doneLine = pickPhrase(LEVEL_DONE);
+  // все задания всех мест найдены: отдельная большая похвала вместо обычной
+  const everything = LEVELS.every((l) => l.tasks.every((t) => progress.found[t.id] !== undefined));
+  const doneLine = pickPhrase(everything ? GAME_DONE : LEVEL_DONE);
   if (!SHOW_LEVEL_DONE_SCREEN) {
     renderMap(level!);
     const seq = screenSeq;
@@ -733,6 +735,41 @@ function renderLevelDone() {
   setTimeout(() => { if (seq === screenSeq && root.querySelector('#map')) speak(doneLine.text, false, doneLine.who); }, 700); // озвучка после фанфар
   on('map', toMap);
   on('home', toMenu);
+}
+
+// Мини-раунд после найденного предмета: звучит английское слово, ребёнок выбирает одну из двух картинок.
+const shuffle = <T,>(a: T[]): T[] => a.map((v) => [Math.random(), v] as const).sort((x, y) => x[0] - y[0]).map((x) => x[1]);
+function renderQuiz(L: Level, justFound: Task, proceed: () => void) {
+  const target = justFound; // спрашиваем именно то, что только что нашли
+  const word = englishFor(target.id);
+  const others = shuffle(L.tasks.filter((t) => t.id !== target.id && englishFor(t.id)));
+  if (others.length < 1) others.push(...shuffle(LEVELS.flatMap((l) => l.tasks).filter((t) => t.id !== target.id && !others.includes(t) && englishFor(t.id))));
+  if (!word || others.length < 1) return proceed();
+  const opts = shuffle([target, others[0]]);
+  const owner = (t: Task) => LEVELS.find((l) => l.tasks.includes(t)) ?? L;
+  const cards = opts.map((t, i) => `<button class="quiz-opt" data-id="${t.id}" style="--i:${i}" aria-label="${taskName(t)}">${taskIcon(owner(t), t)}</button>`).join('');
+  taskScreen(L, `<div class="tk-quizcard" id="tkcard"><p class="tk-en quiz-word">${word.en}</p><div class="quiz-opts">${cards}</div></div>`, '', '', 'tk-quiz');
+  const seq = screenSeq;
+  setTimeout(() => { if (seq === screenSeq) { speak(QUIZ_ASK.text, false, QUIZ_ASK.who); speakEnglish(word.en); } }, 400);
+  let solved = false;
+  root.querySelectorAll<HTMLButtonElement>('.quiz-opt').forEach((b) => b.addEventListener('click', () => {
+    if (solved) return;
+    if (b.dataset.id === target.id) {
+      solved = true;
+      b.classList.add('right');
+      playSfx('correct');
+      confettiBehind(root.querySelector<HTMLElement>('.loc')!, root.querySelector<HTMLElement>('#tkcard')!);
+      const praise = pickPhrase(PRAISE);
+      speak(praise.text, false, praise.who);
+      setTimeout(() => { if (seq === screenSeq) proceed(); }, 1800);
+    } else {
+      b.classList.remove('wrong'); void b.offsetWidth; b.classList.add('wrong');
+      playSfx('wrong-soft');
+      const line = pickPhrase(QUIZ_WRONG);
+      speak(line.text, false, line.who);
+      speakEnglish(word.en);
+    }
+  }));
 }
 
 function render() {
@@ -768,8 +805,9 @@ function render() {
         taskScreen(L, `<section class="tk-card ok" id="tkcard" ${word ? 'role="button" tabindex="0" aria-label="Послушать слово ещё раз"' : ''}>
             <span class="tk-ico">${taskIcon(L, task!)}</span>
             <p class="tk-en">${word ? word.en : taskName(task!)}</p>${word ? `<p class="tk-ru">${word.ru}</p>` : ''}</section>`, '',
-          bigBtn('next', nextIcon(), 'Следующее задание'), 'tk-ok');
+          bigBtn('next', nextIcon(), 'Следующее задание', !word), 'tk-ok');
         const card = root.querySelector<HTMLElement>('#tkcard')!;
+        const resSeq = screenSeq;
         confettiBehind(root.querySelector<HTMLElement>('.loc')!, card);
         // Универсально: сначала похвала (записывается один раз), потом слово по-английски.
         const praise = pickPhrase(PRAISE);
@@ -777,7 +815,13 @@ function render() {
         if (word) {
           const intro = pickPhrase(INTRO_EN); // «Вот так это будет по-английски»
           speak(intro.text, true, intro.who);
-          speakEnglish(word.en); speakEnglish(word.en);
+          speakEnglish(word.en); speakEnglish(word.en); // два раза слово, потом просим повторить
+          // «Повтори за мной!»: пауза, пока ребёнок говорит слово, потом слово ещё раз; кнопка «Дальше» пульсирует только после паузы.
+          const ask = pickPhrase(REPEAT_AFTER);
+          speak(ask.text, true, ask.who);
+          const pulseNext = () => { if (resSeq === screenSeq) root.querySelector('#next')?.classList.add('pulse'); };
+          if (isMuted()) pulseNext(); else speakPause(2800, undefined, pulseNext); // кнопка оживает, когда ребёнок сказал
+          speakEnglish(word.en);
           card.addEventListener('click', () => speakEnglish(word.en, false));
         }
         speak(NEXT_HINT.text, true, NEXT_HINT.who); // «нажми на кнопку внизу»
@@ -798,11 +842,13 @@ function render() {
       const last = s.tasks[0];
       const levelDone = finishTask();
       state = null;
-      if (levelDone) renderLevelDone();
-      else {
-        const nxt = nextTaskAfter(level!, last);
-        if (nxt) startTask(nxt); else renderMap(level!);
-      }
+      const L = level!;
+      const proceed = () => {
+        if (levelDone) return renderLevelDone();
+        const nxt = nextTaskAfter(L, last);
+        if (nxt) startTask(nxt); else renderMap(L);
+      };
+      renderQuiz(L, last, proceed); // мини-раунд со словом, потом дальше
       break;
     }
   }

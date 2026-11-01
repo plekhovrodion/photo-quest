@@ -33,15 +33,21 @@ function playNext() {
   nextAt = t + buf.duration - FADE;
 }
 
+// Звук выключен: громкость в ноль и контекст на паузу (музыка совсем останавливается), включён: контекст оживает, музыка продолжается.
+let suspendTimer: ReturnType<typeof setTimeout> | null = null;
 function applyGate() {
   if (!ctx || !master) return;
-  master.gain.setTargetAtTime(enabled ? VOLUME : 0, ctx.currentTime, 0.4);
+  const c = ctx;
+  if (suspendTimer) { clearTimeout(suspendTimer); suspendTimer = null; }
+  master.gain.setTargetAtTime(enabled ? VOLUME : 0, c.currentTime, enabled ? 0.4 : 0.15);
+  if (enabled) { if (c.state === 'suspended' && !document.hidden) void c.resume().then(begin); }
+  else suspendTimer = setTimeout(() => { suspendTimer = null; if (!enabled && c.state === 'running') void c.suspend(); }, 700);
 }
 
 // Контекст и треки готовим сразу при входе в игру (звук ждёт разрешения браузера), играть начинаем с первого касания
 let playing = false;
 function begin() {
-  if (playing || !ctx || !buffers.length || ctx.state !== 'running') return;
+  if (playing || !enabled || !ctx || !buffers.length || ctx.state !== 'running') return;
   playing = true;
   playNext();
   setInterval(() => { if (ctx && ctx.state === 'running' && ctx.currentTime >= nextAt) playNext(); }, 500);
@@ -55,6 +61,7 @@ async function preload() {
     master = ctx.createGain();
     master.gain.value = enabled ? VOLUME : 0;
     master.connect(ctx.destination);
+    if (!enabled) void ctx.suspend(); // звук выключен ещё до загрузки: музыка не стартует
     const c = ctx;
     ctx.addEventListener('statechange', begin); // автоплей разрешён сразу: музыка пойдёт без касания
     for (const name of TRACKS) {
@@ -79,12 +86,12 @@ export const startMusicLoad = () => void preload();
 
 export function wireMusic() {
   const go = () => {
-    if (ctx && ctx.state === 'suspended' && !document.hidden) void ctx.resume().then(begin);
+    if (enabled && ctx && ctx.state === 'suspended' && !document.hidden) void ctx.resume().then(begin);
   };
   addEventListener('pointerdown', go, { capture: true, passive: true });
   // Пока вкладка скрыта, музыку не крутим: контекст на паузе, время в нём тоже стоит
   document.addEventListener('visibilitychange', () => {
     if (!ctx) return;
-    if (document.hidden) void ctx.suspend(); else void ctx.resume();
+    if (document.hidden || !enabled) void ctx.suspend(); else void ctx.resume();
   });
 }

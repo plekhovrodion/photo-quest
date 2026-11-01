@@ -60,6 +60,26 @@ export const LEVEL_DONE: Phrase[] = [
   P('done-6', 'sonya', 'Браво! Всё место пройдено!'),
 ];
 
+// Найдены вообще все задания всех мест (говорит Соня): звучит вместо обычной фразы окончания места.
+export const GAME_DONE: Phrase[] = [
+  P('game-done-1', 'sonya', 'Ура! Ты прошёл вообще все задания! Какой же ты молодец!'),
+  P('game-done-2', 'sonya', 'Невероятно! Ты нашёл всё на свете! Ты просто молодец!'),
+];
+
+// После английского слова: ребёнок повторяет вслух (говорит Соня). Дальше пауза и слово ещё раз.
+export const REPEAT_AFTER: Phrase[] = [
+  P('repeat-1', 'sonya', 'Повтори за мной!'),
+  P('repeat-2', 'sonya', 'А теперь ты скажи!'),
+  P('repeat-3', 'sonya', 'Скажи вместе со мной!'),
+];
+
+// Мини-раунд «услышь слово и выбери картинку» после найденного предмета (говорит Соня).
+export const QUIZ_ASK: Phrase = P('quiz-ask', 'sonya', 'Послушай слово и выбери картинку!');
+export const QUIZ_WRONG: Phrase[] = [
+  P('quiz-wrong-1', 'sonya', 'Попробуй ещё раз!'),
+  P('quiz-wrong-2', 'sonya', 'Послушай ещё раз!'),
+];
+
 // Подсказки при входе: на главной (выбор места с персонажем) и внутри места (выбор предмета).
 export const HINT_PLACE: Phrase[] = [
   P('hint-place-3', 'sonya', 'Питомцам грустно. Помоги им! Пройди все места, и они станут весёлыми!'),
@@ -106,7 +126,7 @@ export const VIDEO_LINES: Phrase[] = [
   P('video-5', 'sonya', 'Давай играть!'),
 ];
 
-export const ALL_PHRASES: Phrase[] = [TASK_AIM, ...VIDEO_LINES, NEXT_HINT, ...LEVEL_UP, ...PRAISE, ...INTRO_EN, ASK_CAMERA, ...TRY_AGAIN, ...TROUBLE, ...LEVEL_DONE, ...HINT_PLACE, ...HINT_ITEM, ...HINT_COLOR, ...LOCKED_HINT, ...TASK_LOCKED];
+export const ALL_PHRASES: Phrase[] = [TASK_AIM, ...VIDEO_LINES, NEXT_HINT, ...LEVEL_UP, ...PRAISE, ...INTRO_EN, ASK_CAMERA, ...TRY_AGAIN, ...TROUBLE, ...LEVEL_DONE, ...GAME_DONE, ...REPEAT_AFTER, QUIZ_ASK, ...QUIZ_WRONG, ...HINT_PLACE, ...HINT_ITEM, ...HINT_COLOR, ...LOCKED_HINT, ...TASK_LOCKED];
 
 // Случайная фраза, не повторяющая предыдущую из этого же списка.
 const last = new Map<Phrase[], string>();

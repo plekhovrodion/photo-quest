@@ -83,7 +83,7 @@ for (const i of pending) {
     method: 'POST',
     headers: { 'xi-api-key': key, 'Content-Type': 'application/json', Accept: 'audio/mpeg' },
     body: JSON.stringify({
-      text: i.voice === 'en' && PRON[i.text] ? PRON[i.text] : i.text,
+      text: i.voice === 'en' ? Object.entries(PRON).reduce((t, [w, r]) => (t === w ? r : t.replace(new RegExp(`\\b${w}\\b`, 'g'), r)), i.text) : i.text,
       // все слова одной моделью (multilingual_v2), чтобы звучали одинаково; language_code понимают только turbo/flash
       model_id: i.voice === 'en' ? EN_MODEL : MODEL,
       ...(i.voice === 'en' && /turbo|flash/.test(EN_MODEL) && { language_code: 'en' }),

@@ -13,13 +13,17 @@ export function recordedFor(text: string, english = false): string | null {
   return file ? urlOf(file) : null;
 }
 
-interface Item { url: string; text: string; english: boolean }
+// url = null — тишина на ms миллисекунд (пауза, чтобы ребёнок успел повторить слово); onStart вызывается, когда очередь дошла до пункта.
+interface Item { url: string | null; text: string; english: boolean; ms?: number; onStart?: () => void; onEnd?: () => void }
 let queue: Item[] = [];
 let current: HTMLAudioElement | null = null;
+let pauseTimer: ReturnType<typeof setTimeout> | null = null;
+let pauseEnd: (() => void) | null = null;
 
 export function stopRecorded() {
   queue = [];
   waiting = null;
+  if (pauseTimer) { clearTimeout(pauseTimer); pauseTimer = null; pauseEnd?.(); pauseEnd = null; }
   if (!current) return;
   current.pause();
   current = null;
@@ -28,6 +32,13 @@ export function stopRecorded() {
 function next() {
   const item = queue.shift();
   if (!item) { current = null; return; }
+  if (item.url === null) {
+    current = null;
+    item.onStart?.();
+    pauseEnd = item.onEnd ?? null;
+    pauseTimer = setTimeout(() => { pauseTimer = null; pauseEnd?.(); pauseEnd = null; next(); }, item.ms ?? 0);
+    return;
+  }
   const a = new Audio(item.url);
   current = a;
   a.onended = () => { if (current === a) next(); };
@@ -64,7 +75,13 @@ export function playRecorded(text: string, queued = false, english = false): boo
   if (!url) return false;
   if (!queued) stopRecorded();
   queue.push({ url, text, english });
-  if (!current) next();
+  if (!current && !pauseTimer) next();
   return true;
+}
+
+// Тишина в очереди голоса: после неё продолжится следующая запись. onStart/onEnd — начало и конец паузы (подсветка на экране).
+export function pauseRecorded(ms: number, onStart?: () => void, onEnd?: () => void) {
+  queue.push({ url: null, text: '', english: false, ms, onStart, onEnd });
+  if (!current && !pauseTimer) next();
 }
 

@@ -1,4 +1,4 @@
-import { playRecorded, stopRecorded } from './voice';
+import { playRecorded, pauseRecorded, stopRecorded } from './voice';
 import { playSfx, setSfxGate } from './sfx';
 import { setMusicEnabled } from './music';
 
@@ -32,6 +32,12 @@ export function speak(text: string, queue = false, _who: Speaker = 'grisha') {
 // Оборвать всю озвучку: при смене экрана, чтобы фразы не накладывались.
 export function stopSpeech() {
   stopRecorded();
+}
+
+// Тишина в цепочке озвучки (ребёнок повторяет слово).
+export function speakPause(ms: number, onStart?: () => void, onEnd?: () => void) {
+  if (!VOICE_ENABLED || muted) return;
+  pauseRecorded(ms, onStart, onEnd);
 }
 
 export function speakEnglish(word: string, queue = true) {

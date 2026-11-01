@@ -1171,3 +1171,15 @@ button.pw-back:not(.level):not(.stop):not(.cube-btn) { position: absolute; top: 
 .done-btns { position: fixed; z-index: 2; left: 16px; right: 16px; bottom: calc(24px + var(--safe-bottom, 0px)); max-width: 560px; margin: 0 auto; display: flex; flex-direction: column; gap: 14px; }
 .done-btns button { width: 100%; }
 @media (min-width: 900px) { .done-top h1 { font-size: 64px; line-height: 72px; } }
+
+/* Мини-раунд «услышь слово и выбери картинку»: слово сверху, две большие карточки без общей плашки */
+.tk-quizcard { display: flex; flex-direction: column; align-items: center; gap: 20px; width: 100%; position: relative; z-index: 2; }
+.quiz-word { margin: 0; font-size: 48px; line-height: 56px; text-align: center; }
+.quiz-opts { display: flex; gap: 16px; justify-content: center; width: 100%; }
+#app.screen-loc button.quiz-opt { flex: 1 1 0; max-width: 240px; width: auto; aspect-ratio: 1; height: auto; min-height: 0; padding: 0; border: 0; border-radius: 32px; background: #fff; box-shadow: 0 10px 0 var(--lshadow); display: grid; place-items: center; cursor: pointer; animation: loc-pop .7s cubic-bezier(.22, 1, .36, 1) backwards; animation-delay: calc(var(--i, 0) * 90ms + 200ms); }
+.quiz-opt { container-type: inline-size; }
+.quiz-opt .loc-ico { width: 72cqw; height: 72cqw; }
+@media (min-width: 600px) { .quiz-word { font-size: 56px; line-height: 64px; } .quiz-opts { gap: 32px; } #app.screen-loc button.quiz-opt { max-width: 280px; } }
+.quiz-opt.wrong { animation: tk-shake .7s cubic-bezier(.45, .05, .3, 1) both !important; }
+.quiz-opt.right { animation: tk-pop .6s cubic-bezier(.22, 1.3, .36, 1) both !important; }
+@media (prefers-reduced-motion: reduce) { .quiz-opt { animation: none !important; } }
