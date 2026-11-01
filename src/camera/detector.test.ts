@@ -18,6 +18,9 @@ describe('pickDetection', () => {
     );
     expect(d?.className).toBe('cup');
   });
+  it('если в задании назван предмет, чужие предметы не подсвечивает', () => {
+    expect(pickDetection([P('cell phone', 0.9, [260, 190, 120, 100]), P('remote', 0.8, [300, 200, 40, 40])], frame, { words: ['couch', 'sofa'] })).toBeNull();
+  });
   it('без подсказки берёт предмет у прицела, а не крупный в стороне', () => {
     const d = pickDetection([P('cup', 0.9, [10, 10, 40, 40]), P('book', 0.7, [250, 190, 140, 100])], frame, {});
     expect(d?.className).toBe('book');

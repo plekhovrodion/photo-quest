@@ -959,8 +959,8 @@ button.pw-back:not(.level):not(.stop):not(.cube-btn) { position: absolute; top: 
   #app.screen-tk.tk-task .tk-cam::before { border-radius: 0; }
   #app.screen-tk.tk-task .tk-cam .cam-hint { top: 96px; bottom: auto; }
   #app.screen-tk.tk-task .tk-live .tk-head { position: fixed; z-index: 4; left: 0; right: 0; bottom: 0; max-width: 600px; margin: 0 auto; padding: 32px; gap: 16px; background: #fff; border-radius: 32px 32px 0 0; box-shadow: 0 10px 0 #cbb7ff; }
-  #app.screen-tk.tk-task .tk-card.tk-live { --tkico: 108px; }
-  #app.screen-tk.tk-task .tk-live .tk-head .tk-text { font-size: 28px; line-height: 36px; color: #221c5f; }
+  #app.screen-tk.tk-task .tk-card.tk-live { --tkico: 144px; }
+  #app.screen-tk.tk-task .tk-live .tk-head .tk-text { font-size: 32px; line-height: 40px; color: #221c5f; }
   #app.screen-tk.tk-task .loc-head { --lbtn: #7a5ad0; --lbtns: #977eda; }
 }
 
@@ -1091,9 +1091,9 @@ button.pw-back:not(.level):not(.stop):not(.cube-btn) { position: absolute; top: 
 
 /* Экран «Загружаем игру»: во весь экран, полоска как на экране места */
 .loading-screen { position: fixed; inset: 0; z-index: 80; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 32px;
-  padding: 24px; background: #fff; --lfill: #66d385; animation: ca-fade .3s ease backwards; }
+  padding: 24px; background: radial-gradient(circle at 50% 38%, #f2fff4 0, #d9f6de 55%, #bfeccb 100%); --lfill: #66d385; animation: ca-fade .3s ease backwards; }
 .loading-screen h2 { margin: 0; font-size: 28px; line-height: 36px; font-weight: 700; color: #221c5f; text-align: center; text-shadow: none; }
-.loading-screen .loc-track { background: #e9e0ff; }
+.loading-screen .loc-track { background: rgba(255, 255, 255, .75); }
 .loading-screen .loc-progress { width: min(100%, 560px); }
 .loading-screen .loc-fill { width: var(--w, 0%); transition: width .25s ease-out; animation: loc-stripes 2.4s linear infinite; }
 .loading-screen .loc-fill[style*="--w:0%"] { display: block; width: 0; }
@@ -1129,13 +1129,13 @@ button.pw-back:not(.level):not(.stop):not(.cube-btn) { position: absolute; top: 
 .perm-ask button.pm-next:not(.level):not(.stop):not(.cube-btn):not(.x) { position: relative; width: 208px; min-width: 0; height: 80px; min-height: 0; padding: 0; border: 0; border-radius: 24px; overflow: hidden;
   background: none; box-shadow: none; cursor: pointer; font: 700 24px/32px 'Factor A', system-ui, sans-serif; color: #fff; text-shadow: none; }
 .pm-next i { position: absolute; left: 0; right: 0; height: 72px; border-radius: 24px; }
-.pm-next-shadow { top: 8px; background: #4cbc6c; }
-.pm-next-bg { top: 0; background: #66d385; }
+.pm-next-shadow { top: 8px; background: #6e46da; }
+.pm-next-bg { top: 0; background: #8a5eff; }
 .pm-next span { position: absolute; left: 0; right: 0; top: 20px; text-align: center; }
 .perm-ask button.pm-next:not(.level):not(.stop):not(.cube-btn):not(.x):active { transform: translateY(8px); }
 .pm-next:active .pm-next-shadow { opacity: 0; }
 @media (hover: hover) { .perm-ask button.pm-next:not(.level):not(.stop):not(.cube-btn):not(.x):hover { transform: translateY(8px); } .pm-next:hover .pm-next-shadow { opacity: 0; } }
-.pm-next:focus-visible { outline: 4px solid #fde68a; outline-offset: 4px; }
+.pm-next:focus, .pm-next:focus-visible { outline: none; }
 @keyframes pm-pop { from { opacity: 0; transform: translateY(168px); } }
 @media (max-height: 700px) { .pm-mcard { transform: translateY(115px) scale(.8); } }
 @media (max-height: 560px) { .pm-mcard { transform: translateY(86px) scale(.6); } }
@@ -1148,4 +1148,14 @@ button.pw-back:not(.level):not(.stop):not(.cube-btn) { position: absolute; top: 
   #app.screen-tk.tk-task .loc-body { padding: 104px 24px 32px; }
   #app.screen-tk.tk-task .tk-card.tk-live { --tkico: 120px; padding: 32px; gap: 24px; min-height: calc(100dvh - 136px); }
   #app.screen-tk.tk-task .tk-live .tk-head .tk-text { font-size: 44px; line-height: 52px; max-width: none; }
+}
+
+/* Экран «Все найдено!» на невысоких телефонах: уменьшаем комнату и кубок, чтобы обе кнопки были видны без прокрутки */
+@media (max-height: 760px) {
+  .done-room { width: min(100%, 290px); margin-inline: auto; }
+  .trophy { width: 96px; }
+}
+@media (max-height: 680px) {
+  .done-room { width: min(100%, 220px); }
+  .trophy { width: 80px; }
 }

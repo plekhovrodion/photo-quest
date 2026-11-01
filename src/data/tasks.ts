@@ -208,6 +208,7 @@ const DISABLED = new Set([
   'plate', 'pot', // кухня: тарелка 71% (и 12% ложных), кастрюля 70%
   'chair', 'bench', // стул 71%, скамейка 76%
   'pencil', // школа: карандаш 0% на мелких кадрах
+  'fork', // кухня: убрана по просьбе, пока вообще
 ].map((id) => `object-${id}`));
 
 export const LEVELS: Level[] = ALL_LEVELS.map((l) => ({ ...l, tasks: l.tasks.filter((t) => !DISABLED.has(t.id)) }));
@@ -224,7 +225,7 @@ export const ICON_INDEX: Record<string, number> = Object.fromEntries(
 // Иконки заданий, добавленных после первой раскладки спрайта: номер ячейки с начала спрайта (по рядам, 8 в ряду).
 export const ICON_ABS: Record<string, number> = {
   'object-kite': 62, 'object-airplane': 63, 'object-train': 64, 'object-horse': 65, 'object-sheep': 66,
-  'object-fork': 1, 'object-kettle': 67, 'object-toaster': 68, 'object-pan': 69, 'object-pot': 70, 'object-wineglass': 71, 'object-guitar': 72, 'object-globe': 73, 'object-frame': 74, 'object-calculator': 75, 'object-eraser': 76, 'object-pencilcase': 77, 'object-glue': 78, 'object-pencil': 79, 'object-shampoo': 80, 'object-hairbrush': 81, 'object-soap': 82, 'object-toothpaste': 83, 'object-duck': 84, 'object-bathtub': 85, 'object-boots': 86, 'object-helmet': 87, 'object-gloves': 88, 'object-scarf': 89, 'object-jacket': 90, 'object-tie': 91, 'object-egg': 92, 'object-cheese': 93, 'object-tomato': 94,
+  'object-fork': 1, 'object-kettle': 67, 'object-toaster': 68, 'object-pan': 69, 'object-pot': 70, 'object-wineglass': 71, 'object-guitar': 72, 'object-globe': 73, 'object-frame': 74, 'object-calculator': 75, 'object-eraser': 76, 'object-pencilcase': 77, 'object-glue': 78, 'object-pencil': 79, 'object-shampoo': 80, 'object-hairbrush': 81, 'object-soap': 82, 'object-toothpaste': 83, 'object-duck': 84, 'object-bathtub': 85, 'object-boots': 86, 'object-helmet': 87, 'object-gloves': 88, 'object-scarf': 89, 'object-jacket': 90, 'object-tie': 91, 'object-egg': 92, 'object-cheese': 93, 'object-tomato': 94, 'object-backpack': 95,
 };
 
 export const TASKS: Task[] = LEVELS.flatMap((l) => l.tasks);

@@ -19,6 +19,7 @@ let current: HTMLAudioElement | null = null;
 
 export function stopRecorded() {
   queue = [];
+  waiting = null;
   if (!current) return;
   current.pause();
   current = null;
@@ -30,10 +31,30 @@ function next() {
   const a = new Audio(item.url);
   current = a;
   a.onended = () => { if (current === a) next(); };
-  a.play().catch(() => {
-    // браузер не дал проиграть (например, нет жеста пользователя): остаток очереди бросаем
-    if (current === a) { current = null; queue = []; }
+  a.play().catch((e: unknown) => {
+    if (current === a) current = null;
+    if ((e as { name?: string })?.name === 'NotAllowedError') { waitForTouch([item, ...queue]); return; }
+    // другая ошибка (файл не загрузился и т. п.): остаток очереди бросаем
+    queue = [];
   });
+}
+
+// iPhone и другие браузеры не дают играть звук без касания: подсказка при входе на страницу ждёт первого касания и звучит тогда.
+// Смена экрана (stopRecorded) отменяет ожидание, чтобы старая фраза не прозвучала не к месту.
+let waiting: Item[] | null = null;
+function waitForTouch(items: Item[]) {
+  const had = !!waiting;
+  queue = [];
+  waiting = items;
+  if (had) return;
+  const events = ['touchend', 'pointerup', 'click', 'keydown'] as const;
+  const go = () => {
+    events.forEach((ev) => document.removeEventListener(ev, go, true));
+    const w = waiting;
+    waiting = null;
+    if (w?.length) { queue = w; next(); }
+  };
+  events.forEach((ev) => document.addEventListener(ev, go, true));
 }
 
 // true — запись поставлена (или пошла); false — файла нет.

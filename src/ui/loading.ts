@@ -20,9 +20,8 @@ export async function ensureModelsLoaded(): Promise<void> {
     el.className = 'loading-screen';
     el.setAttribute('role', 'dialog');
     el.setAttribute('aria-modal', 'true');
-    el.setAttribute('aria-label', 'Загружаем игру');
-    el.innerHTML = `<h2>Загружаем игру</h2>
-      <div class="loc-progress" role="progressbar" aria-label="Загрузка" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0"><div class="loc-track"><div class="loc-fill" style="background-image:url(${import.meta.env.BASE_URL}art/loc/stripe-a.svg)"></div></div></div>`;
+    el.setAttribute('aria-label', 'Загрузка');
+    el.innerHTML = `<div class="loc-progress" role="progressbar" aria-label="Загрузка" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0"><div class="loc-track"><div class="loc-fill" style="background-image:url(${import.meta.env.BASE_URL}art/loc/stripe-a.svg)"></div></div></div>`;
     fill = el.querySelector('.loc-fill');
     bar = el.querySelector('.loc-progress');
     document.body.appendChild(el);

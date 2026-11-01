@@ -30,6 +30,7 @@ export function pickDetection(
     const dist = Math.hypot((cx - frame.w / 2) / frame.w, (cy - frame.h / 2) / frame.h);
     const holdsCenter = frame.w / 2 >= x && frame.w / 2 <= x + w && frame.h / 2 >= y && frame.h / 2 <= y + h;
     const matches = target.words?.length && matchesLabels([{ className: p.class, probability: 1 }], target.words) ? 1 : 0;
+    if (target.words?.length && !matches) continue; // в задании назван предмет: рамка только на него, чужие вещи ребёнка не путают
     if (!matches && !holdsCenter && dist > MAX_CENTER_DIST) continue; // далеко от прицела и не из задания
     const size = Math.min((w * h) / (frame.w * frame.h), 0.5);
     const rank = matches * 2 + (holdsCenter ? 0.8 : 0) + p.score + size * 0.5 - dist * 1.5;

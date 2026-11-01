@@ -31,11 +31,11 @@ const TITLE = 'Разреши доступ к камере';
 
 function desktopHtml(side: PromptSide): string {
   const fox = `<img class="pm-fox pm-fox-${side}" src="${base()}/fox-${side}.svg" alt="">`;
-  return `${fox}<div class="pm-card"><h2>${TITLE}</h2><p>Тогда ты сможешь <span class="pm-tag">искать предметы</span></p></div>`;
+  return `${fox}<div class="pm-card"><h2>${TITLE}</h2></div>`;
 }
 
 const mobileHtml = () => `<div class="pm-mcard"><img class="pm-fox-mobile" src="${base()}/fox-mobile.svg" alt="">
-  <h2>${TITLE}</h2><p>Тогда ты сможешь <b>искать предметы</b></p>
+  <h2>${TITLE}</h2>
   <button class="pm-next" type="button"><i class="pm-next-shadow"></i><i class="pm-next-bg"></i><span>Далее</span></button></div>`;
 
 // Пока окно просьбы говорит само, оно перебивает озвучку задания. Когда окно закрылось, экран задания договаривает (см. main.ts).

@@ -1,8 +1,7 @@
 import './style.css';
 import { LEVELS, ICON_INDEX, ICON_ABS, type Level, type Task } from './data/tasks';
 import { createGame, currentTask, reduce, STARS_PER_TASK, type Action, type GameState } from './game/state';
-import { PRAISE, INTRO_EN, TRY_AGAIN, TROUBLE, LEVEL_DONE, LOCKED_HINT, TASK_LOCKED, TASK_AIM, NEXT_HINT, levelUpText, type Phrase, HINT_PLACE, HINT_ITEM, pickPhrase } from './data/phrases';
-import { starsSvg } from './ui/stars';
+import { PRAISE, INTRO_EN, TRY_AGAIN, TROUBLE, LEVEL_DONE, LOCKED_HINT, TASK_LOCKED, TASK_AIM, NEXT_HINT, levelUpText, type Phrase, HINT_PLACE, HINT_ITEM, HINT_COLOR, pickPhrase } from './data/phrases';
 import { takePhoto, compressPhoto, stopCamera, type Captured } from './camera/capture';
 import { onCameraPromptClosed } from './camera/prepermission';
 import { targetOf } from './camera/target';
@@ -31,7 +30,7 @@ import { album, toSticker, type Sticker } from './album';
 import { CLIP_OBJECTS } from './data/clip';
 import { loadProgress, recordTask, LEVEL_BONUS, type Progress } from './progress';
 import { createStore } from './storage/store';
-import { flashIcon, lockIcon, starIcon, checkIcon, backIcon } from './ui/icons';
+import { flashIcon, lockIcon, checkIcon, backIcon } from './ui/icons';
 import { placeSvg } from './map/places';
 import { mapDecor } from './ui/mapDecor';
 
@@ -232,10 +231,6 @@ async function processCapture(task: Task, cap: Captured) {
 // Картинки заврёнков Гриши и Сони (Figma «Иллюстрации. Гриша и Соня. Заврики»).
 const art = (name: string, cls = '') =>
   `<img class="char ${cls}" src="${import.meta.env.BASE_URL}art/${name}.svg" alt="" aria-hidden="true" style="--hue:${lookOf(progress, zavrikOfArt(name)).hue}deg">`;
-
-const starRow = (n: number) =>
-  `<div class="stars" role="img" aria-label="Звёзд: ${n} из 3">${[1, 2, 3]
-    .map((i) => `<span class="star ${i <= n ? 'on' : ''}" style="--d:${i * 0.25}s">${starIcon()}</span>`).join('')}</div>`;
 
 // «Найди предмет с красным цветом» -> «предмет с красным цветом»
 const goalOf = (task: Task) => task.prompt.replace(/^Найди\s+/, '').replace(/[!.]$/, '');
@@ -552,7 +547,6 @@ async function renderAlbum() {
 // Крупная наклейка: фото, название, звёзды; фото можно удалить.
 function showSticker(t: Task, url: string) {
   if (document.querySelector('.modal-overlay')) return;
-  const stars = progress.found[t.id] ?? 0;
   const overlay = document.createElement('div');
   overlay.className = 'modal-overlay';
   overlay.setAttribute('role', 'dialog');
@@ -561,7 +555,6 @@ function showSticker(t: Task, url: string) {
   overlay.innerHTML = `<div class="modal sticker-modal">
     <img class="sticker-big" src="${url}" alt="">
     <h2>${esc(taskName(t))}</h2>
-    ${stars ? starRow(stars) : ''}
     <button class="st-ok" type="button">Закрыть</button>
     <button class="st-del secondary" type="button">Удалить фото</button>
   </div>`;
@@ -715,7 +708,7 @@ function renderMap(l: Level) {
   );
   on('back', toMenu);
   wireLocTools();
-  if (found < n) sayHint('.loc-grid', HINT_ITEM); // у пройденного места подсказка не нужна
+  if (found < n) sayHint('.loc-grid', l.id === 'colors' ? HINT_COLOR : HINT_ITEM); // у пройденного места подсказка не нужна
 }
 
 function renderLevelDone() {
@@ -767,7 +760,7 @@ function render() {
         playSfx('correct'); setTimeout(() => playSfx('star'), 380);
         const word = englishFor(task!.id);
         taskScreen(L, `<section class="tk-card ok" id="tkcard" ${word ? 'role="button" tabindex="0" aria-label="Послушать слово ещё раз"' : ''}>
-            <div class="tk-stars" role="img" aria-label="Звёзд: ${STARS_PER_TASK} из 3">${starsSvg()}</div><span class="tk-ico">${taskIcon(L, task!)}</span>
+            <span class="tk-ico">${taskIcon(L, task!)}</span>
             <p class="tk-en">${word ? word.en : taskName(task!)}</p>${word ? `<p class="tk-ru">${word.ru}</p>` : ''}</section>`, '',
           bigBtn('next', nextIcon(), 'Следующее задание'), 'tk-ok');
         const card = root.querySelector<HTMLElement>('#tkcard')!;

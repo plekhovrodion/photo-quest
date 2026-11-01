@@ -1149,8 +1149,12 @@
 </defs>
 </g>
 <g id="cell 80" transform="translate(0 1280)">
-<rect x="40" y="26" width="48" height="90" rx="14" fill="#7B6EE0"/><path d="M40 92H88V102A14 14 0 0 1 74 116H54A14 14 0 0 1 40 102Z" fill="#5A4FC0"/>
-<rect x="46" y="54" width="36" height="38" rx="8" fill="#FFFFFF"/><circle cx="64" cy="72" r="8" fill="#F08CB6"/><rect x="54" y="10" width="20" height="18" rx="5" fill="#FFFFFF"/><path d="M60 12H96A8 8 0 0 1 100 20" stroke="#FFFFFF" stroke-width="8" stroke-linecap="round" fill="none"/>
+<rect x="56" y="8" width="16" height="16" rx="4" fill="#D9689A"/><path d="M62 10H92A8 8 0 0 1 100 18V20H92" stroke="#D9689A" stroke-width="9" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
+<rect x="46" y="22" width="36" height="16" rx="6" fill="#F08CB6"/>
+<rect x="30" y="36" width="68" height="84" rx="22" fill="#6DB8F0"/><path d="M30 98H98V100A22 22 0 0 1 76 120H52A22 22 0 0 1 30 100Z" fill="#4A8FD4"/>
+<rect x="40" y="56" width="48" height="40" rx="10" fill="#FFFFFF"/><circle cx="64" cy="76" r="9" fill="#BDE6FF"/><path d="M64 66C69 73 72 76 72 80A8 8 0 0 1 56 80C56 76 59 73 64 66Z" fill="#6DB8F0"/>
+<path d="M38 46C40 42 44 40 48 40" stroke="#FFFFFF" stroke-width="6" stroke-linecap="round" fill="none" opacity=".6"/>
+<circle cx="108" cy="40" r="9" fill="#BDE6FF"/><circle cx="116" cy="58" r="6" fill="#BDE6FF"/><circle cx="102" cy="58" r="4" fill="#BDE6FF"/>
 </g>
 <g id="cell 81" transform="translate(128 1280)">
 <g id="xhairbrush_WordChicken">
@@ -1173,8 +1177,11 @@
 <path d="M32 58H56" stroke="#FFFFFF" stroke-width="6" stroke-linecap="round" opacity=".7"/><circle cx="92" cy="30" r="14" fill="#BDE6FF"/><circle cx="72" cy="22" r="8" fill="#BDE6FF"/><circle cx="110" cy="46" r="7" fill="#BDE6FF"/>
 </g>
 <g id="cell 83" transform="translate(384 1280)">
-<g transform="rotate(-35 64 64)"><path d="M10 46L30 54V74L10 82Z" fill="#4A8FD4"/><rect x="26" y="44" width="66" height="40" rx="9" fill="#6DB8F0"/><path d="M26 72H92V75A9 9 0 0 1 83 84H35A9 9 0 0 1 26 75Z" fill="#4A8FD4"/>
-<rect x="40" y="44" width="14" height="40" fill="#FFFFFF"/><rect x="88" y="50" width="26" height="28" rx="6" fill="#FFFFFF"/><rect x="104" y="50" width="10" height="28" rx="5" fill="#DCE6F3"/></g>
+<g transform="rotate(-40 64 64)"><rect x="4" y="46" width="14" height="36" rx="4" fill="#C9D3E3"/><path d="M8 50V78M12 50V78M16 50V78" stroke="#8A97AD" stroke-width="2.5"/>
+<rect x="16" y="42" width="62" height="44" rx="10" fill="#6DB8F0"/><path d="M16 74H78V76A10 10 0 0 1 68 86H26A10 10 0 0 1 16 76Z" fill="#4A8FD4"/>
+<rect x="28" y="54" width="38" height="14" rx="7" fill="#FFFFFF"/><path d="M76 46L92 54V74L76 82Z" fill="#4A8FD4"/><rect x="90" y="52" width="20" height="24" rx="6" fill="#FFFFFF"/><rect x="90" y="52" width="8" height="24" rx="4" fill="#DCE6F3"/>
+<path d="M110 64C122 58 128 66 118 70" stroke="#FFFFFF" stroke-width="0"/></g>
+<path d="M96 22C108 14 120 22 112 30C122 32 118 44 106 40" stroke="#8FE0D0" stroke-width="9" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
 </g>
 <g id="cell 84" transform="translate(512 1280)">
 <path d="M22 68Q10 52 26 48Q32 62 40 68Z" fill="#FFC857"/><ellipse cx="60" cy="82" rx="40" ry="26" fill="#FFC857"/><circle cx="82" cy="46" r="24" fill="#FFC857"/>
@@ -1339,6 +1346,13 @@
 </g>
 </g>
 </g>
+</g>
+<g id="cell 95" transform="translate(896 1408)">
+<path d="M44 30C44 12 84 12 84 30" stroke="#D24C4C" stroke-width="9" stroke-linecap="round" fill="none"/>
+<rect x="22" y="24" width="84" height="96" rx="26" fill="#EF6F6C"/><path d="M22 92H106V96A26 26 0 0 1 80 120H48A26 26 0 0 1 22 96Z" fill="#D24C4C"/>
+<rect x="36" y="64" width="56" height="40" rx="12" fill="#FFC857"/><path d="M36 92H92V94A12 12 0 0 1 80 104H48A12 12 0 0 1 36 94Z" fill="#F2A93B"/>
+<path d="M48 78H80" stroke="#FFFFFF" stroke-width="6" stroke-linecap="round" opacity=".8"/><path d="M38 38C48 30 62 30 78 34" stroke="#FFFFFF" stroke-width="6" stroke-linecap="round" fill="none" opacity=".5"/>
+<rect x="8" y="60" width="16" height="32" rx="8" fill="#D24C4C"/><rect x="104" y="60" width="16" height="32" rx="8" fill="#D24C4C"/>
 </g>
 <defs>
 <clipPath id="clip0_4826_17019">

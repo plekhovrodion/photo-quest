@@ -12,10 +12,11 @@ const FIRST_SCREEN = [
   'art/rooms/head-food-bare.svg', 'art/rooms/head-bath-bare.svg', 'art/rooms/head-hall-bare.svg', 'art/rooms/head-outdoor-bare.svg',
   'art/loc/back.svg', 'art/loc/fullscreen.svg', 'art/loc/sound.svg', 'art/loc/play.svg', 'art/loc/stripe-a.svg',
 ];
-const SECOND_STEP = ['art/loc/icons.svg', 'art/loc/headers.svg', 'art/loc/next.svg', 'art/loc/check.svg', 'art/loc/stars.svg'];
+const SECOND_STEP = ['art/loc/icons.svg', 'art/loc/headers.svg', 'art/loc/next.svg', 'art/loc/check.svg'];
+const REQUIRED = [...FIRST_SCREEN, ...SECOND_STEP]; // обязательное: без этого экраны игры собираются с запозданием
 const FONTS = ['400 16px "Factor A"', '700 16px "Factor A"', '800 16px "Factor A"'];
-const SHOW_AFTER_MS = 350; // быстрая загрузка не мигает заставкой
-const GIVE_UP_MS = 8000; // совсем плохая сеть: не держим игру, остальное догрузится само
+const MIN_SHOW_MS = 5000; // заставка держится не меньше 5 секунд, пока грузится обязательное
+const GIVE_UP_MS = 12000; // совсем плохая сеть: не держим игру, остальное догрузится само
 
 export const LOW: RequestInit = { priority: 'low' } as RequestInit; // подсказка браузеру: файл не срочный, не отнимай канал у главного экрана
 
@@ -35,9 +36,8 @@ function overlay(): { paint(p: number): void; remove(): void } {
   el.className = 'loading-screen';
   el.setAttribute('role', 'dialog');
   el.setAttribute('aria-modal', 'true');
-  el.setAttribute('aria-label', 'Загружаем игру');
-  el.innerHTML = `<h2>Загружаем игру</h2>
-    <div class="loc-progress" role="progressbar" aria-label="Загрузка" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0"><div class="loc-track"><div class="loc-fill"></div></div></div>`;
+  el.setAttribute('aria-label', 'Загрузка');
+  el.innerHTML = `<div class="loc-progress" role="progressbar" aria-label="Загрузка" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0"><div class="loc-track"><div class="loc-fill"></div></div></div>`;
   const fill = el.querySelector<HTMLElement>('.loc-fill')!;
   const bar = el.querySelector<HTMLElement>('.loc-progress')!;
   fill.style.backgroundImage = `url(${BASE}art/loc/stripe-a.svg)`;
@@ -51,22 +51,26 @@ function overlay(): { paint(p: number): void; remove(): void } {
 let secondDone: Promise<void> | null = null;
 export const whenBootDone = (): Promise<void> => secondDone ?? Promise.resolve();
 
-// Первая ступень: возвращается, когда можно рисовать главный экран.
+// Первая ступень: заставка без текста, не меньше MIN_SHOW_MS; полоска идёт по меньшему из «реально загружено» и «прошло времени».
 export async function bootFirstStep(): Promise<void> {
   mark('старт');
-  const total = FIRST_SCREEN.length + FONTS.length;
+  const total = REQUIRED.length + FONTS.length;
+  const t0 = performance.now();
   let done = 0;
-  const box: { screen?: ReturnType<typeof overlay> } = {};
-  const tick = () => { done++; box.screen?.paint(done / total); };
-  const timer = setTimeout(() => { box.screen = overlay(); box.screen.paint(done / total); }, SHOW_AFTER_MS);
+  const screen = overlay();
+  const paint = () => screen.paint(Math.min(done / total, (performance.now() - t0) / MIN_SHOW_MS));
+  const tick = () => { done++; paint(); };
+  const timer = setInterval(paint, 100);
   const fonts = Promise.all(FONTS.map((f) => document.fonts?.load(f).catch(() => []).finally(tick)));
   await Promise.race([
-    Promise.all([fetchAll(FIRST_SCREEN, tick), fonts]),
+    Promise.all([fetchAll(REQUIRED, tick), fonts, new Promise((ok) => setTimeout(ok, MIN_SHOW_MS))]),
     new Promise((ok) => setTimeout(ok, GIVE_UP_MS)),
   ]);
-  clearTimeout(timer);
-  box.screen?.paint(1);
-  box.screen?.remove();
+  clearInterval(timer);
+  screen.paint(1);
+  await new Promise((ok) => setTimeout(ok, 250)); // полоска успевает дойти до края
+  screen.remove();
+  document.querySelector('.pre-splash')?.remove();
   mark('главный экран');
   showStatsOverlay();
 }
@@ -76,6 +80,6 @@ export function bootSecondStep(then: () => void): void {
   const idle = (fn: () => void) => ('requestIdleCallback' in window ? requestIdleCallback(fn, { timeout: 2000 }) : setTimeout(fn, 300));
   // Питомцам на главном экране нужна пара секунд, чтобы скачать свои анимации: вторую ступень начинаем чуть позже.
   secondDone = new Promise<void>((resolve) => setTimeout(() => idle(() => {
-    void fetchAll(SECOND_STEP, () => {}, 2, LOW).then(() => { mark('основа догружена'); resolve(); then(); setTimeout(() => { mark('отчёт'); saveReport(); }, 6000); });
+    mark('основа догружена'); resolve(); then(); setTimeout(() => { mark('отчёт'); saveReport(); }, 6000);
   }), 2000));
 }

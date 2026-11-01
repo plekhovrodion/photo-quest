@@ -56,6 +56,11 @@ export const HINT_ITEM: Phrase[] = [
   P('hint-item-1', 'sonya', 'Выбери предмет!'),
   P('hint-item-2', 'sonya', 'Нажми на предмет, который будем искать!'),
 ];
+// То же в месте «Цвета»: там ищем цвета, а не предметы.
+export const HINT_COLOR: Phrase[] = [
+  P('hint-color-1', 'sonya', 'Выбери цвет!'),
+  P('hint-color-2', 'sonya', 'Нажми на цвет, который будем искать!'),
+];
 
 // Нажал на закрытое место (говорит Соня).
 export const LOCKED_HINT: Phrase[] = [
@@ -79,7 +84,16 @@ export const NEXT_HINT: Phrase = P('next-1', 'sonya', 'Идём дальше! Н
 export const levelUpText = (name: string, level: number) => `${name} ${name === 'Соня' ? 'выросла' : 'вырос'}! Уровень ${level}!`;
 export const LEVEL_UP: Phrase[] = ['Гриша', 'Соня'].flatMap((name) => [2, 3, 4, 5].map((n) => P(`levelup-${name === 'Гриша' ? 'g' : 's'}${n}`, 'sonya', levelUpText(name, n))));
 
-export const ALL_PHRASES: Phrase[] = [TASK_AIM, NEXT_HINT, ...LEVEL_UP, ...PRAISE, ...INTRO_EN, ASK_CAMERA, ...TRY_AGAIN, ...TROUBLE, ...LEVEL_DONE, ...HINT_PLACE, ...HINT_ITEM, ...LOCKED_HINT, ...TASK_LOCKED];
+// Видео-приветствие на 15 секунд (docs/video-onboarding-prompt.md): три питомца, закадровый голос Сони.
+export const VIDEO_LINES: Phrase[] = [
+  P('video-1', 'sonya', 'Привет! Давай вместе искать предметы!'),
+  P('video-2', 'sonya', 'Смотри, как мы это делаем. Сначала найди предмет.'),
+  P('video-3', 'sonya', 'Потом наведи на него камеру.'),
+  P('video-4', 'sonya', 'Когда рамка станет зелёной, предмет найден!'),
+  P('video-5', 'sonya', 'Давай играть!'),
+];
+
+export const ALL_PHRASES: Phrase[] = [TASK_AIM, ...VIDEO_LINES, NEXT_HINT, ...LEVEL_UP, ...PRAISE, ...INTRO_EN, ASK_CAMERA, ...TRY_AGAIN, ...TROUBLE, ...LEVEL_DONE, ...HINT_PLACE, ...HINT_ITEM, ...HINT_COLOR, ...LOCKED_HINT, ...TASK_LOCKED];
 
 // Случайная фраза, не повторяющая предыдущую из этого же списка.
 const last = new Map<Phrase[], string>();
