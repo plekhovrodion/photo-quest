@@ -220,8 +220,8 @@ function liveCamera(target: Target, host: HTMLElement): Promise<Captured | null>
         : foundAt ? 'Нашёл!'
         : liveOk() || locked ? 'Нашёл! Держи ровно…'
         : hasBox ? 'Держи ровно…'
-        : startedAt && now - startedAt > LOST_HINT_MS ? 'Не вижу предмета. Наведи камеру прямо на него'
-        : 'Наведи камеру на предмет';
+        : startedAt && now - startedAt > LOST_HINT_MS ? 'Пока не вижу. Наведи камеру прямо на него'
+        : 'Наведи камеру';
     };
 
     const render = (now: number) => {

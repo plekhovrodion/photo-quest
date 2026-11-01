@@ -711,17 +711,23 @@ function renderMap(l: Level) {
   if (found < n) sayHint('.loc-grid', l.id === 'colors' ? HINT_COLOR : HINT_ITEM); // у пройденного места подсказка не нужна
 }
 
+// Экран «Все найдено!» пока выключен: когда место пройдено, ребёнок возвращается к заданиям места и слышит только озвучку.
+const SHOW_LEVEL_DONE_SCREEN = false;
 function renderLevelDone() {
   playSfx('level-up');
   const doneLine = pickPhrase(LEVEL_DONE);
-  const hero = hasRoom(level!.id)
-    ? `<div class="done-room">${roomHtml(level!.id, true, 'head-', 'happy-loop')}</div>` // зверёнок места радуется в своей комнате
-    : `<div class="duo">${art('grisha-cheer', 'cheer')}${art('sonya-cheer', 'cheer')}</div>`;
-  show(`${hud('')}${hero}<div class="trophy">${objectSvg('trophy')}</div><h1>Все найдено!</h1>
-    <p>Ты справился со всей категорией «${level!.title}»</p>
-    <div class="reward">${flashIcon()}бонус +${LEVEL_BONUS}</div>
-    <button id="map" class="green">К заданиям</button>
-    <button id="home" class="secondary">На главную</button>`);
+  if (!SHOW_LEVEL_DONE_SCREEN) {
+    renderMap(level!);
+    const seq = screenSeq;
+    setTimeout(() => { if (seq === screenSeq) speak(doneLine.text, false, doneLine.who); }, 700); // после звука
+    return;
+  }
+  // Комната места на весь экран, в центре большой радостный питомец; поверх заголовок и кнопки.
+  const stage = hasRoom(level!.id)
+    ? `<div class="done-stage">${roomHtml(level!.id, true, 'head-', 'happy-loop')}</div>`
+    : `<div class="done-stage"><div class="duo">${art('grisha-cheer', 'cheer')}${art('sonya-cheer', 'cheer')}</div></div>`;
+  show(`${stage}<div class="done-top"><h1>Все найдено!</h1><div class="reward">${flashIcon()}бонус +${LEVEL_BONUS}</div></div>
+    <div class="done-btns"><button id="map" class="green">К заданиям</button><button id="home" class="secondary">На главную</button></div>`, 'screen-done');
   confetti(2200);
   const seq = screenSeq;
   setTimeout(() => { if (seq === screenSeq && root.querySelector('#map')) speak(doneLine.text, false, doneLine.who); }, 700); // озвучка после фанфар

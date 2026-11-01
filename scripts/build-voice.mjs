@@ -26,7 +26,10 @@ if (existsSync('.env.voice')) {
 const OUT = 'public/voice';
 const MANIFEST = 'src/data/voice-manifest.json';
 const MODEL = process.env.ELEVENLABS_MODEL || 'eleven_multilingual_v2';
-const EN_MODEL = process.env.ELEVENLABS_EN_MODEL || 'eleven_turbo_v2_5';
+const EN_MODEL = process.env.ELEVENLABS_EN_MODEL || 'eleven_multilingual_v2';
+
+// Слова, которые голос читает не так, как нужно ребёнку: подсказка произношения (пишем слово так, как оно звучит по-американски).
+const PRON = { vase: 'vayss' };
 
 const args = process.argv.slice(2);
 const dry = args.includes('--dry');
@@ -80,10 +83,10 @@ for (const i of pending) {
     method: 'POST',
     headers: { 'xi-api-key': key, 'Content-Type': 'application/json', Accept: 'audio/mpeg' },
     body: JSON.stringify({
-      text: i.text,
-      // английские слова: модель с жёсткой привязкой к языку, иначе короткое слово (cup) голос читает с русским акцентом («цап»)
+      text: i.voice === 'en' && PRON[i.text] ? PRON[i.text] : i.text,
+      // все слова одной моделью (multilingual_v2), чтобы звучали одинаково; language_code понимают только turbo/flash
       model_id: i.voice === 'en' ? EN_MODEL : MODEL,
-      ...(i.voice === 'en' && { language_code: 'en' }),
+      ...(i.voice === 'en' && /turbo|flash/.test(EN_MODEL) && { language_code: 'en' }),
       ...(withSettings && {
         // английские слова: стабильнее и медленнее, чтобы ребёнок расслышал
         voice_settings: i.voice === 'en' ? { stability: 0.7, similarity_boost: 0.8, style: 0.1 } : { stability: 0.45, similarity_boost: 0.8, style: 0.35 },

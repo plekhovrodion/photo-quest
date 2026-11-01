@@ -1159,3 +1159,15 @@ button.pw-back:not(.level):not(.stop):not(.cube-btn) { position: absolute; top: 
   .done-room { width: min(100%, 220px); }
   .trophy { width: 80px; }
 }
+
+/* Экран «Все найдено!»: комната места на весь экран, питомец крупно по центру */
+.done-stage { position: fixed; inset: 0; z-index: 0; overflow: hidden; container-type: size; background: #fde9bd; }
+.done-stage .room-box { position: absolute; inset: 0; width: 100%; height: 100%; }
+.done-stage .room-img { object-fit: cover; object-position: 50% 100%; } /* фон: комната места на весь экран, берём нижнюю часть с ковриком */
+.done-stage .pet { left: 50%; bottom: 17%; width: min(118vw, 72vh); } /* питомец крупно по центру */
+.done-stage .duo { position: absolute; inset: 0; display: flex; align-items: flex-end; justify-content: center; }
+.done-top { position: fixed; z-index: 2; top: calc(24px + var(--safe-top, 0px)); left: 16px; right: 16px; display: flex; flex-direction: column; align-items: center; gap: 12px; pointer-events: none; }
+.done-top h1 { margin: 0; text-align: center; color: #fff; font-size: 44px; line-height: 50px; text-shadow: 0 4px 0 rgba(94, 56, 190, .85), 0 0 18px rgba(94, 56, 190, .5); }
+.done-btns { position: fixed; z-index: 2; left: 16px; right: 16px; bottom: calc(24px + var(--safe-bottom, 0px)); max-width: 560px; margin: 0 auto; display: flex; flex-direction: column; gap: 14px; }
+.done-btns button { width: 100%; }
+@media (min-width: 900px) { .done-top h1 { font-size: 64px; line-height: 72px; } }
