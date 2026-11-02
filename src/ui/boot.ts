@@ -10,7 +10,7 @@ const FIRST_SCREEN = [
   'art/map/wide/hills-a.svg', 'art/map/wide/hills-b.svg', 'art/map/wide/hills-c.svg',
   'art/rooms/head-colors-bare.svg', 'art/rooms/head-room-bare.svg', 'art/rooms/head-kitchen-bare.svg', 'art/rooms/head-school-bare.svg',
   'art/rooms/head-food-bare.svg', 'art/rooms/head-bath-bare.svg', 'art/rooms/head-hall-bare.svg', 'art/rooms/head-outdoor-bare.svg',
-  'art/loc/back.svg', 'art/loc/fullscreen.svg', 'art/loc/sound.svg', 'art/loc/play.svg', 'art/loc/stripe-a.svg',
+  'art/loc/back.svg', 'art/loc/fullscreen.svg', 'art/loc/sound.svg', 'art/loc/play.svg', 'art/loc/onboarding-play.svg', 'art/loc/stripe-a.svg',
 ];
 // Иконки комнаты, задания и результата запрашиваются браузером при переходе на эти экраны.
 // Не скачиваем их вместе с картой: это лишние запросы до первого действия игрока.
