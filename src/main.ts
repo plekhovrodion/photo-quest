@@ -285,7 +285,7 @@ function renderOnboarding() {
     <video class="intro-video" autoplay playsinline preload="auto" aria-label="Видео-знакомство с игрой">
       <source src="${import.meta.env.BASE_URL}${onboardingVideo}" type="video/mp4">
     </video>
-    <button id="intro-play" class="intro-play" type="button" aria-label="Воспроизвести видео" hidden>▶</button>
+    <button id="intro-play" class="intro-play" type="button" aria-label="Воспроизвести видео" hidden><i class="intro-play-icon" style="--m:url(${import.meta.env.BASE_URL}art/loc/play.svg)" aria-hidden="true"></i></button>
   </div>`, 'screen-onboarding-video');
   const video = root.querySelector<HTMLVideoElement>('.intro-video')!;
   const play = root.querySelector<HTMLButtonElement>('#intro-play')!;
