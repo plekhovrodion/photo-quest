@@ -1,5 +1,7 @@
 import { CLIP_OBJECTS } from '../data/clip';
 import { heavyModelsAllowed, fetchWithProgress, setClipReady } from './models';
+import { CLIP_ACCEPT } from './clipConstants';
+export { CLIP_ACCEPT } from './clipConstants';
 
 // CLIP (ViT-B/32, квантованный): сравниваем фото с описаниями всех предметов игры и смотрим, на каком месте нужный.
 // Описания посчитаны заранее (scripts/build-clip.mjs), в браузере считается только картинка.
@@ -150,7 +152,6 @@ export function clipProb(ranks: ClipRank[], en: string): number {
 
 // Порог засчитывания. Замер: при 0,02 узнаётся 87,7% (было 88,3% по правилу «в первых шести»), а путаница
 // с соседними предметами того же места вдвое реже: 10% вместо 20%.
-export const CLIP_ACCEPT = 0.02;
 export const clipAccepts = (ranks: ClipRank[], en: string): boolean => clipProb(ranks, en) >= CLIP_ACCEPT;
 
 // Нужный предмет входит в первые `top` по сходству.

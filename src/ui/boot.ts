@@ -12,11 +12,12 @@ const FIRST_SCREEN = [
   'art/rooms/head-food-bare.svg', 'art/rooms/head-bath-bare.svg', 'art/rooms/head-hall-bare.svg', 'art/rooms/head-outdoor-bare.svg',
   'art/loc/back.svg', 'art/loc/fullscreen.svg', 'art/loc/sound.svg', 'art/loc/play.svg', 'art/loc/stripe-a.svg',
 ];
-const SECOND_STEP = ['art/loc/icons.svg', 'art/loc/headers.svg', 'art/loc/next.svg', 'art/loc/check.svg'];
-const REQUIRED = [...FIRST_SCREEN, ...SECOND_STEP]; // обязательное: без этого экраны игры собираются с запозданием
+// Иконки комнаты, задания и результата запрашиваются браузером при переходе на эти экраны.
+// Не скачиваем их вместе с картой: это лишние запросы до первого действия игрока.
+const REQUIRED = FIRST_SCREEN;
 const FONTS = ['400 16px "Factor A"', '700 16px "Factor A"', '800 16px "Factor A"'];
-const MIN_SHOW_MS = 5000; // заставка держится не меньше 5 секунд, пока грузится обязательное
-const GIVE_UP_MS = 12000; // совсем плохая сеть: не держим игру, остальное догрузится само
+const MIN_SHOW_MS = 900; // не мелькаем на быстрой сети, но не удерживаем готовую игру несколько секунд
+const GIVE_UP_MS = 4000; // если сеть медленная, показываем карту, а ресурсы догружаются по мере надобности
 
 export const LOW: RequestInit = { priority: 'low' } as RequestInit; // подсказка браузеру: файл не срочный, не отнимай канал у главного экрана
 
@@ -63,7 +64,7 @@ export async function bootFirstStep(): Promise<void> {
   const timer = setInterval(paint, 100);
   const fonts = Promise.all(FONTS.map((f) => document.fonts?.load(f).catch(() => []).finally(tick)));
   await Promise.race([
-    Promise.all([fetchAll(REQUIRED, tick), fonts, new Promise((ok) => setTimeout(ok, MIN_SHOW_MS))]),
+    Promise.all([fetchAll(REQUIRED, tick, 8), fonts, new Promise((ok) => setTimeout(ok, MIN_SHOW_MS))]),
     new Promise((ok) => setTimeout(ok, GIVE_UP_MS)),
   ]);
   clearInterval(timer);

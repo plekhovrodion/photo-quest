@@ -8,7 +8,7 @@ import { colorShares, type ColorName } from '../vision/color';
 import { COLOR_RU, ruName } from '../vision/names';
 import { loadCoco, modelStatus, onModelStatus, preloadModels } from '../vision/models';
 import { matchesLabels } from '../vision/labels';
-import { loadClip, rankObjects, clipProb, CLIP_ACCEPT } from '../vision/clip';
+import { CLIP_ACCEPT } from '../vision/clipConstants';
 import { playSfx } from '../audio/sfx';
 
 const MAX_SIDE = 1024;
@@ -49,6 +49,7 @@ const MIN_GAP_MS = 110; // не чаще ~9 раз в секунду ищем п
 const COLOR_GAP_MS = 50; // цветовое пятно считается за миллисекунды — можно чаще
 const LOST_HINT_MS = 3000; // через сколько без рамки подсказываем, что делать
 const SMALL = { w: 96, h: 72 };
+const DETECTOR_MAX_SIDE = 640;
 const AUTO_CLIP_MS = 450; // сколько CLIP должен уверенно узнавать предмет, чтобы снять сам
 const AUTO_LOCK_MS = 650; // то же для рамки детектора или цветового пятна, уже ставшей зелёной
 const FOUND_ANIM_MS = 1000; // сколько показываем зелёную подсветку, прежде чем отдать снимок
@@ -78,10 +79,13 @@ function liveCamera(target: Target, host: HTMLElement): Promise<Captured | null>
     let stream: MediaStream | null = null;
     let alive = true;
     let raf = 0;
+    let visibilityHandler: (() => void) | null = null;
+    let resumeClip: (() => void) | null = null;
 
     const done = (r: Captured | null) => {
       alive = false;
       cancelAnimationFrame(raf);
+      if (visibilityHandler) document.removeEventListener('visibilitychange', visibilityHandler);
       unsub();
       stop(stream);
       if (stopLive === stopThis) stopLive = null;
@@ -100,6 +104,8 @@ function liveCamera(target: Target, host: HTMLElement): Promise<Captured | null>
     small.width = SMALL.w;
     small.height = SMALL.h;
     const sctx = small.getContext('2d', { willReadFrequently: true })!;
+    const detectorFrame = document.createElement('canvas');
+    const detectorCtx = detectorFrame.getContext('2d')!;
     const needDetector = !target.color || !!target.words?.length; // для чистых заданий на цвет нейросеть не нужна
     preloadModels();
     let detectorReady = !needDetector || modelStatus().coco >= 1;
@@ -135,8 +141,16 @@ function liveCamera(target: Target, host: HTMLElement): Promise<Captured | null>
       }
       if (detectorReady && needDetector) {
         try {
-          const d = await detectObject(video, target);
+          const scale = Math.min(1, DETECTOR_MAX_SIDE / Math.max(vw, vh));
+          const dw = Math.max(1, Math.round(vw * scale)), dh = Math.max(1, Math.round(vh * scale));
+          if (detectorFrame.width !== dw || detectorFrame.height !== dh) {
+            detectorFrame.width = dw;
+            detectorFrame.height = dh;
+          }
+          detectorCtx.drawImage(video, 0, 0, dw, dh);
+          const d = await detectObject(detectorFrame, target);
           if (d) {
+            d.box.x /= scale; d.box.y /= scale; d.box.w /= scale; d.box.h /= scale;
             const matches = !!target.words?.length && matchesLabels([{ className: d.className, probability: 1 }], target.words);
             // для задания на предмет+цвет рамка по детектору, если он нашёл нужный класс; иначе цветовое пятно
             if (!(target.color && colorFound && !matches)) {
@@ -155,7 +169,7 @@ function liveCamera(target: Target, host: HTMLElement): Promise<Captured | null>
     const detectLoop = async () => {
       if (!alive) return;
       const t = performance.now();
-      if (!busy && video.readyState >= 2 && t - lastStart >= gap) {
+      if (!document.hidden && !busy && video.readyState >= 2 && t - lastStart >= gap) {
         busy = true;
         lastStart = t;
         try {
@@ -183,9 +197,15 @@ function liveCamera(target: Target, host: HTMLElement): Promise<Captured | null>
     const liveOk = () => liveProb >= LIVE_OK;
     if (target.clip) {
       const clip = target.clip;
-      loadClip().then(() => { clipReady = true; }).catch((e) => { clipErr = String(e).slice(0, 80); });
+      let clipModule: typeof import('../vision/clip') | null = null;
+      import('../vision/models').then(({ heavyModelsAllowed }) => {
+        if (!heavyModelsAllowed()) throw new Error('CLIP отключён на этом устройстве');
+        return import('../vision/clip');
+      }).then((m) => { clipModule = m; return m.loadClip(); })
+        .then(() => { clipReady = true; if (video.readyState >= 2) resumeClip?.(); })
+        .catch((e) => { clipErr = String(e).slice(0, 80); });
       const clipLoop = async () => {
-        if (!alive) return;
+        if (!alive || !clipReady || document.hidden) return;
         const t = performance.now();
         if (clipReady && video.readyState >= 2 && video.videoWidth) {
           try {
@@ -193,8 +213,9 @@ function liveCamera(target: Target, host: HTMLElement): Promise<Captured | null>
             const snap = document.createElement('canvas');
             snap.width = vw; snap.height = vh;
             snap.getContext('2d')!.drawImage(video, 0, 0);
-            const ranks = await rankObjects(snap, vw, vh);
-            const p = clipProb(ranks, clip);
+            if (!clipModule) return;
+            const ranks = await clipModule.rankObjects(snap, vw, vh);
+            const p = clipModule.clipProb(ranks, clip);
             liveProb = liveProb * 0.35 + p * 0.65; // сглаживаем, чтобы индикатор не мигал
             clipRuns++;
             clipMs = clipMs ? clipMs * 0.7 + (performance.now() - t) * 0.3 : performance.now() - t;
@@ -202,8 +223,9 @@ function liveCamera(target: Target, host: HTMLElement): Promise<Captured | null>
             if (!best || p >= best.prob || now - best.t > BEST_KEEP_MS) best = { prob: p, t: now, canvas: snap };
           } catch (e) { clipErr = String(e).slice(0, 80); }
         }
-        if (alive) setTimeout(clipLoop, Math.max(120, Math.min(900, clipMs * 0.6)));
+        if (alive && clipReady) setTimeout(clipLoop, Math.max(120, Math.min(900, clipMs * 0.6)));
       };
+      resumeClip = () => { void clipLoop(); };
       video.addEventListener('loadeddata', clipLoop, { once: true });
     }
 
@@ -226,7 +248,7 @@ function liveCamera(target: Target, host: HTMLElement): Promise<Captured | null>
 
     const render = (now: number) => {
       if (!alive) return;
-      raf = requestAnimationFrame(render);
+      if (!document.hidden) raf = requestAnimationFrame(render);
       const w = video.clientWidth, h = video.clientHeight;
       if (w && h) {
         const dpr = Math.min(devicePixelRatio || 1, 2);
@@ -270,6 +292,17 @@ function liveCamera(target: Target, host: HTMLElement): Promise<Captured | null>
       if (dbgEl && stats.frames % 15 === 0) dbgEl.textContent = debugText();
     };
     raf = requestAnimationFrame(render);
+    visibilityHandler = () => {
+      if (document.hidden) {
+        cancelAnimationFrame(raf);
+        video.pause();
+      } else {
+        void video.play().catch(() => {});
+        raf = requestAnimationFrame(render);
+        resumeClip?.();
+      }
+    };
+    document.addEventListener('visibilitychange', visibilityHandler);
 
     // ---- отладочная панель (?debug=1) ----
     const report = () => {

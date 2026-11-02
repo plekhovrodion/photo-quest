@@ -26,40 +26,54 @@ const VOLUME = 0.8;
 let ctx: AudioContext | null = null;
 let enabled = () => true;
 const buffers = new Map<string, AudioBuffer>();
+const pending = new Map<string, Promise<AudioBuffer | null>>();
 const last = new Map<SfxName, number>();
-let loading = false;
 
 // Выключатель звука (общий с озвучкой) подключается из sounds.ts, чтобы модули не зависели друг от друга
 export const setSfxGate = (fn: () => boolean) => { enabled = fn; };
 
 const url = (name: string, i: number) => `${import.meta.env.BASE_URL}sfx/${name}-${i}.m4a`;
 
-// Загружать звуки разрешено только после первого экрана (см. ui/boot.ts): иначе 48 файлов отнимают канал у главного экрана.
+// Частые звуки готовы сразу после главного экрана; остальные варианты грузятся при первом использовании.
 let allowed = false;
-const PARALLEL = 4;
+const CORE: SfxName[] = ['tap', 'tap-soft', 'tap-heavy', 'forward', 'back', 'toggle-on', 'toggle-off', 'correct', 'wrong-soft', 'star', 'level-up'];
+const PARALLEL = 3;
+let coreLoading: Promise<void> | null = null;
 
-async function load() {
-  if (loading || !ctx || !allowed) return;
-  loading = true;
+function loadVariant(name: SfxName, i: number): Promise<AudioBuffer | null> {
+  const key = `${name}-${i}`;
+  const cached = buffers.get(key);
+  if (cached) return Promise.resolve(cached);
+  const inFlight = pending.get(key);
+  if (inFlight) return inFlight;
+  if (!ctx || !allowed) return Promise.resolve(null);
   const c = ctx;
-  const queue = (Object.entries(SFX) as [SfxName, number][]).flatMap(([name, n]) => Array.from({ length: n }, (_, i) => [name, i] as const));
+  const request = (async () => {
+    const res = await fetch(url(name, i), { priority: 'low' } as RequestInit);
+    if (!res.ok) return null;
+    const buffer = await c.decodeAudioData(await res.arrayBuffer());
+    buffers.set(key, buffer);
+    return buffer;
+  })().catch(() => null).finally(() => pending.delete(key));
+  pending.set(key, request);
+  return request;
+}
+
+function loadCore(): Promise<void> {
+  if (!ctx || !allowed || !enabled()) return Promise.resolve();
+  if (coreLoading) return coreLoading;
+  const queue = CORE.map((name) => [name, 0] as const);
   const worker = async () => {
-    for (let item = queue.shift(); item; item = queue.shift()) {
-      const [name, i] = item;
-      try {
-        const res = await fetch(url(name, i), { priority: 'low' } as RequestInit);
-        if (!res.ok) continue;
-        buffers.set(`${name}-${i}`, await c.decodeAudioData(await res.arrayBuffer()));
-      } catch { /* нет файла или формат не поддержан: этот звук просто промолчит */ }
-    }
+    for (let item = queue.shift(); item; item = queue.shift()) await loadVariant(item[0], item[1]);
   };
-  await Promise.all(Array.from({ length: PARALLEL }, worker));
+  coreLoading = Promise.all(Array.from({ length: PARALLEL }, worker)).then(() => {}).finally(() => { coreLoading = null; });
+  return coreLoading;
 }
 
 // Разрешает загрузку звуков (после первого экрана).
 export function startSfxLoad() {
   allowed = true;
-  try { ctx ??= new AudioContext(); void load(); } catch { /* без Web Audio звуков не будет */ }
+  try { ctx ??= new AudioContext(); void loadCore(); } catch { /* без Web Audio звуков не будет */ }
 }
 
 // Браузеры разрешают звук только после касания: на первом касании создаём контекст и грузим звуки
@@ -67,16 +81,12 @@ export function unlockSfx() {
   try {
     ctx ??= new AudioContext();
     if (ctx.state === 'suspended') void ctx.resume();
-    void load();
+    if (allowed) void loadCore();
   } catch { /* без Web Audio звуков интерфейса не будет */ }
 }
 
-export function playSfx(name: SfxName, volume = 1) {
+function playBuffer(name: SfxName, i: number, volume: number) {
   if (!ctx || !enabled()) return;
-  const n = SFX[name];
-  let i = Math.floor(Math.random() * n);
-  if (n > 1 && i === last.get(name)) i = (i + 1) % n;
-  last.set(name, i);
   const buf = buffers.get(`${name}-${i}`);
   if (!buf) return;
   const src = ctx.createBufferSource();
@@ -85,6 +95,50 @@ export function playSfx(name: SfxName, volume = 1) {
   src.buffer = buf;
   src.connect(gain).connect(ctx.destination);
   src.start();
+}
+
+export function playSfx(name: SfxName, volume = 1) {
+  if (!ctx || !enabled()) return;
+  const n = SFX[name];
+  const ready = Array.from({ length: n }, (_, i) => i).filter((i) => buffers.has(`${name}-${i}`));
+  if (ready.length) {
+    const choices = ready.length > 1 ? ready.filter((i) => i !== last.get(name)) : ready;
+    const i = choices[Math.floor(Math.random() * choices.length)];
+    last.set(name, i);
+    playBuffer(name, i, volume);
+
+    // Подгружаем не больше второго варианта для звуков, которые действительно используются.
+    const hasPendingVariant = Array.from({ length: n }, (_, j) => pending.has(`${name}-${j}`)).some(Boolean);
+    if (allowed && ready.length < Math.min(2, n) && !hasPendingVariant) {
+      const next = Array.from({ length: n }, (_, j) => j).find((j) => !buffers.has(`${name}-${j}`) && !pending.has(`${name}-${j}`));
+      if (next !== undefined) void loadVariant(name, next);
+    }
+    return;
+  }
+
+  const inFlightIndex = Array.from({ length: n }, (_, i) => i).find((i) => pending.has(`${name}-${i}`));
+  if (inFlightIndex !== undefined) {
+    void pending.get(`${name}-${inFlightIndex}`)!.then((buffer) => {
+      if (!buffer || !enabled()) return;
+      last.set(name, inFlightIndex);
+      playBuffer(name, inFlightIndex, volume);
+    });
+    return;
+  }
+
+  // Редкий звук загружается только при первом вызове и играет после декодирования.
+  if (!allowed) return;
+  const i = Math.floor(Math.random() * n);
+  void loadVariant(name, i).then((buffer) => {
+    if (!buffer || !enabled()) return;
+    last.set(name, i);
+    playBuffer(name, i, volume);
+    const hasPendingVariant = Array.from({ length: n }, (_, j) => pending.has(`${name}-${j}`)).some(Boolean);
+    if (n > 1 && !hasPendingVariant) {
+      const next = Array.from({ length: n }, (_, j) => j).find((j) => j !== i && !buffers.has(`${name}-${j}`) && !pending.has(`${name}-${j}`));
+      if (next !== undefined) void loadVariant(name, next);
+    }
+  });
 }
 
 // Клики по кнопкам тише остальных звуков (успех, ошибка, переключатель звука), чтобы не перебивали озвучку

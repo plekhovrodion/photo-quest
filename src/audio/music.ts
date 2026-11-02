@@ -1,6 +1,6 @@
 // Фоновая музыка: два спокойных инструментальных трека (public/music, сделаны в ElevenLabs Music) играют по кругу
 // с плавным переходом друг в друга. Тихая, чтобы не перебивать озвучку; выключается тем же переключателем звука.
-// Треки грузятся сразу при входе в игру, играть начинают с первого касания (браузеры не разрешают звук раньше).
+// Треки загружаются при первом касании (браузеры не разрешают звук раньше).
 // На паузу ставится, когда вкладка скрыта.
 
 const TRACKS = ['theme-1', 'theme-2'];
@@ -81,11 +81,11 @@ export function setMusicEnabled(on: boolean) {
   applyGate();
 }
 
-// Файлы музыки грузятся после первого экрана (startMusicLoad), слушатели касаний ставятся сразу.
-export const startMusicLoad = () => void preload();
-
 export function wireMusic() {
   const go = () => {
+    // Музыка не нужна, пока игрок не начал взаимодействовать с игрой.
+    // Загружаем её по первому касанию, чтобы не занимать сеть и декодирование на старте.
+    if (!started) void preload();
     if (enabled && ctx && ctx.state === 'suspended' && !document.hidden) void ctx.resume().then(begin);
   };
   addEventListener('pointerdown', go, { capture: true, passive: true });

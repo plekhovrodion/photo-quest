@@ -14,7 +14,7 @@ export const SLIDES: Slide[] = [
   { art: 'sonya-walk', who: 'Соня', text: 'Ищи только дома. Не лезь высоко и не трогай острое. Можно позвать взрослого!', obj: 'umbrella' },
 ];
 
-const KEY = 'photoquest.onboarded.v1';
+const KEY = 'photoquest.onboarded.video.v1';
 
 export function isOnboarded(): boolean {
   try {

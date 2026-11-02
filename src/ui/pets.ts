@@ -35,16 +35,16 @@ export const hasRoom = (locId: string) => locId in ROOMS;
 
 // Разметка комнаты: картинка во всю коробку 368:200 плюс место под питомца
 export type Mood = 'happy' | 'sad' | 'happy-loop' | 'sad-loop'; // happy-loop: радость по кругу (экран «Все найдено»)
-export function roomHtml(locId: string, withPet = true, set = '', mood?: Mood): string {
+export function roomHtml(locId: string, withPet = true, set = '', mood?: Mood, useBareArt = false): string {
   const r = ROOMS[locId];
   if (!r) return '';
   const pet = withPet && r.pet && IDLES[r.pet] ? r.pet : undefined;
   const p = pet ? PLACE[pet] : undefined;
-  return `<span class="room-box"><img class="room-img" src="${BASE()}art/rooms/${set}${locId}${pet ? '-bare' : ''}.svg" alt="">${
+  return `<span class="room-box"><img class="room-img" src="${BASE()}art/rooms/${set}${locId}${pet || useBareArt ? '-bare' : ''}.svg" alt="">${
     pet && p ? `<span class="pet" data-pet="${pet}"${mood ? ` data-mood="${mood}"` : ''} style="--px:${p.x}%;--pb:${p.bottom}%;--pw:${p.w}%" aria-hidden="true"></span>` : ''}</span>`;
 }
 
-interface Live { anims: AnimationItem[]; boxes: HTMLElement[]; cur: number; dead: boolean }
+interface Live { el: HTMLElement; anims: AnimationItem[]; boxes: HTMLElement[]; cur: number; visible: boolean; dead: boolean }
 const live: Live[] = [];
 const json = new Map<string, Promise<object>>();
 const load = (pet: PetName, i: number | Mood) => {
@@ -69,39 +69,35 @@ async function mount(el: HTMLElement) {
   const pet = el.dataset.pet as PetName;
   const n = IDLES[pet];
   if (!n) return;
-  const st: Live = { anims: [], boxes: [], cur: -1, dead: false };
+  const st: Live = { el, anims: [], boxes: [], cur: -1, visible: true, dead: false };
   live.push(st);
   const mood = el.dataset.mood as Mood | undefined; // реакция на ответ: один раз, потом снова ожидание
-  let data: object[];
+  let idleData: object | null;
   let emo: object | null = null;
-  const loopMood = mood === 'happy-loop' || mood === 'sad-loop'; // зацикленная реакция сама крутится, ожидание (idle) ей не нужно: на главной экономим 4 файла на питомца
+  const loopMood = mood === 'happy-loop' || mood === 'sad-loop'; // зацикленная реакция сама крутится, idle-анимация ей не нужна
   try {
-    [data, emo] = await Promise.all([loopMood ? Promise.resolve([]) : Promise.all(Array.from({ length: n }, (_, i) => load(pet, i + 1))), mood ? load(pet, mood).catch(() => null) : Promise.resolve(null)]);
+    const idle = loopMood ? Promise.resolve(null) : load(pet, 1 + Math.floor(Math.random() * n));
+    [idleData, emo] = await Promise.all([idle, mood ? load(pet, mood).catch(() => null) : Promise.resolve(null)]);
   } catch { return; }
   if (st.dead || !el.isConnected) return;
-  await slot(); // на телефоне запускаем питомцев по одному-два: восемь Lottie сразу подвешивают страницу
-  data.forEach((animationData) => {
-    const box = document.createElement('span');
-    box.className = 'pet-anim';
-    el.appendChild(box);
-    st.boxes.push(box);
-    st.anims.push(lottie.loadAnimation({ container: box, renderer: 'svg', loop: false, autoplay: false, animationData }));
-  });
+  await slot(); // ограничиваем одновременную инициализацию SVG-анимаций на телефоне
   const reduce = matchMedia('(prefers-reduced-motion: reduce)').matches;
   const show = (i: number) => {
     st.cur = i;
     st.boxes.forEach((b, k) => { b.style.visibility = k === i ? 'visible' : 'hidden'; });
-    if (reduce) st.anims[i].goToAndStop(0, true); else st.anims[i].goToAndPlay(0, true);
+    if (reduce) st.anims[i].goToAndStop(0, true);
+    else if (st.visible && !document.hidden) st.anims[i].goToAndPlay(0, true);
+    else st.anims[i].pause();
   };
-  // Следующий вариант: чаще другой, иногда тот же ещё раз (дыхание), так оживает без заметного шва
-  const next = () => {
-    if (st.dead) return;
-    const again = Math.random() < 0.3;
-    let i = st.cur;
-    if (!again || st.cur < 0) while (i === st.cur) i = Math.floor(Math.random() * n);
-    show(i);
-  };
-  st.anims.forEach((a) => a.addEventListener('complete', () => { if (!reduce) next(); }));
+  if (idleData) {
+    const box = document.createElement('span');
+    box.className = 'pet-anim';
+    el.appendChild(box);
+    st.boxes.push(box);
+    st.anims.push(lottie.loadAnimation({ container: box, renderer: 'svg', loop: true, autoplay: false, animationData: idleData }));
+  }
+  const idleIndex = st.anims.length ? 0 : -1;
+  if (idleIndex >= 0 && !emo) { show(idleIndex); return; }
   if (emo) {
     const box = document.createElement('span');
     box.className = 'pet-anim';
@@ -111,15 +107,14 @@ async function mount(el: HTMLElement) {
     st.boxes.push(box);
     st.anims.push(a);
     const i = st.anims.length - 1;
-    // реакция не входит в круг ожидания: после неё запускаем обычный idle
+    // После короткой реакции показываем одну зацикленную idle-анимацию.
     st.boxes.forEach((b, k) => { b.style.visibility = k === i ? 'visible' : 'hidden'; });
     st.cur = i;
     if (reduce) { a.goToAndStop(0, true); return; }
-    if (!loopEmo) a.addEventListener('complete', () => { if (!st.dead) { st.cur = -1; next(); } });
-    a.goToAndPlay(0, true);
+    if (!loopEmo) a.addEventListener('complete', () => { if (!st.dead && idleIndex >= 0) show(idleIndex); });
+    if (st.visible && !document.hidden) a.goToAndPlay(0, true); else a.pause();
     return;
   }
-  next();
 }
 
 // Питомцы грузят свои анимации, только когда попадают в экран (на главной их восемь, а видно два-три): меньше трафика и работы на телефоне.
@@ -129,9 +124,15 @@ export function mountPets(scope: ParentNode) {
   if (!('IntersectionObserver' in window)) { els.forEach((el) => { void mount(el); }); return; }
   observer ??= new IntersectionObserver((entries) => {
     for (const e of entries) {
-      if (!e.isIntersecting) continue;
-      observer?.unobserve(e.target);
-      void mount(e.target as HTMLElement);
+      const el = e.target as HTMLElement;
+      const st = live.find((item) => item.el === el);
+      if (!st) {
+        if (e.isIntersecting) void mount(el);
+        continue;
+      }
+      st.visible = e.isIntersecting;
+      if (!e.isIntersecting || document.hidden) st.anims.forEach((a) => a.pause());
+      else st.anims[st.cur]?.play();
     }
   }, { rootMargin: '200px' });
   els.forEach((el) => observer!.observe(el));
@@ -149,8 +150,7 @@ export function unmountPets() {
 // Вкладка скрыта: анимации стоят
 document.addEventListener('visibilitychange', () => {
   for (const st of live) {
-    const a = st.anims[st.cur];
-    if (!a) continue;
-    if (document.hidden) a.pause(); else a.play();
+    if (document.hidden || !st.visible) st.anims.forEach((a) => a.pause());
+    else st.anims[st.cur]?.play();
   }
 });

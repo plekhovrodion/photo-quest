@@ -103,7 +103,16 @@ export function loadCoco(): Promise<CocoModel> {
 
 // Слабое соединение или режим экономии трафика: тяжёлую модель CLIP (~90 МБ) не качаем, проверка идёт на лёгких моделях.
 export function heavyModelsAllowed(): boolean {
-  const c = (navigator as Navigator & { connection?: { saveData?: boolean; effectiveType?: string }; deviceMemory?: number });
+  const c = (navigator as Navigator & {
+    connection?: { saveData?: boolean; effectiveType?: string };
+    deviceMemory?: number;
+    userAgentData?: { mobile?: boolean };
+    maxTouchPoints?: number;
+  });
+  // Модель CLIP весит 85 МБ. На телефонах браузер часто скрывает сведения о памяти и сети.
+  const mobile = c.userAgentData?.mobile === true || /Android|iPhone|iPod|Mobile/i.test(navigator.userAgent) ||
+    (/Macintosh/i.test(navigator.userAgent) && (c.maxTouchPoints ?? 0) > 1);
+  if (mobile) return false;
   if (c.connection?.saveData) return false;
   if (c.connection?.effectiveType && c.connection.effectiveType !== '4g') return false;
   if (c.deviceMemory !== undefined && c.deviceMemory < 4) return false;
@@ -127,8 +136,16 @@ export const modelsReady = (): boolean => status.coco >= 1 && (!heavyModelsAllow
 export async function whenModelsReady(onProgress: (p: number) => void): Promise<void> {
   const clipOn = heavyModelsAllowed();
   const off = onModelStatus((s) => onProgress(clipOn ? 0.17 * s.coco + 0.83 * s.clip : s.coco));
+  let timer: ReturnType<typeof setTimeout> | undefined;
   try {
-    await loadCoco().catch(() => {});
-    if (clipOn) await import('./clip').then((m) => m.loadClip()).catch(() => {});
-  } finally { off(); }
+    const loads = (async () => {
+      await loadCoco().catch(() => {});
+      if (clipOn) await import('./clip').then((m) => m.loadClip()).catch(() => {});
+    })();
+    // При зависшей сети или ошибке инициализации камеры не нужно бесконечно ждать модель.
+    await Promise.race([loads, new Promise<void>((resolve) => { timer = setTimeout(resolve, 20_000); })]);
+  } finally {
+    if (timer) clearTimeout(timer);
+    off();
+  }
 }

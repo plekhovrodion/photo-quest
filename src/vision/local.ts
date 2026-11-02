@@ -3,8 +3,8 @@ import { colorShares, type ColorName } from './color';
 import { evaluate, isMaybe, type Ctx } from './evaluate';
 import { matchesLabels, PROB_MIN, type Prediction } from './labels';
 import { COLOR_RU, ruName } from './names';
-import { loadCoco } from './models';
-import { rankObjects, clipAccepts, clipProb, type ClipRank } from './clip';
+import { heavyModelsAllowed, loadCoco } from './models';
+import type { ClipRank } from './clip';
 import { CLIP_OBJECTS } from '../data/clip';
 
 const SAMPLE = 96;
@@ -95,7 +95,13 @@ export async function localVerify(
   };
   let clipRanks: ClipRank[] | null | undefined;
   const getClip = async () => {
-    if (clipRanks === undefined) clipRanks = await rankObjects(canvas, canvas.width, canvas.height).catch(() => null);
+    if (clipRanks === undefined) {
+      if (!heavyModelsAllowed()) clipRanks = null;
+      else {
+        const clip = await import('./clip');
+        clipRanks = await clip.rankObjects(canvas, canvas.width, canvas.height).catch(() => null);
+      }
+    }
     return clipRanks;
   };
   const ctx: Ctx = { shares: getShares, predictions: getPreds, clip: getClip, liveClip: opts.liveClip };
@@ -103,7 +109,7 @@ export async function localVerify(
   const reason = cache.preds?.[0]?.className ?? 'local';
   if (match) {
     const byPreds = pickLabel(cache.preds, check);
-    const viaClip = check.kind === 'labels' && check.clip && (opts.liveClip || (clipRanks && clipAccepts(clipRanks, check.clip)));
+    const viaClip = check.kind === 'labels' && check.clip && (opts.liveClip || (clipRanks && (await import('./clip')).clipAccepts(clipRanks, check.clip)));
     // Если предмет узнал только CLIP, называем его по заданию, а не по случайному классу детектора.
     return { match, reason, label: viaClip ? CLIP_OBJECTS[check.clip!] : byPreds };
   }
@@ -116,7 +122,7 @@ export async function localVerify(
   } else {
     // Что на фото: если CLIP уверен — берём его ответ (он знает предметы игры лучше), иначе первый ответ MobileNet
     const clipTop = (await getClip())?.find((r) => !r.bg);
-    const sure = clipTop && clipRanks && clipProb(clipRanks, clipTop.en) >= 0.3 ? clipTop.ru : undefined;
+    const sure = clipTop && clipRanks && (await import('./clip')).clipProb(clipRanks, clipTop.en) >= 0.3 ? clipTop.ru : undefined;
     foundLabel = sure ?? anyLabel(await getPreds()) ?? clipTop?.ru;
     found = foundLabel ? `Это ${foundLabel}` : colorPhrase(getShares());
   }

@@ -20,9 +20,9 @@ import { locPattern } from './ui/locPattern';
 import { showPaywall } from './ui/paywall';
 import { paywallUrl } from './api/paywall';
 import { playSfx, wireSfx, startSfxLoad } from './audio/sfx';
-import { wireMusic, startMusicLoad } from './audio/music';
+import { setMusicEnabled, wireMusic } from './audio/music';
 import { bootFirstStep, bootSecondStep } from './ui/boot';
-import { SLIDES, isOnboarded, markOnboarded } from './onboarding';
+import { isOnboarded, markOnboarded } from './onboarding';
 import { feed, setLook, stageOf, fedOf, lookOf, ZAVRIKS, ZAVRIK_NAME, HUES, HATS, BADGES, UNLOCK_STAGE, UNLOCK_ALL, MAX_STAGE, zavrikOfArt, type ZavrikId } from './zavrik';
 import { hatSvg, badgeSvg } from './ui/accessories';
 import { objectSvg, colorBallSvg, fitObject } from './map/objects';
@@ -63,13 +63,13 @@ let navDir: 'fwd' | 'back' = 'fwd';
 const goBack = () => { navDir = 'back'; };
 const reduceMotion = () => matchMedia('(prefers-reduced-motion: reduce)').matches;
 
-// Знакомство с завриками пока выключено: сразу открывается главная. Включить: true.
-const ONBOARDING = false;
+const ONBOARDING = true;
 // Цвет «рамки» браузера: статус-бар сверху и область под панелью снизу окрашиваем под экран.
 // Сверху цвет шапки места, снизу цвет фона под карточками; фон страницы делится пополам, чтобы совпало и при оттяжке.
 function setChrome(cls: string) {
   let top = '#471fb0', bottom = '#471fb0';
-  if (cls.includes('screen-loc') && level) { const c = LOC_COLORS[level.id] ?? LOC_COLORS.kitchen; top = c.head; bottom = c.bg; }
+  if (cls.includes('screen-onboarding-video')) { top = '#000'; bottom = '#000'; }
+  else if (cls.includes('screen-loc') && level) { const c = LOC_COLORS[level.id] ?? LOC_COLORS.kitchen; top = c.head; bottom = c.bg; }
   else if (cls.includes('screen-map')) { top = '#d9c8ff'; bottom = '#8a5eff'; }
   const bg = `linear-gradient(${top} 50%, ${bottom} 50%)`;
   document.documentElement.style.background = bg;
@@ -277,23 +277,39 @@ function hud(left: string, mid = '', label = '', right = '') {
   return `<div class="hud">${left}<div class="pips"${aria}>${mid}</div><div class="hud-right">${right}${wallet()}</div></div>`;
 }
 
-function renderOnboarding(i = 0) {
-  const slide = SLIDES[i];
-  const last = i === SLIDES.length - 1;
-  const dots = SLIDES.map((_, j) => `<span class="dot ${j === i ? 'on' : ''}"></span>`).join('');
-  const pic = slide.obj === 'ball-red' ? colorBallSvg(COLOR_CSS.red) : slide.obj ? objectSvg(slide.obj) : '';
-  show(`${art(slide.art, 'talking')}${pic ? `<div class="task-card ob-card">${pic}</div>` : ''}<div class="who">${slide.who}</div>${bubble(slide.text)}
-    <div class="dots">${dots}</div>
-    <button id="onext" class="green">${last ? 'Поехали!' : 'Дальше'}</button>
-    ${last ? '' : '<button id="oskip" class="secondary">Пропустить</button>'}`);
-  speak(slide.text, false, slide.who === 'Соня' ? 'sonya' : 'grisha');
-  const done = () => { markOnboarded(); stopSpeech(); renderLevels(); };
-  on('onext', () => (last ? done() : renderOnboarding(i + 1)));
-  on('oskip', done);
+function renderOnboarding() {
+  const onboardingVideo = window.matchMedia('(max-width: 767px)').matches
+    ? 'video/onboarding-mobile.mp4'
+    : 'video/onboarding.mp4';
+  show(`<div class="intro-video-wrap">
+    <video class="intro-video" autoplay playsinline preload="auto" aria-label="Видео-знакомство с игрой">
+      <source src="${import.meta.env.BASE_URL}${onboardingVideo}" type="video/mp4">
+    </video>
+    <button id="intro-play" class="intro-play" type="button" aria-label="Воспроизвести видео" hidden>▶</button>
+  </div>`, 'screen-onboarding-video');
+  const video = root.querySelector<HTMLVideoElement>('.intro-video')!;
+  const play = root.querySelector<HTMLButtonElement>('#intro-play')!;
+  let finished = false;
+  // Не смешиваем фоновую музыку игры с оригинальным звуком вступительного ролика.
+  setMusicEnabled(false);
+  const finish = () => {
+    if (finished) return;
+    finished = true;
+    video.pause();
+    markOnboarded();
+    setMusicEnabled(!isMuted());
+    renderLevels();
+  };
+  video.addEventListener('ended', finish, { once: true });
+  video.addEventListener('error', finish, { once: true });
+  void video.play().then(() => { play.hidden = true; }).catch(() => { play.hidden = false; });
+  play.addEventListener('click', () => {
+    void video.play().then(() => { play.hidden = true; }).catch(() => { play.hidden = false; });
+  });
 }
 
 // Главная по макету: карта-дорожка из мест, плитки идут зигзагом, у каждой своя полоса прогресса; красная «Играть» прибита к низу.
-// Закрыто: качаем плашку и подсказываем голосом, что сначала нужно пройти предыдущее.
+// Закрытые места остаются видимыми, но открываются только после полного прохождения «Цветов».
 function shakeLocked(b: HTMLElement, list: Phrase[]) {
   b.classList.remove('shake'); void b.offsetWidth; b.classList.add('shake');
   const line = pickPhrase(list);
@@ -307,8 +323,8 @@ function mapTile(l: Level, i: number): string {
   const full = total > 0 && found >= total;
   const locked = !isUnlocked(l);
   const target = !locked && !full && l === targetPlace;
-  return `<button class="mp-tile ${i % 2 ? 'right' : 'left'}${full ? ' done' : ''}${locked ? ' locked' : ''}${target ? ' pulse' : ''}" role="listitem" data-i="${i}" style="--i:${i}" ${locked ? 'aria-disabled="true"' : ''} aria-label="${l.title}: найдено ${found} из ${total}${full ? ', всё найдено' : ''}${locked ? ', закрыто: сначала пройди предыдущее место' : ''}">
-    <span class="mp-win is-room">${roomHtml(l.id, true, 'head-', full ? 'happy-loop' : 'sad-loop')}</span>${full ? `<img class="loc-check mp-check" src="${LOC_BASE()}/check.svg" alt="">` : ''}
+  return `<button class="mp-tile ${i % 2 ? 'right' : 'left'}${full ? ' done' : ''}${locked ? ' locked' : ''}${target ? ' pulse' : ''}" role="listitem" data-i="${i}" style="--i:${i}" ${locked ? 'aria-disabled="true"' : ''} aria-label="${l.title}: найдено ${found} из ${total}${full ? ', всё найдено' : ''}${locked ? ', закрыто: сначала пройди уровень Цвета' : ''}">
+    <span class="mp-win is-room">${roomHtml(l.id, !locked, 'head-', full ? 'happy-loop' : 'sad-loop', locked)}</span>${full ? `<img class="loc-check mp-check" src="${LOC_BASE()}/check.svg" alt="">` : ''}
     <span class="mp-track" role="progressbar" aria-valuemin="0" aria-valuemax="${total}" aria-valuenow="${found}"><span class="loc-fill" style="--w:${pct}%;background-image:url(${LOC_BASE()}/stripe-a.svg)"></span></span></button>`;
 }
 
@@ -579,16 +595,14 @@ const toMap = () => { goBack(); state = null; render(); };
 // Экран места по макету: шапка с фоном места, полоса прогресса, сетка карточек с иконками и кнопка «играть».
 // Иконки и шапки — спрайты из Figma (public/art/loc): порядок в спрайте — места по макету, внутри места — порядок заданий.
 const LOC_ORDER = ['kitchen', 'colors', 'room', 'school', 'bath', 'hall', 'food', 'outdoor'];
-// Порядок на главной и открытие по очереди: первым идут «Цвета», каждое следующее место открывается, когда найдено всё в предыдущем.
+// На карте «Цвета» всегда первый уровень; после его полного прохождения открываются все остальные.
 // (LOC_ORDER выше нельзя менять: по нему устроены спрайты иконок и шапок.)
 const MAP_ORDER = ['colors', 'kitchen', 'room', 'school', 'bath', 'hall', 'food', 'outdoor'];
 const levelFull = (l: Level) => l.tasks.length > 0 && l.tasks.every((t) => progress.found[t.id] !== undefined);
 function isUnlocked(l: Level): boolean {
-  if (UNLOCK_ALL) return true;
-  const i = MAP_ORDER.indexOf(l.id);
-  if (i <= 0) return true;
-  const prev = LEVELS.find((x) => x.id === MAP_ORDER[i - 1]);
-  return !prev || levelFull(prev);
+  if (l.id === 'colors') return true;
+  const colors = LEVELS.find((x) => x.id === 'colors');
+  return !!colors && levelFull(colors);
 }
 // Задания, убранные из мест: в спрайте иконок их картинки остаются, поэтому индексы после них сдвигаем.
 const LOC_COUNTS = [8, 10, 9, 7, 4, 5, 8, 10];
@@ -868,11 +882,10 @@ void bootFirstStep().then(() => {
     if (!state && /screen-(menu|map)/.test(root.className)) render();
   });
 
-  // Дальше в простое: иконки, звуки и музыка, и только потом умное зрение, чтобы к камере модели уже были загружены.
+  // Дальше в простое: звуки и, при хорошем соединении, лёгкая модель распознавания.
   // На главной лёгкие модели грузим только при хорошем соединении: на мобильном интернете они отнимают канал у игры.
   bootSecondStep(() => {
     startSfxLoad();
-    startMusicLoad();
     if (heavyModelsAllowed()) setTimeout(() => preloadModels(false), 2500);
   });
 });

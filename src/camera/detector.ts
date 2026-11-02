@@ -42,9 +42,11 @@ export function pickDetection(
 // Последние «сырые» предсказания детектора — для отладочной панели (?debug=1).
 export let lastPreds: Array<{ bbox: number[]; class: string; score: number }> = [];
 
-export async function detectObject(video: HTMLVideoElement, target: Target): Promise<Detection | null> {
+export async function detectObject(video: HTMLVideoElement | HTMLCanvasElement, target: Target): Promise<Detection | null> {
   const model = await loadDetector();
   const preds = await model.detect(video, 8, 0.25);
   lastPreds = preds;
-  return pickDetection(preds, { w: video.videoWidth, h: video.videoHeight }, target);
+  const w = video instanceof HTMLVideoElement ? video.videoWidth : video.width;
+  const h = video instanceof HTMLVideoElement ? video.videoHeight : video.height;
+  return pickDetection(preds, { w, h }, target);
 }

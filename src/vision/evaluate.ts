@@ -1,7 +1,7 @@
 import type { LocalCheck } from '../data/tasks';
 import { COLOR_SHARE_MIN, hasColor, type ColorName } from './color';
 import { matchesLabels, type Prediction } from './labels';
-import { clipAccepts, type ClipRank } from './clip';
+import type { ClipRank } from './clip';
 
 // Ленивый контекст: цвета и предсказания детектора считаются только если нужны.
 export interface Ctx {
@@ -24,7 +24,7 @@ export async function evaluate(check: LocalCheck, ctx: Ctx): Promise<boolean> {
       if (matchesLabels(await ctx.predictions(), check.words)) return true;
       if (!check.clip || !ctx.clip) return false;
       const ranks = await ctx.clip();
-      return !!ranks && clipAccepts(ranks, check.clip);
+      return !!ranks && (await import('./clip')).clipAccepts(ranks, check.clip);
     }
     case 'and':
       for (const c of check.checks) if (!(await evaluate(c, ctx))) return false;

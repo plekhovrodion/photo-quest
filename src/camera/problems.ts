@@ -13,7 +13,7 @@ export function classifyCameraError(err: unknown): CamProblem {
   return 'other';
 }
 
-// Почему камеру нельзя даже запросить: не защищённая ссылка (нужен https) или в браузере её вообще нет.
+// Почему камеру нельзя даже запросить: небезопасный контекст или в браузере её вообще нет.
 export function unavailableReason(secure = isSecureContext, hasApi = !!navigator.mediaDevices?.getUserMedia): CamProblem {
   return !secure ? 'insecure' : hasApi ? 'other' : 'nocamera';
 }
@@ -83,7 +83,7 @@ export const PROBLEM_SCREENS: Record<CamProblem, Screen> = {
   nocamera: { title: 'Ой, нет камеры!', body: 'Попробуй зайти в игру с телефона или планшета', button: 'Хорошо', next: 'close' },
   denied: { title: 'Нет доступа к камере', body: 'Позови родителей и следуй инструкции, чтобы подключить камеру', button: 'Подключить камеру', next: 'instructions' },
   busy: { title: 'Камера занята', body: 'Закрой другие программы, где включена камера, и попробуй ещё раз', button: 'Попробовать ещё раз', next: 'retry' },
-  insecure: { title: 'Камера не включается', body: 'Позови родителей: игру нужно открыть по защищённой ссылке, которая начинается с https', button: 'Хорошо', next: 'close' },
+  insecure: { title: 'Камера не включается', body: 'Похоже, браузер не может запустить камеру. Попробуй открыть игру в другом браузере', button: 'Понятно', next: 'close' },
   other: { title: 'Не получилось включить камеру', body: 'Попробуй ещё раз. Если не выходит, обнови страницу', button: 'Попробовать ещё раз', next: 'retry' },
 };
 
@@ -119,7 +119,7 @@ export function showCameraProblem(kind: CamProblem): Promise<'retry' | 'close'> 
         el.querySelector('.cp-btn')!.addEventListener('click', () => finish('retry'));
       } else {
         el.setAttribute('aria-label', s.title);
-        el.innerHTML = `${backBtn}<main class="cp-main"><section class="cp-card"><img class="cp-ico" src="${base}/camera-big.svg" alt="">
+        el.innerHTML = `${backBtn}<main class="cp-main"><section class="cp-card"><img class="cp-ico" src="${base}/fox-camera.png" alt="">
           <h2>${esc(s.title)}</h2><p>${esc(s.body)}</p></section></main>
           <div class="cp-bar"><button class="cp-btn" type="button">${esc(s.button)}</button></div>`;
         el.querySelector('.cp-btn')!.addEventListener('click', () => (s.next === 'instructions' ? render('steps') : finish(s.next)));
