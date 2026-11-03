@@ -33,6 +33,17 @@ export function classifyPixel(r: number, g: number, b: number): ColorName {
   return 'pink';
 }
 
+// Камера телефона заметно сдвигает тёплые цвета из-за освещения и баланса белого.
+// Поэтому при поиске конкретного цвета допускаем небольшое пересечение жёлтого
+// и оранжевого. Для оранжевого требуем более насыщенный пиксель: так тёплый
+// серый металл и бежевый фон не превращаются в оранжевый предмет.
+export function matchesColorPixel(r: number, g: number, b: number, target: ColorName): boolean {
+  const [h, s, v] = rgbToHsv(r, g, b);
+  if (target === 'yellow') return h >= 30 && h < 75 && s >= 0.25 && v >= 0.45;
+  if (target === 'orange') return h >= 12 && h < 42 && s >= 0.35 && v >= 0.45;
+  return classifyPixel(r, g, b) === target;
+}
+
 // Доли цветов по центру кадра (по умолчанию центральные 60%): там обычно находится предмет.
 // Для кадра, уже обрезанного по предмету, берём почти всё (margin меньше).
 export function colorShares(data: ArrayLike<number>, width: number, height: number, margin = 0.2): Record<ColorName, number> {
@@ -45,7 +56,9 @@ export function colorShares(data: ArrayLike<number>, width: number, height: numb
   for (let y = y0; y < y1; y++) {
     for (let x = x0; x < x1; x++) {
       const i = (y * width + x) * 4;
-      shares[classifyPixel(data[i], data[i + 1], data[i + 2])]++;
+      for (const color of Object.keys(shares) as ColorName[]) {
+        if (matchesColorPixel(data[i], data[i + 1], data[i + 2], color)) shares[color]++;
+      }
       total++;
     }
   }

@@ -1,10 +1,11 @@
-import { classifyPixel, type ColorName } from './color';
+import { matchesColorPixel, type ColorName } from './color';
 import type { Box } from '../camera/box';
 
 export interface BlobOptions {
   minShare?: number; // минимальная площадь пятна (доля кадра)
   maxShare?: number; // слишком большое пятно — это фон (стена, стол), его не берём
   center?: { x: number; y: number }; // прицел, доли 0..1
+  maxCenterDistance?: number; // пятно вдали от прицела считаем частью фона
 }
 
 interface Component { size: number; x0: number; y0: number; x1: number; y1: number; cx: number; cy: number }
@@ -13,9 +14,9 @@ interface Component { size: number; x0: number; y0: number; x1: number; y1: numb
 // Берём пятно у прицела (в центре кадра), а не просто самое большое; фон (пятно почти на весь кадр
 // или прилегающее к трём сторонам) отбрасываем.
 export function colorBlob(data: ArrayLike<number>, w: number, h: number, target: ColorName, opts: BlobOptions = {}): Box | null {
-  const { minShare = 0.02, maxShare = 0.6, center = { x: 0.5, y: 0.5 } } = opts;
+  const { minShare = 0.02, maxShare = 0.6, center = { x: 0.5, y: 0.5 }, maxCenterDistance = 0.28 } = opts;
   const mask = new Uint8Array(w * h);
-  for (let i = 0; i < w * h; i++) mask[i] = classifyPixel(data[i * 4], data[i * 4 + 1], data[i * 4 + 2]) === target ? 1 : 0;
+  for (let i = 0; i < w * h; i++) mask[i] = matchesColorPixel(data[i * 4], data[i * 4 + 1], data[i * 4 + 2], target) ? 1 : 0;
 
   const seen = new Uint8Array(w * h);
   const stack: number[] = [];
@@ -49,6 +50,7 @@ export function colorBlob(data: ArrayLike<number>, w: number, h: number, target:
     if (edges >= 3) continue; // фон: прилегает к трём сторонам кадра
     const holdsCenter = cx >= c.x0 && cx <= c.x1 && cy >= c.y0 && cy <= c.y1;
     const dist = Math.hypot((c.cx - cx) / w, (c.cy - cy) / h);
+    if (!holdsCenter && dist > maxCenterDistance) continue;
     const rank = (holdsCenter ? 1 : 0) + share - dist * 0.8;
     if (!best || rank > best.rank) best = { c, rank };
   }

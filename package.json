@@ -7,6 +7,9 @@
     "dev": "vite",
     "build": "tsc --noEmit && vite build",
     "test": "vitest run",
+    "eval:open-images": "node scripts/eval-datasets/open-images.mjs",
+    "eval:run": "node scripts/eval-datasets/run-browser.mjs",
+    "eval:clip": ".eval-data/venv/bin/python scripts/eval-datasets/eval_clip.py",
     "voice:test": "./scripts/voice-test.sh",
     "voice": "node scripts/build-voice.mjs"
   },

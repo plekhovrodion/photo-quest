@@ -41,4 +41,18 @@ describe('colorBlob', () => {
     const d = frame((s) => rect(s, 5, 5, 2, 2, [220, 30, 30]));
     expect(colorBlob(d, W, H, 'red')).toBeNull();
   });
+  it('жёлтый в тёплом освещении не становится оранжевым', () => {
+    const warmYellow: [number, number, number] = [210, 170, 115];
+    const d = frame((s) => rect(s, 14, 9, 12, 12, warmYellow));
+    expect(colorBlob(d, W, H, 'yellow')).not.toBeNull();
+  });
+  it('тёплый серый фон не считается оранжевым', () => {
+    const warmGray: [number, number, number] = [155, 137, 118];
+    const d = frame((s) => rect(s, 12, 8, 16, 14, warmGray));
+    expect(colorBlob(d, W, H, 'orange')).toBeNull();
+  });
+  it('цветное пятно далеко от прицела не запускает съёмку', () => {
+    const d = frame((s) => rect(s, 1, 1, 8, 8, [240, 120, 20]));
+    expect(colorBlob(d, W, H, 'orange')).toBeNull();
+  });
 });

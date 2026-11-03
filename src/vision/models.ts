@@ -101,21 +101,10 @@ export function loadCoco(): Promise<CocoModel> {
   return cocoP;
 }
 
-// Слабое соединение или режим экономии трафика: тяжёлую модель CLIP (~90 МБ) не качаем, проверка идёт на лёгких моделях.
+// CLIP нужен для предметов, которых нет среди 80 классов COCO. Загружаем его
+// на всех устройствах, включая телефоны: иначе часть заданий нельзя пройти.
+// Функцию оставляем как единую точку политики загрузки тяжёлых моделей.
 export function heavyModelsAllowed(): boolean {
-  const c = (navigator as Navigator & {
-    connection?: { saveData?: boolean; effectiveType?: string };
-    deviceMemory?: number;
-    userAgentData?: { mobile?: boolean };
-    maxTouchPoints?: number;
-  });
-  // Модель CLIP весит 85 МБ. На телефонах браузер часто скрывает сведения о памяти и сети.
-  const mobile = c.userAgentData?.mobile === true || /Android|iPhone|iPod|Mobile/i.test(navigator.userAgent) ||
-    (/Macintosh/i.test(navigator.userAgent) && (c.maxTouchPoints ?? 0) > 1);
-  if (mobile) return false;
-  if (c.connection?.saveData) return false;
-  if (c.connection?.effectiveType && c.connection.effectiveType !== '4g') return false;
-  if (c.deviceMemory !== undefined && c.deviceMemory < 4) return false;
   return true;
 }
 
@@ -128,7 +117,7 @@ export function preloadModels(withClip = true): void {
   else light.catch(() => {});
 }
 
-// Всё нужное для проверки фото уже загружено (CLIP нужен только там, где он разрешён).
+// Всё нужное для проверки фото уже загружено.
 export const modelsReady = (): boolean => status.coco >= 1 && (!heavyModelsAllowed() || status.clip >= 1);
 
 // Грузит обе модели и сообщает общий прогресс 0…1 (по размеру файлов: COCO ~18 МБ, CLIP ~89 МБ). Ошибки не бросает:

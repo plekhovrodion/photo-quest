@@ -24,7 +24,7 @@ interface Ready {
 let readyP: Promise<Ready> | null = null;
 
 export function loadClip(): Promise<Ready> {
-  if (!readyP && !heavyModelsAllowed()) return Promise.reject(new Error('CLIP отключён: слабое соединение')); // вызывающие уже умеют работать без CLIP
+  if (!readyP && !heavyModelsAllowed()) return Promise.reject(new Error('CLIP отключён на этом устройстве'));
   readyP ??= (async () => {
     const worker = new Worker(new URL('./clipWorker.ts', import.meta.url), { type: 'module' });
     const waiting = new Map<number, { ok: (v: Float32Array) => void; fail: (e: Error) => void }>();

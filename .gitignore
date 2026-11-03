@@ -4,6 +4,7 @@ dist
 .env.*.local
 .claude/launch.json
 .hf-cache
+.eval-data
 .env.voice
 .DS_Store
 public/models/yolox/

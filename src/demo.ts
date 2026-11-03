@@ -40,7 +40,7 @@ const pct = (p: number) => `${(p * 100).toFixed(p < 0.1 ? 1 : 0)}%`;
 const esc = (s: string) => s.replace(/[&<>]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;' })[c]!);
 
 let mstat: ModelStatus = { coco: 0, clip: 0, backend: '' };
-let clipState = heavyModelsAllowed() ? 'загрузка…' : 'отключён (слабое соединение/память)';
+let clipState = heavyModelsAllowed() ? 'загрузка…' : 'отключён';
 const t: Record<string, number> = {};
 let fps = 0;
 let frames = 0, fpsT = performance.now();
