@@ -1,14 +1,11 @@
 import type { LocalCheck } from '../data/tasks';
 import { COLOR_SHARE_MIN, hasColor, type ColorName } from './color';
 import { matchesLabels, type Prediction } from './labels';
-import type { ClipRank } from './clip';
 
 // Ленивый контекст: цвета и предсказания детектора считаются только если нужны.
 export interface Ctx {
   shares(): Record<ColorName, number> | Promise<Record<ColorName, number>>;
   predictions(): Prediction[] | Promise<Prediction[]>;
-  liveClip?: boolean; // CLIP узнал предмет в живой камере: засчитываем без повторной проверки
-  clip?(): Promise<ClipRank[] | null>; // CLIP считается только если остальные модели не узнали предмет
 }
 
 export const ANY_PROB_MIN = 0.15; // «на фото есть узнаваемый предмет»
@@ -20,11 +17,7 @@ export async function evaluate(check: LocalCheck, ctx: Ctx): Promise<boolean> {
     case 'color':
       return hasColor(await ctx.shares(), check.color);
     case 'labels': {
-      if (ctx.liveClip) return true;
-      if (matchesLabels(await ctx.predictions(), check.words)) return true;
-      if (!check.clip || !ctx.clip) return false;
-      const ranks = await ctx.clip();
-      return !!ranks && (await import('./clip')).clipAccepts(ranks, check.clip);
+      return matchesLabels(await ctx.predictions(), check.words);
     }
     case 'and':
       for (const c of check.checks) if (!(await evaluate(c, ctx))) return false;

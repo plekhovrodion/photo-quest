@@ -215,17 +215,19 @@ button.level small { font-size: 18px; }
   justify-content: center; gap: 18px; padding: calc(72px + var(--safe-top)) 16px 28px; text-align: center; }
 #app.screen-onboarding-video { position: fixed; inset: 0; z-index: 20; width: 100vw; height: 100dvh; min-height: 0; max-width: none; padding: 0; gap: 0; overflow: hidden; background: #000; }
 .intro-video-wrap { position: relative; width: 100%; height: 100%; display: grid; place-items: center; overflow: hidden; background: radial-gradient(ellipse at 50% 42%, #fff7df, #d6f5df 68%, #b8e8c8); }
-.intro-poster { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 18px; padding: 24px; transition: opacity .25s ease; }
-.intro-poster-pets { display: flex; align-items: flex-end; justify-content: center; gap: clamp(4px, 3vw, 28px); width: min(82vw, 640px); height: min(42vh, 340px); }
-.intro-poster-pets img { display: block; width: 30%; height: 100%; object-fit: contain; }
-.intro-poster-pets img:nth-child(2) { height: 82%; }
-.intro-poster p { margin: 0; color: #221c5f; font: 800 clamp(24px, 6vw, 40px)/1.15 'Factor A', system-ui, sans-serif; text-align: center; text-shadow: none; }
-.intro-video-wrap.is-playing .intro-poster { opacity: 0; pointer-events: none; }
+.intro-loading { position: absolute; inset: 0; z-index: 2; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 18px; padding: 24px; color: #221c5f; font: 700 18px/1.3 'Factor A', system-ui, sans-serif; }
+.intro-loading[hidden] { display: none; }
+.intro-progress { width: min(280px, 72vw); height: 14px; border: 3px solid rgba(255,255,255,.9); border-radius: 999px; background: rgba(255,255,255,.5); overflow: hidden; }
+.intro-progress-fill { display: block; width: 0; height: 100%; border-radius: inherit; background: #66cb83; transition: width .18s ease-out; }
+.intro-progress.indeterminate .intro-progress-fill { width: 35% !important; animation: intro-progress-indeterminate .9s ease-in-out infinite alternate; }
+@keyframes intro-progress-indeterminate { to { transform: translateX(180%); } }
 .intro-video { position: absolute; inset: 0; display: block; width: 100%; height: 100%; object-fit: contain; opacity: 0; transition: opacity .2s ease; }
 .intro-video-wrap.is-playing .intro-video { opacity: 1; }
-#app.screen-onboarding-video button.intro-play { position: absolute; inset: 50% auto auto 50%; transform: translate(-50%, -50%); width: 120px; min-width: 120px; height: 128px; min-height: 128px; padding: 0; border: 0; border-radius: 0; background: transparent; box-shadow: none; display: grid; place-items: center; animation: pulse-scale 1s ease-in-out infinite; }
+#app.screen-onboarding-video button.intro-play { position: absolute; inset: 0; z-index: 3; margin: auto; transform-origin: center; width: 120px; min-width: 120px; height: 128px; min-height: 128px; padding: 0; border: 0; border-radius: 0; background: transparent; box-shadow: none; display: grid; place-items: center; animation: intro-play-pulse 1s ease-in-out infinite; }
+#app.screen-onboarding-video button.intro-play[hidden] { display: none; }
+@keyframes intro-play-pulse { 0%, 100% { transform: scale(1); } 50% { transform: scale(1.1); } }
 .intro-play-icon { display: block; width: 120px; height: 128px; }
-#app.screen-onboarding-video button.intro-play:active:not(:disabled) { transform: translate(-50%, calc(-50% + 4px)); box-shadow: none; }
+#app.screen-onboarding-video button.intro-play:active:not(:disabled) { transform: scale(.96); box-shadow: none; }
 #app.ghost, .ghost { position: fixed; inset: 0; z-index: 8; pointer-events: none; overflow: hidden; min-height: 0; }
 .ghost, .ghost * { animation: none !important; }
 @media (prefers-reduced-motion: reduce) { .ghost { display: none; } }
@@ -252,13 +254,6 @@ button.stop.done { background: #16a34a; border-color: #166534; color: #fff; box-
 .ico { width: 1.15em; height: 1.15em; flex: none; display: inline-block; vertical-align: -.2em; }
 button .ico { width: 1.2em; height: 1.2em; }
 .chip .ico { width: 1.15em; height: 1.15em; margin-right: .1em; }
-
-/* Скелетоны для растровых и векторных файлов, которые приходят после показа экрана. */
-img.asset-loading, img.asset-error { background: linear-gradient(105deg, #e8e1f7 28%, #f8f5ff 44%, #e8e1f7 60%); background-size: 220% 100%; }
-img.asset-loading { animation: asset-shimmer 1.25s ease-in-out infinite; }
-img.asset-error { background-position: 50% 0; }
-@keyframes asset-shimmer { to { background-position-x: -220%; } }
-@media (prefers-reduced-motion: reduce) { img.asset-loading { animation: none; } }
 
 .hint { display: flex; align-items: center; gap: 10px; text-align: left; }
 .hint .ico { width: 34px; height: 34px; }
@@ -678,6 +673,12 @@ button.pw-back:not(.level):not(.stop):not(.cube-btn) { position: absolute; top: 
 @media (prefers-reduced-motion: reduce) { .cam-ask, .ca-card { animation: none; } }
 
 /* ===== Главная: карта-дорожка из мест (макет «01 / Кухня») ===== */
+@keyframes asset-shimmer { to { background-position-x: -220%; } }
+.mp-win.asset-pending { position: relative; }
+.mp-win.asset-pending::after, .loc-head.asset-pending::after { content: ''; position: absolute; inset: 0; z-index: 6; background: linear-gradient(105deg, #e8e1f7 28%, #f8f5ff 44%, #e8e1f7 60%); background-size: 220% 100%; animation: asset-shimmer 1.25s ease-in-out infinite; pointer-events: none; }
+.mp-win.asset-pending::after { z-index: 3; border-radius: inherit; }
+.loc-card.asset-pending .loc-ico { border-radius: 20px; background-image: linear-gradient(105deg, #e8e1f7 28%, #f8f5ff 44%, #e8e1f7 60%) !important; background-size: 220% 100%; animation: asset-shimmer 1.25s ease-in-out infinite; }
+@media (prefers-reduced-motion: reduce) { .mp-win.asset-pending::after, .loc-card.asset-pending .loc-ico, .loc-head.asset-pending::after { animation: none; } }
 #app.screen-map > .loc { --lbg: #8a5eff; --lfill: #66d385; --lbtns: #cbb7ff; } /* подложки кнопок шапки того же сиреневого, что у первой карточки (кухня) */
 .mp-head { position: relative; height: 216px; flex: none; display: flex; justify-content: center; background: linear-gradient(#d9c8ff 70%, #8a5eff); overflow: hidden; }
 .mp-road { position: relative; width: 100%; max-width: 360px; display: flex; flex-direction: column; gap: 48px; margin: 0 auto; }
@@ -788,6 +789,7 @@ button.pw-back:not(.level):not(.stop):not(.cube-btn) { position: absolute; top: 
 
 /* Шапка места с комнатой из Figma: по бокам зеркальные копии комнаты (без питомца), края сходятся без шва */
 .loc-head.has-room { background: linear-gradient(var(--lhead) 98px, var(--lbg) 98px); }
+.loc-head.asset-pending .loc-art, .loc-head.asset-pending .loc-fx { visibility: hidden; }
 .loc-art.loc-room { display: flex; width: 1728px; margin-left: -864px; background: none; animation: none; will-change: auto; }
 .loc-art.loc-room .room-side { flex: none; display: block; width: 576px; height: 313px; margin-top: -97px; }
 .loc-art.loc-room .room-side:first-child { transform: scaleX(-1); }
@@ -829,15 +831,13 @@ button.pw-back:not(.level):not(.stop):not(.cube-btn) { position: absolute; top: 
 .tk-cam { position: relative; width: 100%; aspect-ratio: 3 / 4; max-height: calc(100dvh - 250px); min-height: 260px; border-radius: 20px; overflow: hidden; background: #1a1235; line-height: 0; }
 .tk-cam .cam-video { position: absolute; inset: 0; width: 100%; height: 100%; max-width: none; max-height: none; object-fit: cover; border: 0; border-radius: 0; transform: none; animation: none; }
 .tk-cam .cam-boxes { position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none; }
-.tk-cam .cam-hint { position: absolute; z-index: 2; left: 8px; right: 8px; bottom: 8px; margin: 0; padding: 8px 12px; border-radius: 14px; background: rgba(26, 18, 53, .62); color: #fff; font-size: 16px; line-height: 20px; font-weight: 700; text-align: center; text-shadow: none; min-height: 0; }
-.tk-cam .cam-hint:empty, .tk-cam .cam-hint.quiet { display: none; }
+.tk-cam .cam-hint { display: none; }
 .tk-cam .cam-debug { position: absolute; z-index: 3; left: 4px; right: 4px; top: 4px; margin: 0; font-size: 10px; line-height: 12px; }
 
 /* Предмет узнан: зелёная подсветка карточки камеры и галочка, снимок уходит на проверку сам */
 .tk-cam::before { content: ''; position: absolute; inset: 0; z-index: 2; border-radius: 20px; box-shadow: inset 0 0 0 0 #22c55e; pointer-events: none; transition: box-shadow .35s ease; }
 .tk-cam.found::before { box-shadow: inset 0 0 0 10px #22c55e, inset 0 0 60px rgba(34, 197, 94, .55); animation: cam-found-glow 1s ease-out; }
 .tk-cam.found::after { content: ''; position: absolute; z-index: 3; left: 50%; top: 36%; width: 88px; height: 88px; translate: -50% -50%; border-radius: 50%; background: #22c55e url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='white' stroke-width='3.2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M5.5 12.5l4.2 4.2L18.5 7.6'/%3E%3C/svg%3E") center / 62% no-repeat; box-shadow: 0 6px 0 #15803d; animation: cam-found-pop .6s cubic-bezier(.22, 1.4, .36, 1) .15s backwards; }
-.tk-cam.found .cam-hint { background: rgba(21, 128, 61, .85); }
 @keyframes cam-found-glow { 0% { box-shadow: inset 0 0 0 0 #22c55e, inset 0 0 0 rgba(34, 197, 94, 0); } 40% { box-shadow: inset 0 0 0 14px #22c55e, inset 0 0 80px rgba(34, 197, 94, .7); } 100% { box-shadow: inset 0 0 0 10px #22c55e, inset 0 0 60px rgba(34, 197, 94, .55); } }
 @keyframes cam-found-pop { from { scale: 0; opacity: 0; } }
 @media (prefers-reduced-motion: reduce) { .tk-cam.found::before, .tk-cam.found::after { animation: none; } }
@@ -890,7 +890,6 @@ button.pw-back:not(.level):not(.stop):not(.cube-btn) { position: absolute; top: 
   #app.screen-tk.tk-task .tk-card.tk-live { display: contents; }
   #app.screen-tk.tk-task .tk-cam { position: fixed; inset: 0; z-index: 0; width: auto; height: auto; min-height: 0; max-height: none; border-radius: 0; flex: none; }
   #app.screen-tk.tk-task .tk-cam::before { border-radius: 0; }
-  #app.screen-tk.tk-task .tk-cam .cam-hint { top: 96px; bottom: auto; }
   #app.screen-tk.tk-task .tk-live .tk-head { position: fixed; z-index: 4; left: 0; right: 0; bottom: 0; max-width: 600px; margin: 0 auto; padding: 20px; gap: 8px; background: #fff; border-radius: 32px 32px 0 0; box-shadow: 0 10px 0 #cbb7ff; }
   #app.screen-tk.tk-task .tk-card.tk-live { --tkico: 112px; }
   #app.screen-tk.tk-task .tk-live .tk-head .tk-text { font-size: 28px; line-height: 34px; color: #221c5f; }
@@ -1024,6 +1023,8 @@ button.pw-back:not(.level):not(.stop):not(.cube-btn) { position: absolute; top: 
 /* Экран «Загружаем игру»: во весь экран, полоска как на экране места */
 .loading-screen { position: fixed; inset: 0; z-index: 80; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 32px;
   padding: 24px; background: radial-gradient(circle at 50% 38%, #f2fff4 0, #d9f6de 55%, #bfeccb 100%); --lfill: #66d385; animation: ca-fade .3s ease backwards; }
+.model-loading-screen { z-index: 110; }
+.model-loading-screen[hidden] { display: none; }
 .loading-screen h2 { margin: 0; font-size: 28px; line-height: 36px; font-weight: 700; color: #221c5f; text-align: center; text-shadow: none; }
 .loading-screen .loc-track { background: rgba(255, 255, 255, .75); }
 .loading-screen .loc-progress { width: min(100%, 560px); }

@@ -1,24 +1,21 @@
 import { describe, expect, it } from 'vitest';
-import { createRequire } from 'node:module';
 import { LEVELS } from './tasks';
 import { matchesLabels } from '../vision/labels';
+import { YOLO_CLASSES } from '../vision/yolo';
 
-// Настоящий список классов детектора COCO-SSD (из установленной библиотеки).
-const require = createRequire(import.meta.url);
-const COCO: string[] = (Object.values(require('@tensorflow-models/coco-ssd/dist/classes.js').CLASSES) as Array<{ displayName: string }>).map((c) => c.displayName);
+const COCO = YOLO_CLASSES;
 
 const objectTasks = LEVELS.flatMap((l) => l.tasks.map((t) => ({ level: l.id, t }))).filter(({ t }) => t.local?.kind === 'labels');
 const hits = (words: string[], names: string[]) => names.filter((n) => matchesLabels([{ className: n, probability: 1 }], words));
 
-describe('предметы заданий и классы моделей', () => {
-  it('списки классов загрузились', () => {
+describe('предметы заданий и классы YOLO', () => {
+  it('стандартная модель YOLO содержит 80 классов COCO', () => {
     expect(COCO).toHaveLength(80);
   });
 
-  // Предмет без класса COCO проверяет только CLIP, поэтому у каждого задания есть либо класс COCO, либо название для CLIP.
-  it.each(objectTasks.map(({ t }) => [t.id, t] as const))('%s: есть класс COCO или название для CLIP', (_id, t) => {
-    const { words, clip } = t.local as { words: string[]; clip?: string };
-    expect(hits(words, COCO).length > 0 || !!clip, `для «${t.prompt}» нет ни класса COCO, ни названия для CLIP`).toBe(true);
+  it.each(objectTasks.map(({ t }) => [t.id, t] as const))('%s: есть класс YOLO', (_id, t) => {
+    const { words } = t.local as { words: string[] };
+    expect(hits(words, COCO).length > 0, `для «${t.prompt}» нет класса в YOLO`).toBe(true);
   });
 
   it('в уровне разные задания не путаются на одном классе (кроме известных пар)', () => {

@@ -1,5 +1,5 @@
 import './style.css';
-import './ui/assetSkeletons';
+import './ui/assetLoadRecovery';
 import { LEVELS, ICON_INDEX, ICON_ABS, type Level, type Task } from './data/tasks';
 import { createGame, currentTask, reduce, STARS_PER_TASK, type Action, type GameState } from './game/state';
 import { PRAISE, INTRO_EN, TRY_AGAIN, TROUBLE, LEVEL_DONE, GAME_DONE, REPEAT_AFTER, QUIZ_ASK, QUIZ_WRONG, LOCKED_HINT, TASK_LOCKED, TASK_AIM, NEXT_HINT, type Phrase, HINT_PLACE, HINT_ITEM, HINT_COLOR, pickPhrase } from './data/phrases';
@@ -9,7 +9,7 @@ import { targetOf } from './camera/target';
 import { verifyPhoto } from './api/verify';
 import { COLOR_RU } from './vision/names';
 import { englishFor } from './data/english';
-import { preloadModels, heavyModelsAllowed } from './vision/models';
+import { loadDetectorModel } from './vision/models';
 import { confetti, confettiBehind } from './fx/confetti';
 import { typeText, stopTyping } from './fx/typewriter';
 import { speak, speakEnglish, speakPause, stopSpeech, isMuted, setMuted } from './audio/sounds';
@@ -25,7 +25,6 @@ import { bootFirstStep, bootSecondStep } from './ui/boot';
 import { isOnboarded, markOnboarded } from './onboarding';
 import { objectSvg, colorBallSvg, fitObject } from './map/objects';
 import { album, toSticker, type Sticker } from './album';
-import { CLIP_OBJECTS } from './data/clip';
 import { loadProgress, recordTask, type Progress } from './progress';
 import { createStore } from './storage/store';
 import { checkIcon, backIcon } from './ui/icons';
@@ -35,6 +34,7 @@ import { mapDecor } from './ui/mapDecor';
 const root = document.getElementById('app')!;
 const store = createStore();
 let progress: Progress = loadProgress();
+const colorsLevel = LEVELS.find((item) => item.id === 'colors');
 let level: Level | null = null;
 let state: GameState | null = null;
 let notice = '';
@@ -105,7 +105,6 @@ function on(id: string, fn: () => void) {
 
 function startLevel(l: Level) {
   if (!isUnlocked(l)) return; // закрытое место не открываем даже напрямую
-  setTimeout(() => preloadModels(), 900); // тяжёлые модели грузим после перехода, чтобы экран открывался сразу
   level = l;
   state = null;
   render();
@@ -123,7 +122,7 @@ function startTask(task: Task) {
   if (!canAfford(progress.found[task.id] !== undefined)) { void showNoBeads(); return; }
   promptSpoken = null;
   recorded = null; // новое прохождение задания: прежний итог не переиспользуем
-  setTimeout(() => preloadModels(), 900);
+  if (targetOf(task).words?.length) void loadDetectorModel().catch(() => {});
   state = createGame([task]);
   render();
 }
@@ -163,7 +162,7 @@ async function openCamera(task: Task) {
   if (!host) return;
   camOn = true;
   const target = targetOf(task);
-  // Камера открывается сразу; готовность распознавания показываем прямо поверх видео.
+  // Камера открывается сразу; распознавание работает без статусной полоски поверх видео.
   if (!host.isConnected) { camOn = false; return; } // пока грузилось, ребёнок ушёл с экрана
   void takePhoto(target, host).then((cap) => {
     camOn = false;
@@ -185,7 +184,7 @@ async function processCapture(task: Task, cap: Captured) {
     if (photoUrl) URL.revokeObjectURL(photoUrl);
     photoUrl = URL.createObjectURL(photo);
     dispatch({ type: 'photo-taken' });
-    const verdict = await verifyPhoto(photo, task, { cropped: wasCropped, liveClass: cap.liveClass, liveClip: cap.liveClip });
+    const verdict = await verifyPhoto(photo, task, { cropped: wasCropped, liveClass: cap.liveClass });
     let match = verdict.match;
     // Почти подошло: не переспрашиваем ребёнка и не отказываем, а засчитываем и называем предмет по заданию.
     if (!match && verdict.maybe) {
@@ -229,60 +228,112 @@ function hud(left: string, mid = '', label = '', right = '') {
 
 function renderOnboarding() {
   const mobileVideo = window.matchMedia('(max-width: 767px)').matches;
-  const onboardingVideo = mobileVideo ? 'video/onboarding-mobile.mp4' : 'video/onboarding.mp4';
+  const mobileUrl = import.meta.env.BASE_URL + 'video/onboarding-mobile.mp4';
+  const desktopUrl = import.meta.env.BASE_URL + 'video/onboarding.mp4';
   show(`<div class="intro-video-wrap">
-    <div class="intro-poster" aria-hidden="true"><div class="intro-poster-pets">
-      <img src="${import.meta.env.BASE_URL}art/pets/cat-happy.svg" alt=""><img src="${import.meta.env.BASE_URL}art/pets/bear-happy.svg" alt=""><img src="${import.meta.env.BASE_URL}art/pets/dog-happy.svg" alt="">
-    </div><p>Привет! Давай искать!</p></div>
-    <video class="intro-video" autoplay playsinline preload="auto" aria-label="Видео-знакомство с игрой">
-      <source src="${import.meta.env.BASE_URL}${onboardingVideo}" type="video/mp4">
+    <div class="intro-loading" role="status" aria-live="polite">
+      <span class="intro-loading-label">Загружаем видео…</span>
+      <div class="intro-progress" role="progressbar" aria-label="Загрузка видео" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0"><span class="intro-progress-fill"></span></div>
+    </div>
+    <video class="intro-video" autoplay playsinline preload="none" aria-label="Видео-знакомство с игрой">
     </video>
     <button id="intro-play" class="intro-play" type="button" aria-label="Воспроизвести видео" hidden><img class="intro-play-icon" src="${import.meta.env.BASE_URL}art/loc/onboarding-play.svg" alt=""></button>
   </div>`, 'screen-onboarding-video');
   const video = root.querySelector<HTMLVideoElement>('.intro-video')!;
   const wrap = root.querySelector<HTMLElement>('.intro-video-wrap')!;
   const play = root.querySelector<HTMLButtonElement>('#intro-play')!;
-  const source = video.querySelector<HTMLSourceElement>('source')!;
+  const loading = root.querySelector<HTMLElement>('.intro-loading')!;
+  const progress = root.querySelector<HTMLElement>('.intro-progress')!;
+  const progressFill = root.querySelector<HTMLElement>('.intro-progress-fill')!;
   let finished = false;
-  let fallbackSource = false;
-  let started = false;
-  let startTimer: ReturnType<typeof setTimeout>;
-  // Не смешиваем фоновую музыку игры с оригинальным звуком вступительного ролика.
+  let fallbackUsed = false;
+  let videoReady = false;
+  let attempt = 0;
+  let controller: AbortController | null = null;
+  let objectUrl: string | null = null;
   setMusicEnabled(false);
   const finish = () => {
     if (finished) return;
     finished = true;
-    clearTimeout(startTimer);
+    controller?.abort();
     video.pause();
+    if (objectUrl) URL.revokeObjectURL(objectUrl);
     markOnboarded();
     setMusicEnabled(!isMuted());
     renderLevels();
   };
   const onPlaying = () => {
-    started = true;
-    clearTimeout(startTimer);
     wrap.classList.add('is-playing');
     play.hidden = true;
   };
   const attemptPlay = () => {
-    void video.play().catch(() => { play.hidden = false; });
+    void video.play().catch(() => { if (videoReady) play.hidden = false; });
   };
-  const onError = () => {
-    if (finished) return;
-    if (mobileVideo && !fallbackSource) {
-      fallbackSource = true;
-      source.src = `${import.meta.env.BASE_URL}video/onboarding.mp4`;
+  const loadVideo = async (url: string) => {
+    const loadId = ++attempt;
+    controller?.abort();
+    controller = new AbortController();
+    videoReady = false;
+    wrap.classList.remove('is-ready');
+    loading.hidden = false;
+    play.hidden = true;
+    progress.classList.remove('indeterminate');
+    progress.setAttribute('aria-valuenow', '0');
+    progressFill.style.width = '0%';
+    try {
+      const response = await fetch(url, { signal: controller.signal });
+      if (!response.ok) throw new Error('Видео: ' + response.status);
+      const total = Number(response.headers.get('content-length')) || 0;
+      const reader = response.body?.getReader();
+      const chunks: ArrayBuffer[] = [];
+      let received = 0;
+      if (reader) {
+        for (;;) {
+          const { done, value } = await reader.read();
+          if (done) break;
+          const chunk = new Uint8Array(value.byteLength);
+          chunk.set(value);
+          chunks.push(chunk.buffer as ArrayBuffer);
+          received += value.byteLength;
+          if (total) {
+            const percent = Math.min(99, Math.floor(received / total * 100));
+            progress.setAttribute('aria-valuenow', String(percent));
+            progressFill.style.width = percent + '%';
+          } else progress.classList.add('indeterminate');
+        }
+      } else chunks.push(await response.arrayBuffer());
+      if (finished || loadId !== attempt) return;
+      const blob = new Blob(chunks, { type: response.headers.get('content-type') || 'video/mp4' });
+      if (objectUrl) URL.revokeObjectURL(objectUrl);
+      objectUrl = URL.createObjectURL(blob);
+      video.addEventListener('canplay', () => {
+        if (finished || loadId !== attempt) return;
+        videoReady = true;
+        progress.classList.remove('indeterminate');
+        progress.setAttribute('aria-valuenow', '100');
+        progressFill.style.width = '100%';
+        wrap.classList.add('is-ready');
+        loading.hidden = true;
+        attemptPlay();
+      }, { once: true });
+      video.src = objectUrl;
       video.load();
-      attemptPlay();
-      return;
+    } catch {
+      if (finished || loadId !== attempt || controller.signal.aborted) return;
+      if (mobileVideo && !fallbackUsed) {
+        fallbackUsed = true;
+        void loadVideo(desktopUrl);
+      } else finish();
     }
-    finish();
   };
   video.addEventListener('playing', onPlaying);
   video.addEventListener('ended', finish, { once: true });
-  video.addEventListener('error', onError);
-  startTimer = setTimeout(() => { if (!started && !finished) play.hidden = false; }, 3500);
-  attemptPlay();
+  video.addEventListener('error', () => {
+    if (finished) return;
+    if (mobileVideo && !fallbackUsed) { fallbackUsed = true; void loadVideo(desktopUrl); }
+    else finish();
+  });
+  void loadVideo(mobileVideo ? mobileUrl : desktopUrl);
   play.addEventListener('click', attemptPlay);
 }
 
@@ -314,7 +365,11 @@ function refreshMapTiles(places: Level[]) {
     else tile.removeAttribute('aria-disabled');
     const oldWin = tile.querySelector<HTMLElement>('.mp-win');
     const newWin = fresh.querySelector<HTMLElement>('.mp-win');
-    if (oldWin && newWin && oldWin.innerHTML !== newWin.innerHTML) oldWin.innerHTML = newWin.innerHTML;
+    if (oldWin && newWin && oldWin.innerHTML !== newWin.innerHTML) {
+      oldWin.innerHTML = newWin.innerHTML;
+      oldWin.classList.remove('asset-ready');
+      oldWin.classList.add('asset-pending');
+    }
     const oldCheck = tile.querySelector<HTMLImageElement>('.mp-check');
     const newCheck = fresh.querySelector<HTMLImageElement>('.mp-check');
     if (!oldCheck && newCheck) tile.append(newCheck);
@@ -338,7 +393,7 @@ function mapTile(l: Level, i: number): string {
   const locked = !isUnlocked(l);
   const target = !locked && !full && l === targetPlace;
   return `<button class="mp-tile ${i % 2 ? 'right' : 'left'}${full ? ' done' : ''}${locked ? ' locked' : ''}${target ? ' pulse' : ''}" role="listitem" data-i="${i}" style="--i:${i}" ${locked ? 'aria-disabled="true"' : ''} aria-label="${l.title}: найдено ${found} из ${total}${full ? ', всё найдено' : ''}${locked ? ', закрыто: сначала пройди уровень Цвета' : ''}">
-    <span class="mp-win is-room">${roomHtml(l.id, !locked, 'head-', full ? 'happy-loop' : 'sad-loop', locked, true)}</span>${full ? `<img class="loc-check mp-check" src="${LOC_BASE()}/check.svg" alt="">` : ''}
+    <span class="mp-win is-room asset-pending" data-asset-group="images">${roomHtml(l.id, !locked, 'head-', full ? 'happy-loop' : 'sad-loop', locked, true)}</span>${full ? `<img class="loc-check mp-check" src="${LOC_BASE()}/check.svg" alt="">` : ''}
     <span class="mp-track" role="progressbar" aria-valuemin="0" aria-valuemax="${total}" aria-valuenow="${found}"><span class="loc-fill" style="--w:${pct}%;background-image:url(${LOC_BASE()}/stripe-a.svg)"></span></span></button>`;
 }
 
@@ -443,7 +498,6 @@ function taskArt(t: Task, cls = 'obj3d'): string {
 // Название предмета задания в именительном падеже для подписи наклейки.
 function taskName(t: Task): string {
   if (t.local?.kind === 'color') return `${COLOR_RU[t.local.color]} цвет`;
-  if (t.local?.kind === 'labels' && t.local.clip) return CLIP_OBJECTS[t.local.clip] ?? goalOf(t);
   return goalOf(t);
 }
 
@@ -585,7 +639,7 @@ function locFx(l: Level): string {
 function locHeader(l: Level, mood?: Mood): string {
   const base = LOC_BASE();
   const tool = (id: string, icon: string, label: string) => `<button id="${id}" class="loc-btn" aria-label="${label}"><i class="loc-i" style="--m:url(${base}/${icon}.svg)"></i></button>`;
-  return `<header class="loc-head${hasRoom(l.id) ? ' has-room' : ''}">${hasRoom(l.id) ? `<div class="loc-art loc-room" aria-hidden="true"><img class="room-side" src="${import.meta.env.BASE_URL}art/rooms/hd-${l.id}-side.svg" alt=""><span class="room-mid">${roomHtml(l.id, true, 'hd-', mood)}</span><img class="room-side" src="${import.meta.env.BASE_URL}art/rooms/hd-${l.id}-side.svg" alt=""></div>` : `<div class="loc-art" style="background-image:url(${base}/headers.svg)" aria-hidden="true"></div>`}${locFx(l)}
+  return `<header class="loc-head${hasRoom(l.id) ? ' has-room asset-pending' : ''}"${hasRoom(l.id) ? ' data-asset-group="room" data-asset-wait-pet="true"' : ''}>${hasRoom(l.id) ? `<div class="loc-art loc-room" aria-hidden="true"><img class="room-side" src="${import.meta.env.BASE_URL}art/rooms/hd-${l.id}-side.svg" alt=""><span class="room-mid">${roomHtml(l.id, true, 'hd-', mood)}</span><img class="room-side" src="${import.meta.env.BASE_URL}art/rooms/hd-${l.id}-side.svg" alt=""></div>` : `<div class="loc-art" style="background-image:url(${base}/headers.svg)" aria-hidden="true"></div>`}${locFx(l)}
     <button id="back" class="loc-btn" aria-label="Назад"><i class="loc-i" style="--m:url(${base}/back.svg)"></i></button>
     <div class="loc-tools">${tool('snd', 'sound', isMuted() ? 'Включить звук' : 'Выключить звук')}${tool('fs', 'fullscreen', 'На весь экран')}</div></header>`;
 }
@@ -631,7 +685,7 @@ function renderMap(l: Level) {
   const cards = l.tasks.map((t, i) => {
     const done = progress.found[t.id] !== undefined;
     const locked = false; // задания идут по порядку: следующее открывается, когда найдено предыдущее
-    return `<button class="loc-card ${done ? 'done' : ''}${locked ? ' locked' : ''}${i === nextI ? ' pulse' : ''}" data-i="${i}" style="--i:${i}" ${locked ? 'aria-disabled="true"' : ''} aria-label="${taskName(t)}${done ? ', найдено' : ''}${locked ? ', закрыто: сначала найди предыдущее' : ''}">${taskIcon(l, t)}${done ? `<img class="loc-check" src="${base}/check.svg" alt="">` : ''}</button>`;
+    return `<button class="loc-card asset-pending${done ? ' done' : ''}${locked ? ' locked' : ''}${i === nextI ? ' pulse' : ''}" data-asset-group="sprite" data-i="${i}" style="--i:${i}" ${locked ? 'aria-disabled="true"' : ''} aria-label="${taskName(t)}${done ? ', найдено' : ''}${locked ? ', закрыто: сначала найди предыдущее' : ''}">${taskIcon(l, t)}${done ? `<img class="loc-check" src="${base}/check.svg" alt="">` : ''}</button>`;
   }).join('');
   const pct = n ? Math.round((found / n) * 100) : 0;
   show(`<div class="loc" style="${locVars(l)}">${locHeader(l, n > 0 && found >= n ? 'happy-loop' : undefined)}
@@ -787,6 +841,7 @@ void bootFirstStep().then(() => {
   // Подтягиваем прогресс с сервера (если он настроен) и перерисовываем, не прерывая задание.
   store.load().then((p) => {
     progress = p;
+
     // Серверный прогресс обновляет существующие карточки на месте: экран не моргает,
     // и запускающиеся анимации плиток не сбрасываются.
     if (!state && root.classList.contains('screen-map')) {
@@ -795,10 +850,8 @@ void bootFirstStep().then(() => {
     } else if (!state && root.classList.contains('screen-menu')) render();
   });
 
-  // Дальше в простое: звуки и лёгкая модель распознавания. CLIP загружается
-  // после входа в уровень, чтобы главный экран открылся без ожидания 85 МБ.
+  // Дальше в простое: звуки. YOLO загружается при открытии первого задания на предмет.
   bootSecondStep(() => {
     startSfxLoad();
-    if (heavyModelsAllowed()) setTimeout(() => preloadModels(false), 2500);
   });
 });

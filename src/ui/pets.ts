@@ -58,6 +58,11 @@ const load = (pet: PetName, i: number | Mood) => {
   return p;
 };
 
+function markPetAssetsReady(el: HTMLElement) {
+  el.classList.add('pet-assets-ready');
+  el.dispatchEvent(new Event('pet-assets-ready', { bubbles: true }));
+}
+
 // Не больше двух питомцев одновременно создают свои анимации (разбор Lottie тяжёлый для слабого телефона).
 let busy = 0;
 const waiters: (() => void)[] = [];
@@ -81,14 +86,17 @@ async function mount(el: HTMLElement) {
     const idle = loopMood ? Promise.resolve(null) : load(pet, 1 + Math.floor(Math.random() * n));
     [idleData, emo] = await Promise.all([idle, mood ? load(pet, mood).catch(() => null) : Promise.resolve(null)]);
   } catch {
-    // Если Lottie не загрузилась из-за краткого обрыва сети, оставляем питомца
-    // на месте статичной картинкой вместо пустого слота со скелетоном.
+    // Если Lottie не загрузилась из-за краткого обрыва сети, показываем питомца
+    // статичной картинкой.
     if (!st.dead && el.isConnected && !el.querySelector('.pet-anim, .pet-static')) {
       const img = document.createElement('img');
       img.className = 'pet-static';
       img.alt = '';
+      img.addEventListener('load', () => markPetAssetsReady(el), { once: true });
+      img.addEventListener('error', () => markPetAssetsReady(el), { once: true });
       img.src = `${BASE()}art/pets/${pet}-${mood?.startsWith('sad') ? 'sad' : 'happy'}.svg`;
       el.appendChild(img);
+      if (img.complete) markPetAssetsReady(el);
     }
     return;
   }
@@ -107,7 +115,10 @@ async function mount(el: HTMLElement) {
     box.className = 'pet-anim';
     el.appendChild(box);
     st.boxes.push(box);
-    st.anims.push(lottie.loadAnimation({ container: box, renderer: 'svg', loop: true, autoplay: false, animationData: idleData }));
+    const animation = lottie.loadAnimation({ container: box, renderer: 'svg', loop: true, autoplay: false, animationData: idleData });
+    animation.addEventListener('DOMLoaded', () => markPetAssetsReady(el));
+    animation.addEventListener('data_failed', () => markPetAssetsReady(el));
+    st.anims.push(animation);
   }
   const idleIndex = st.anims.length ? 0 : -1;
   if (idleIndex >= 0 && !emo) { show(idleIndex); return; }
@@ -117,6 +128,8 @@ async function mount(el: HTMLElement) {
     el.appendChild(box);
     const loopEmo = (mood === 'happy-loop' || mood === 'sad-loop') && !reduce;
     const a = lottie.loadAnimation({ container: box, renderer: 'svg', loop: loopEmo, autoplay: false, animationData: emo });
+    a.addEventListener('DOMLoaded', () => markPetAssetsReady(el));
+    a.addEventListener('data_failed', () => markPetAssetsReady(el));
     st.boxes.push(box);
     st.anims.push(a);
     const i = st.anims.length - 1;
