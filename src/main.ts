@@ -2,7 +2,7 @@ import './style.css';
 import './ui/assetLoadRecovery';
 import { LEVELS, ICON_INDEX, ICON_ABS, type Level, type Task } from './data/tasks';
 import { createGame, currentTask, reduce, STARS_PER_TASK, type Action, type GameState } from './game/state';
-import { PRAISE, INTRO_EN, TRY_AGAIN, TROUBLE, LEVEL_DONE, GAME_DONE, REPEAT_AFTER, QUIZ_ASK, QUIZ_WRONG, LOCKED_HINT, TASK_LOCKED, TASK_AIM, NEXT_HINT, type Phrase, HINT_PLACE, HINT_ITEM, HINT_COLOR, pickPhrase } from './data/phrases';
+import { PRAISE, INTRO_EN, TRY_AGAIN, TROUBLE, LEVEL_DONE, GAME_DONE, REPEAT_AFTER, QUIZ_ASK, QUIZ_WRONG, LOCKED_HINT, TASK_LOCKED, TASK_AIM, WAIT_LOADING, NEXT_HINT, type Phrase, HINT_PLACE, HINT_ITEM, HINT_COLOR, pickPhrase } from './data/phrases';
 import { takePhoto, compressPhoto, stopCamera, type Captured } from './camera/capture';
 import { onCameraPromptClosed } from './camera/prepermission';
 import { targetOf } from './camera/target';
@@ -167,6 +167,7 @@ async function prepareTask(task: Task, token: number): Promise<void> {
   let active = true;
   const startedAt = performance.now();
   const screen = modelLoadingScreen();
+  speak(WAIT_LOADING.text, false, WAIT_LOADING.who);
   const paint = () => {
     if (!active) return;
     const status = modelStatus();
@@ -221,16 +222,18 @@ async function showNoBeads(): Promise<void> {
 // Сохраняет награду за найденное задание; возвращает, закрыта ли категория целиком.
 // Вызывается сразу, как только показан успех (иначе находка терялась, если уйти стрелкой «назад»),
 // повторный вызов для того же задания ничего не меняет и отдаёт прежний результат.
-let recorded: { id: string; levelDone: boolean } | null = null;
+let recorded: { id: string; levelDone: boolean; newlyFound: boolean } | null = null;
+let gameCompletionAnnounced = false;
 function finishTask(): boolean {
   const s = state!;
   if (s.score === 0) return false;
   const id = s.tasks[0].id;
   if (recorded?.id === id) return recorded.levelDone;
+  const newlyFound = progress.found[id] === undefined;
   const res = recordTask(progress, level!, id, s.stars);
   progress = res.progress;
   void store.save(progress);
-  recorded = { id, levelDone: res.levelDone };
+  recorded = { id, levelDone: res.levelDone, newlyFound };
   return res.levelDone;
 }
 
@@ -476,7 +479,7 @@ function mapTile(l: Level, i: number): string {
   const locked = !isUnlocked(l);
   const target = !locked && !full && l === targetPlace;
   return `<button class="mp-tile ${i % 2 ? 'right' : 'left'}${full ? ' done' : ''}${locked ? ' locked' : ''}${target ? ' pulse' : ''}" role="listitem" data-i="${i}" style="--i:${i}" ${locked ? 'aria-disabled="true"' : ''} aria-label="${l.title}: найдено ${found} из ${total}${full ? ', всё найдено' : ''}${locked ? ', закрыто: сначала пройди уровень Цвета' : ''}">
-    <span class="mp-win is-room asset-pending" data-asset-group="images">${roomHtml(l.id, !locked, 'head-', full ? 'happy-loop' : 'sad-loop', locked, true)}</span>${full ? `<img class="loc-check mp-check" src="${LOC_BASE()}/check.svg" alt="">` : ''}
+    <span class="mp-win is-room asset-pending" data-asset-group="images"${!locked && hasRoom(l.id) ? ' data-asset-wait-pet="true"' : ''}>${roomHtml(l.id, !locked, 'head-', full ? 'happy-loop' : 'sad-loop', locked)}</span>${full ? `<img class="loc-check mp-check" src="${LOC_BASE()}/check.svg" alt="">` : ''}
     <span class="mp-track" role="progressbar" aria-valuemin="0" aria-valuemax="${total}" aria-valuenow="${found}"><span class="loc-fill" style="--w:${pct}%;background-image:url(${LOC_BASE()}/stripe-a.svg)"></span></span></button>`;
 }
 
@@ -793,6 +796,7 @@ function renderMap(l: Level) {
 function renderLevelDone() {
   playSfx('level-up');
   const everything = LEVELS.every((l) => l.tasks.every((t) => progress.found[t.id] !== undefined));
+  if (everything) gameCompletionAnnounced = true;
   const doneLine = pickPhrase(everything ? GAME_DONE : LEVEL_DONE);
   renderMap(level!);
   const seq = screenSeq;
@@ -905,7 +909,9 @@ function render() {
       state = null;
       const L = level!;
       const proceed = () => {
-        if (levelDone) return renderLevelDone();
+        const everything = LEVELS.every((place) => place.tasks.every((task) => progress.found[task.id] !== undefined));
+        const justCompletedGame = everything && recorded?.id === last.id && recorded.newlyFound && !gameCompletionAnnounced;
+        if (levelDone || justCompletedGame) return renderLevelDone();
         const nxt = nextTaskAfter(L, last);
         if (nxt) startTask(nxt); else renderMap(L);
       };

@@ -110,6 +110,9 @@ export const TASK_LOCKED: Phrase[] = [
 // После задания «Найди …»: что делать с камерой (говорит Соня).
 export const TASK_AIM: Phrase = P('aim-1', 'sonya', 'Наведи камеру!');
 
+// Короткая реплика на экране ожидания модели.
+export const WAIT_LOADING: Phrase = P('loading-1', 'sonya', 'Подожди, сейчас загружается!');
+
 // После найденного предмета: что делать дальше (говорит Соня).
 export const NEXT_HINT: Phrase = P('next-1', 'sonya', 'Идём дальше! Нажми на кнопку внизу');
 
@@ -122,7 +125,7 @@ export const VIDEO_LINES: Phrase[] = [
   P('video-5', 'sonya', 'Давай играть!'),
 ];
 
-export const ALL_PHRASES: Phrase[] = [TASK_AIM, ...VIDEO_LINES, NEXT_HINT, ...PRAISE, ...INTRO_EN, ASK_CAMERA, ...TRY_AGAIN, ...TROUBLE, ...LEVEL_DONE, ...GAME_DONE, ...REPEAT_AFTER, QUIZ_ASK, ...QUIZ_WRONG, ...HINT_PLACE, ...HINT_ITEM, ...HINT_COLOR, ...LOCKED_HINT, ...TASK_LOCKED];
+export const ALL_PHRASES: Phrase[] = [TASK_AIM, WAIT_LOADING, ...VIDEO_LINES, NEXT_HINT, ...PRAISE, ...INTRO_EN, ASK_CAMERA, ...TRY_AGAIN, ...TROUBLE, ...LEVEL_DONE, ...GAME_DONE, ...REPEAT_AFTER, QUIZ_ASK, ...QUIZ_WRONG, ...HINT_PLACE, ...HINT_ITEM, ...HINT_COLOR, ...LOCKED_HINT, ...TASK_LOCKED];
 
 // Случайная фраза, не повторяющая предыдущую из этого же списка.
 const last = new Map<Phrase[], string>();
