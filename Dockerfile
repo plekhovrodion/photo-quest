@@ -7,6 +7,7 @@ FROM node:24.18.0-alpine AS build
 # Как лучше и почему читать тут - https://docs.docker.com/develop/develop-images/dockerfile_best-practices/
 
 ARG BASE_PATH
+ARG VITE_PROGRESS_API
 ARG https_proxy
 ARG no_proxy
 
@@ -17,7 +18,7 @@ RUN npm ci
 
 COPY . /app
 
-RUN NODE_ENV=production npm run build
+RUN VITE_PROGRESS_API=${VITE_PROGRESS_API} NODE_ENV=production npm run build
 
 # Основа образа для запуска приложения
 FROM ${BASE_IMAGE}
