@@ -100,7 +100,7 @@ async function mount(el: HTMLElement) {
   // Не оставляем скелетон навсегда, если загрузчик анимации не прислал DOMLoaded/data_failed.
   const readyTimeout = setTimeout(() => {
     if (!st.dead && el.isConnected && !el.classList.contains('pet-assets-ready')) showStaticPet(el, pet, mood);
-  }, 12_000);
+  }, 4_000);
   el.addEventListener('pet-assets-ready', () => clearTimeout(readyTimeout), { once: true });
   let idleData: object | null;
   let emo: object | null = null;
@@ -172,7 +172,7 @@ export function mountPets(scope: ParentNode) {
       const el = e.target as HTMLElement;
       const st = live.find((item) => item.el === el);
       if (!st) {
-        if (e.isIntersecting) void mount(el);
+        if (e.isIntersecting && !live.some((item) => item.el === el)) void mount(el);
         continue;
       }
       st.visible = e.isIntersecting;
@@ -180,7 +180,14 @@ export function mountPets(scope: ParentNode) {
       else st.anims[st.cur]?.play();
     }
   }, { rootMargin: '200px' });
-  els.forEach((el) => observer!.observe(el));
+  els.forEach((el) => {
+    observer!.observe(el);
+    // Immediately start pets that are already on screen. Some mobile/browser
+    // combinations delay the first IntersectionObserver callback indefinitely.
+    const rect = el.getBoundingClientRect();
+    if (rect.width > 0 && rect.height > 0 && rect.bottom > 0 && rect.right > 0 && rect.top < innerHeight && rect.left < innerWidth
+      && !live.some((item) => item.el === el)) void mount(el);
+  });
 }
 
 export function unmountPets() {

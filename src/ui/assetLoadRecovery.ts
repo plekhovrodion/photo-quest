@@ -4,7 +4,7 @@ const groups = new WeakSet<HTMLElement>();
 const imageWaits = new WeakMap<HTMLImageElement, Promise<void>>();
 const backgroundWaits = new Map<string, Promise<void>>();
 const groupTimeouts = new WeakMap<HTMLElement, ReturnType<typeof setTimeout>>();
-const GROUP_LOAD_TIMEOUT_MS = 10_000;
+const GROUP_LOAD_TIMEOUT_MS = 4_000;
 
 function settle(image: HTMLImageElement, state: 'loaded' | 'failed') {
   image.dataset.assetState = state;
@@ -23,7 +23,7 @@ function retry(image: HTMLImageElement) {
 }
 
 function watchImage(image: HTMLImageElement) {
-  if (watched.has(image) || image.classList.contains('mp-bg') || !image.getAttribute('src')) return;
+  if (watched.has(image) || !image.getAttribute('src')) return;
   watched.add(image);
   if (image.complete) {
     if (image.naturalWidth) settle(image, 'loaded');

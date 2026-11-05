@@ -317,33 +317,20 @@ function renderOnboarding() {
   const mobileUrl = import.meta.env.BASE_URL + 'video/onboarding-mobile.mp4';
   const desktopUrl = import.meta.env.BASE_URL + 'video/onboarding.mp4';
   show(`<div class="intro-video-wrap">
-    <div class="intro-loading" role="status" aria-live="polite">
-      <span class="intro-loading-label">Загружаем видео…</span>
-      <div class="intro-progress" role="progressbar" aria-label="Загрузка видео" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0"><span class="intro-progress-fill"></span></div>
-    </div>
-    <video class="intro-video" autoplay playsinline preload="none" aria-label="Видео-знакомство с игрой">
+    <video class="intro-video" autoplay playsinline preload="auto" aria-label="Видео-знакомство с игрой">
     </video>
     <button id="intro-play" class="intro-play" type="button" aria-label="Воспроизвести видео" hidden><img class="intro-play-icon" src="${import.meta.env.BASE_URL}art/loc/onboarding-play.svg" alt=""></button>
   </div>`, 'screen-onboarding-video');
   const video = root.querySelector<HTMLVideoElement>('.intro-video')!;
   const wrap = root.querySelector<HTMLElement>('.intro-video-wrap')!;
   const play = root.querySelector<HTMLButtonElement>('#intro-play')!;
-  const loading = root.querySelector<HTMLElement>('.intro-loading')!;
-  const progress = root.querySelector<HTMLElement>('.intro-progress')!;
-  const progressFill = root.querySelector<HTMLElement>('.intro-progress-fill')!;
   let finished = false;
   let fallbackUsed = false;
-  let videoReady = false;
-  let attempt = 0;
-  let controller: AbortController | null = null;
-  let objectUrl: string | null = null;
   setMusicEnabled(false);
   const finish = () => {
     if (finished) return;
     finished = true;
-    controller?.abort();
     video.pause();
-    if (objectUrl) URL.revokeObjectURL(objectUrl);
     markOnboarded();
     setMusicEnabled(!isMuted());
     renderLevels();
@@ -353,73 +340,27 @@ function renderOnboarding() {
     play.hidden = true;
   };
   const attemptPlay = () => {
-    void video.play().catch(() => { if (videoReady) play.hidden = false; });
+    void video.play().catch(() => { play.hidden = false; });
   };
-  const loadVideo = async (url: string) => {
-    const loadId = ++attempt;
-    controller?.abort();
-    controller = new AbortController();
-    videoReady = false;
-    wrap.classList.remove('is-ready');
-    loading.hidden = false;
+  const loadVideo = (url: string) => {
+    wrap.classList.remove('is-ready', 'is-playing');
     play.hidden = true;
-    progress.classList.remove('indeterminate');
-    progress.setAttribute('aria-valuenow', '0');
-    progressFill.style.width = '0%';
-    try {
-      const response = await fetch(url, { signal: controller.signal });
-      if (!response.ok) throw new Error('Видео: ' + response.status);
-      const total = Number(response.headers.get('content-length')) || 0;
-      const reader = response.body?.getReader();
-      const chunks: ArrayBuffer[] = [];
-      let received = 0;
-      if (reader) {
-        for (;;) {
-          const { done, value } = await reader.read();
-          if (done) break;
-          const chunk = new Uint8Array(value.byteLength);
-          chunk.set(value);
-          chunks.push(chunk.buffer as ArrayBuffer);
-          received += value.byteLength;
-          if (total) {
-            const percent = Math.min(99, Math.floor(received / total * 100));
-            progress.setAttribute('aria-valuenow', String(percent));
-            progressFill.style.width = percent + '%';
-          } else progress.classList.add('indeterminate');
-        }
-      } else chunks.push(await response.arrayBuffer());
-      if (finished || loadId !== attempt) return;
-      const blob = new Blob(chunks, { type: response.headers.get('content-type') || 'video/mp4' });
-      if (objectUrl) URL.revokeObjectURL(objectUrl);
-      objectUrl = URL.createObjectURL(blob);
-      video.addEventListener('canplay', () => {
-        if (finished || loadId !== attempt) return;
-        videoReady = true;
-        progress.classList.remove('indeterminate');
-        progress.setAttribute('aria-valuenow', '100');
-        progressFill.style.width = '100%';
-        wrap.classList.add('is-ready');
-        loading.hidden = true;
-        attemptPlay();
-      }, { once: true });
-      video.src = objectUrl;
-      video.load();
-    } catch {
-      if (finished || loadId !== attempt || controller.signal.aborted) return;
-      if (mobileVideo && !fallbackUsed) {
-        fallbackUsed = true;
-        void loadVideo(desktopUrl);
-      } else finish();
-    }
+    video.src = url;
+    video.load();
   };
   video.addEventListener('playing', onPlaying);
+  video.addEventListener('loadeddata', () => {
+    if (finished) return;
+    wrap.classList.add('is-ready');
+    attemptPlay();
+  });
   video.addEventListener('ended', finish, { once: true });
   video.addEventListener('error', () => {
     if (finished) return;
-    if (mobileVideo && !fallbackUsed) { fallbackUsed = true; void loadVideo(desktopUrl); }
+    if (mobileVideo && !fallbackUsed) { fallbackUsed = true; loadVideo(desktopUrl); }
     else finish();
   });
-  void loadVideo(mobileVideo ? mobileUrl : desktopUrl);
+  loadVideo(mobileVideo ? mobileUrl : desktopUrl);
   play.addEventListener('click', attemptPlay);
 }
 
@@ -454,6 +395,9 @@ function refreshMapTiles(places: Level[]) {
       oldWin.innerHTML = newWin.innerHTML;
       oldWin.classList.remove('asset-ready');
       oldWin.classList.add('asset-pending');
+      // Replacing the room markup also replaces its pet node; attach the
+      // animation observer to the new node so server progress can't leave it blank.
+      mountPets(oldWin);
     }
     const oldCheck = tile.querySelector<HTMLImageElement>('.mp-check');
     const newCheck = fresh.querySelector<HTMLImageElement>('.mp-check');

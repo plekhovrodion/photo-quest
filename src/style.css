@@ -215,12 +215,6 @@ button.level small { font-size: 18px; }
   justify-content: center; gap: 18px; padding: calc(72px + var(--safe-top)) 16px 28px; text-align: center; }
 #app.screen-onboarding-video { position: fixed; inset: 0; z-index: 20; width: 100vw; height: 100dvh; min-height: 0; max-width: none; padding: 0; gap: 0; overflow: hidden; background: #000; }
 .intro-video-wrap { position: relative; width: 100%; height: 100%; display: grid; place-items: center; overflow: hidden; background: radial-gradient(ellipse at 50% 42%, #fff7df, #d6f5df 68%, #b8e8c8); }
-.intro-loading { position: absolute; inset: 0; z-index: 2; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 18px; padding: 24px; color: #221c5f; font: 700 18px/1.3 'Factor A', system-ui, sans-serif; }
-.intro-loading[hidden] { display: none; }
-.intro-progress { width: min(280px, 72vw); height: 14px; border: 3px solid rgba(255,255,255,.9); border-radius: 999px; background: rgba(255,255,255,.5); overflow: hidden; }
-.intro-progress-fill { display: block; width: 0; height: 100%; border-radius: inherit; background: #66cb83; transition: width .18s ease-out; }
-.intro-progress.indeterminate .intro-progress-fill { width: 35% !important; animation: intro-progress-indeterminate .9s ease-in-out infinite alternate; }
-@keyframes intro-progress-indeterminate { to { transform: translateX(180%); } }
 .intro-video { position: absolute; inset: 0; display: block; width: 100%; height: 100%; object-fit: cover; opacity: 0; transition: opacity .2s ease; }
 .intro-video-wrap.is-ready .intro-video, .intro-video-wrap.is-playing .intro-video { opacity: 1; }
 #app.screen-onboarding-video button.intro-play { position: absolute; inset: 0; z-index: 3; margin: auto; transform-origin: center; width: 120px; min-width: 120px; height: 128px; min-height: 128px; padding: 0; border: 0; border-radius: 0; background: transparent; box-shadow: none; display: grid; place-items: center; animation: intro-play-pulse 1s ease-in-out infinite; }
@@ -537,6 +531,12 @@ body::before, body::after { animation: none; }
 @keyframes loc-pop { from { opacity: 0; transform: translateY(26px) scale(.9); } to { opacity: 1; transform: none; } }
 .loc-card { animation: loc-pop .8s cubic-bezier(.22, 1, .36, 1) backwards; animation-delay: calc(var(--i, 0) * 90ms + 200ms); }
 .loc-card .loc-check { animation: loc-check .58s cubic-bezier(.22, 1.4, .36, 1) backwards; animation-delay: calc(var(--i, 0) * 90ms + 700ms); }
+@media (max-width: 599px) {
+  @keyframes loc-pop-mobile { from { transform: translateY(8px) scale(.97); } to { transform: none; } }
+  .loc-card { animation-name: loc-pop-mobile; animation-duration: .28s; animation-delay: calc(var(--i, 0) * 20ms); }
+  #app.screen-loc button.loc-card.pulse { animation: loc-pop-mobile .28s cubic-bezier(.22, 1, .36, 1) backwards, pulse-scale 1s ease-in-out .4s infinite; animation-delay: calc(var(--i, 0) * 20ms), .4s; }
+  .loc-card .loc-check { animation-delay: calc(var(--i, 0) * 20ms + 100ms); }
+}
 @keyframes loc-check { from { opacity: 0; transform: scale(.25) rotate(-35deg); } 72% { opacity: 1; transform: scale(1.12) rotate(5deg); } to { opacity: 1; transform: scale(1) rotate(0); } }
 
 /* ===== Экраны заданий по макету Figma ===== */
@@ -1029,6 +1029,9 @@ button.pw-back:not(.level):not(.stop):not(.cube-btn) { position: absolute; top: 
 #app.screen-map button.mp-tile.pulse { animation: pulse-scale 1s ease-in-out infinite; }
 #app.screen-loc button.loc-card.pulse { animation: loc-pop .8s cubic-bezier(.22, 1, .36, 1) backwards, pulse-scale 1s ease-in-out 1.2s infinite; animation-delay: calc(var(--i, 0) * 90ms + 200ms), 1.2s; }
 #app.screen-loc button.loc-play.pulse { animation: pulse-scale 1s ease-in-out infinite; }
+@media (max-width: 599px) {
+  #app.screen-loc button.loc-card.pulse { animation: loc-pop-mobile .28s cubic-bezier(.22, 1, .36, 1) backwards, pulse-scale 1s ease-in-out .4s infinite; animation-delay: calc(var(--i, 0) * 20ms), .4s; }
+}
 @media (prefers-reduced-motion: reduce) {
   #app.screen-map button.mp-tile.pulse, #app.screen-map .mp-check, #app.screen-loc button.loc-card.pulse, #app.screen-loc button.loc-play.pulse, #app.screen-onboarding-video button.intro-play { animation: none; }
 }
@@ -1140,6 +1143,8 @@ button.pw-back:not(.level):not(.stop):not(.cube-btn) { position: absolute; top: 
   .mp-road { grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 10px; }
   #app.screen-map button.mp-tile, #app.screen-map button.mp-tile.left, #app.screen-map button.mp-tile.right { padding: 8px; gap: 8px; }
   .loc-grid { grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 12px; }
+  #app.screen-loc button.loc-card { padding: 8px; border-radius: 16px; }
+  #app.screen-loc .loc-card .loc-ico { width: clamp(48px, 18vh, 76px); height: clamp(48px, 18vh, 76px); }
 }
 
 /* Повторная загрузка модели доступна без выхода из камеры. */
