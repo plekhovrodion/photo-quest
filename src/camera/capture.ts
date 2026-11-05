@@ -6,7 +6,7 @@ import type { Target } from './target';
 import { colorBlob } from '../vision/colorBlob';
 import { colorShares, type ColorName } from '../vision/color';
 import { COLOR_RU, ruName } from '../vision/names';
-import { loadCoco, modelStatus, onModelStatus, preloadModels } from '../vision/models';
+import { loadCoco, modelStatus, onModelStatus } from '../vision/models';
 import { matchesLabels } from '../vision/labels';
 import { CLIP_ACCEPT } from '../vision/clipConstants';
 import { playSfx } from '../audio/sfx';
@@ -69,7 +69,7 @@ function liveCamera(target: Target, host: HTMLElement): Promise<Captured | null>
     const overlay = host;
     overlay.innerHTML = `
       <video class="cam-video" autoplay playsinline muted></video><canvas class="cam-boxes"></canvas>
-      <p class="cam-hint" aria-live="polite"></p>
+      <p class="cam-hint" aria-live="polite"></p><button class="cam-model-retry" type="button" hidden>Повторить загрузку распознавания</button>
       ${debug ? '<pre class="cam-debug"></pre><span class="dbg-copy" role="button" tabindex="0">Скопировать отчёт</span>' : ''}`;
 
     const video = overlay.querySelector<HTMLVideoElement>('.cam-video')!;
@@ -81,9 +81,13 @@ function liveCamera(target: Target, host: HTMLElement): Promise<Captured | null>
     let raf = 0;
     let visibilityHandler: (() => void) | null = null;
     let resumeClip: (() => void) | null = null;
+    let clipTimer: ReturnType<typeof setTimeout> | undefined;
+    let startClip: (() => void) | null = null;
 
     const done = (r: Captured | null) => {
+      if (!alive) return;
       alive = false;
+      clearTimeout(clipTimer);
       cancelAnimationFrame(raf);
       if (visibilityHandler) document.removeEventListener('visibilitychange', visibilityHandler);
       unsub();
@@ -107,10 +111,16 @@ function liveCamera(target: Target, host: HTMLElement): Promise<Captured | null>
     const detectorFrame = document.createElement('canvas');
     const detectorCtx = detectorFrame.getContext('2d')!;
     const needDetector = !target.color || !!target.words?.length; // для чистых заданий на цвет нейросеть не нужна
-    preloadModels();
     let detectorReady = !needDetector || modelStatus().coco >= 1;
+    let modelState = modelStatus();
     const unsub = onModelStatus((s) => {
-      if (s.coco >= 1) detectorReady = true;
+      modelState = s;
+      detectorReady = !needDetector || s.coco >= 1;
+    });
+    const retryModels = overlay.querySelector<HTMLButtonElement>('.cam-model-retry')!;
+    retryModels.addEventListener('click', () => {
+      if (needDetector && !detectorReady) void loadCoco().catch(() => {});
+      if (target.clip && modelState.clip < 1) startClip?.();
     });
     if (needDetector) loadCoco().then(() => { detectorReady = true; }).catch(() => { detectorReady = false; });
 
@@ -174,6 +184,7 @@ function liveCamera(target: Target, host: HTMLElement): Promise<Captured | null>
         lastStart = t;
         try {
           const f = await findBox();
+          if (!alive) return;
           const now = performance.now();
           follower.observe(f?.box ?? null, now);
           if (f) current = { label: f.label, className: f.className, matches: f.matches };
@@ -187,7 +198,8 @@ function liveCamera(target: Target, host: HTMLElement): Promise<Captured | null>
       }
       setTimeout(detectLoop, 30);
     };
-    video.addEventListener('loadeddata', detectLoop, { once: true });
+    // На мобильных браузерах loadeddata может не прийти: ждём готовый кадр в самом цикле.
+    void detectLoop();
 
     // ---- живое узнавание CLIP: считаем сходство кадра с нужным предметом, лучший недавний кадр запоминаем ----
     const LIVE_OK = 0.04; // порог «зелёного»: чуть строже, чем при проверке, чтобы зелёный почти всегда значил «засчитают»
@@ -198,14 +210,18 @@ function liveCamera(target: Target, host: HTMLElement): Promise<Captured | null>
     if (target.clip) {
       const clip = target.clip;
       let clipModule: typeof import('../vision/clip') | null = null;
-      import('../vision/models').then(({ heavyModelsAllowed }) => {
-        if (!heavyModelsAllowed()) throw new Error('CLIP отключён на этом устройстве');
-        return import('../vision/clip');
-      }).then((m) => { clipModule = m; return m.loadClip(); })
-        .then(() => { clipReady = true; if (video.readyState >= 2) resumeClip?.(); })
-        .catch((e) => { clipErr = String(e).slice(0, 80); });
+      startClip = () => {
+        clipErr = '';
+        void import('../vision/clip').then((m) => { clipModule = m; return m.loadClip(); })
+          .then(() => { if (alive) { clipReady = true; if (video.readyState >= 2) resumeClip?.(); } })
+          .catch((e) => { clipReady = false; clipErr = String(e).slice(0, 80); });
+      };
+      startClip();
+      let clipBusy = false;
       const clipLoop = async () => {
-        if (!alive || !clipReady || document.hidden) return;
+        if (!alive || !clipReady || document.hidden || clipBusy) return;
+        clearTimeout(clipTimer);
+        clipBusy = true;
         const t = performance.now();
         if (clipReady && video.readyState >= 2 && video.videoWidth) {
           try {
@@ -213,19 +229,22 @@ function liveCamera(target: Target, host: HTMLElement): Promise<Captured | null>
             const snap = document.createElement('canvas');
             snap.width = vw; snap.height = vh;
             snap.getContext('2d')!.drawImage(video, 0, 0);
-            if (!clipModule) return;
+            if (!clipModule) throw new Error('CLIP module is not ready');
             const ranks = await clipModule.rankObjects(snap, vw, vh);
+            if (!alive) return;
             const p = clipModule.clipProb(ranks, clip);
             liveProb = liveProb * 0.35 + p * 0.65; // сглаживаем, чтобы индикатор не мигал
             clipRuns++;
             clipMs = clipMs ? clipMs * 0.7 + (performance.now() - t) * 0.3 : performance.now() - t;
             const now = performance.now();
             if (!best || p >= best.prob || now - best.t > BEST_KEEP_MS) best = { prob: p, t: now, canvas: snap };
-          } catch (e) { clipErr = String(e).slice(0, 80); }
+          } catch (e) { clipErr = String(e).slice(0, 80); clipReady = false; liveProb = 0; best = null; }
         }
-        if (alive && clipReady) setTimeout(clipLoop, Math.max(120, Math.min(900, clipMs * 0.6)));
+        clipBusy = false;
+        if (alive && clipReady && !document.hidden) clipTimer = setTimeout(clipLoop, Math.max(120, Math.min(900, clipMs * 0.6)));
       };
       resumeClip = () => { void clipLoop(); };
+      video.addEventListener('playing', () => { startedAt ||= performance.now(); resumeClip?.(); });
       video.addEventListener('loadeddata', clipLoop, { once: true });
     }
 
@@ -236,9 +255,13 @@ function liveCamera(target: Target, host: HTMLElement): Promise<Captured | null>
     const setHint = (locked: boolean, hasBox: boolean, now: number) => {
       if (now - lastHintAt < 150) return;
       lastHintAt = now;
-      hint.classList.toggle('quiet', !(needDetector && !detectorReady));
-      hint.textContent = needDetector && !detectorReady
-        ? ''
+      const failed = (needDetector && modelState.cocoError) || (target.clip && (modelState.clipError || clipErr));
+      retryModels.hidden = !failed;
+      const ready = (needDetector && detectorReady) || (target.clip && clipReady) || !needDetector;
+      hint.classList.remove('quiet');
+      hint.textContent = !ready
+        ? failed ? 'Не удалось загрузить распознавание. Попробуй ещё раз'
+          : `Загружаем распознавание${target.clip ? ` — ${Math.round(modelState.clip * 100)}%` : '…'}`
         : foundAt ? 'Нашёл!'
         : liveOk() || locked ? 'Нашёл! Держи ровно…'
         : hasBox ? 'Держи ровно…'
@@ -295,6 +318,7 @@ function liveCamera(target: Target, host: HTMLElement): Promise<Captured | null>
     visibilityHandler = () => {
       if (document.hidden) {
         cancelAnimationFrame(raf);
+        clearTimeout(clipTimer);
         video.pause();
       } else {
         void video.play().catch(() => {});

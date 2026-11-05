@@ -1,5 +1,5 @@
 import { CLIP_OBJECTS } from '../data/clip';
-import { heavyModelsAllowed, fetchWithProgress, setClipReady } from './models';
+import { heavyModelsAllowed, fetchWithProgress, setClipReady, setClipLoading, setClipError } from './models';
 import { CLIP_ACCEPT } from './clipConstants';
 export { CLIP_ACCEPT } from './clipConstants';
 
@@ -24,40 +24,70 @@ interface Ready {
 let readyP: Promise<Ready> | null = null;
 
 export function loadClip(): Promise<Ready> {
-  if (!readyP && !heavyModelsAllowed()) return Promise.reject(new Error('CLIP отключён на этом устройстве'));
-  readyP ??= (async () => {
+  if (readyP) return readyP;
+  if (!heavyModelsAllowed()) return Promise.reject(new Error('CLIP отключён на этом устройстве'));
+  setClipLoading();
+  const attempt = new Promise<Ready>((resolve, reject) => {
     const worker = new Worker(new URL('./clipWorker.ts', import.meta.url), { type: 'module' });
-    const waiting = new Map<number, { ok: (v: Float32Array) => void; fail: (e: Error) => void }>();
+    const controller = new AbortController();
+    const waiting = new Map<number, { ok: (v: Float32Array) => void; fail: (e: Error) => void; timer: ReturnType<typeof setTimeout> }>();
     let nextId = 1;
-    const ready = new Promise<void>((ok, fail) => {
-      worker.addEventListener('message', (e: MessageEvent) => {
-        const m = e.data as { type: string; id?: number; emb?: Float32Array; message?: string };
-        if (m.type === 'ready') ok();
-        else if (m.type === 'result') { waiting.get(m.id!)?.ok(m.emb!); waiting.delete(m.id!); }
-        else if (m.type === 'error') {
-          if (m.id !== undefined) { waiting.get(m.id)?.fail(new Error(m.message)); waiting.delete(m.id); } else fail(new Error(m.message));
-        }
-      });
-      worker.addEventListener('error', (e) => fail(new Error(e.message)));
+    let dead = false;
+    let tables: Pick<Ready, 'sets' | 'bg'>;
+    const fail = (error: Error) => {
+      if (dead) return;
+      dead = true;
+      clearTimeout(initTimer);
+      controller.abort();
+      worker.terminate();
+      for (const pending of waiting.values()) { clearTimeout(pending.timer); pending.fail(error); }
+      waiting.clear();
+      readyP = null;
+      setClipError(error);
+      reject(error);
+    };
+    // Не оставляем зависший worker навсегда в кэше; повторный вход сможет восстановить модель.
+    const initTimer = setTimeout(() => fail(new Error('Не удалось загрузить CLIP за 3 минуты')), 180_000);
+    const run = (pixels: Float32Array) => new Promise<Float32Array>((ok, rejectRun) => {
+      if (dead) { rejectRun(new Error('CLIP worker остановлен')); return; }
+      const id = nextId++;
+      const timer = setTimeout(() => fail(new Error('CLIP не ответил на запрос распознавания')), 60_000);
+      waiting.set(id, { ok, fail: rejectRun, timer });
+      try { worker.postMessage({ type: 'run', id, pixels }, [pixels.buffer]); }
+      catch (error) { fail(new Error(String(error))); }
     });
-    const bytes = await fetchWithProgress(CLIP_URL, 'clip'); // сами качаем файл, чтобы показать ребёнку полоску загрузки
-    worker.postMessage({ type: 'init', bytes }, [bytes]);
-    const [textRaw] = await Promise.all([
-      fetch(TEXT_URL).then((r) => r.json() as Promise<Record<'ens' | 'bg', Record<string, number[]>>>),
-      ready,
-    ]);
-    const run = (pixels: Float32Array) =>
-      new Promise<Float32Array>((ok, fail) => {
-        const id = nextId++;
-        waiting.set(id, { ok, fail });
-        worker.postMessage({ type: 'run', id, pixels }, [pixels.buffer]);
-      });
-    const table = (o: Record<string, number[]>): Table => Object.entries(o).map(([k, v]) => [k, Float32Array.from(v)] as [string, Float32Array]);
-    setClipReady();
-    return { run, sets: { ens: table(textRaw.ens) }, bg: table(textRaw.bg) };
-  })();
-  readyP.catch(() => { readyP = null; });
-  return readyP;
+    worker.addEventListener('message', (e: MessageEvent) => {
+      if (dead) return;
+      const m = e.data as { type: string; id?: number; emb?: Float32Array; message?: string };
+      if (m.type === 'ready') {
+        clearTimeout(initTimer);
+        setClipReady();
+        resolve({ run, ...tables });
+      } else if (m.type === 'result') {
+        const pending = waiting.get(m.id!);
+        if (pending) { clearTimeout(pending.timer); pending.ok(m.emb!); waiting.delete(m.id!); }
+      } else if (m.type === 'error') fail(new Error(m.message ?? 'Ошибка CLIP'));
+    });
+    worker.addEventListener('error', (e) => fail(new Error(e.message || 'CLIP worker завершился с ошибкой')));
+    worker.addEventListener('messageerror', () => fail(new Error('Не удалось прочитать ответ CLIP')));
+    void (async () => {
+      const [bytes, textRaw] = await Promise.all([
+        fetchWithProgress(CLIP_URL, 'clip', controller.signal),
+        fetch(TEXT_URL, { signal: controller.signal }).then((r) => {
+          if (!r.ok) throw new Error(`CLIP text: ${r.status}`);
+          return r.json() as Promise<Record<'ens' | 'bg', Record<string, number[]>>>;
+        }),
+      ]);
+      const table = (o: Record<string, number[]>): Table => Object.entries(o).map(([k, v]) => [k, Float32Array.from(v)]);
+      tables = { sets: { ens: table(textRaw.ens) }, bg: table(textRaw.bg) };
+      if (!dead) worker.postMessage({ type: 'init', bytes }, [bytes]);
+    })().catch((error) => fail(new Error(String(error))));
+  });
+  readyP = attempt;
+  void attempt.catch((error) => {
+    if (readyP === attempt) { readyP = null; setClipError(error); }
+  });
+  return attempt;
 }
 
 // Вырез кадра -> 224x224, значения по правилам CLIP. 'full' — весь кадр целиком с серыми полями.

@@ -80,7 +80,18 @@ async function mount(el: HTMLElement) {
   try {
     const idle = loopMood ? Promise.resolve(null) : load(pet, 1 + Math.floor(Math.random() * n));
     [idleData, emo] = await Promise.all([idle, mood ? load(pet, mood).catch(() => null) : Promise.resolve(null)]);
-  } catch { return; }
+  } catch {
+    // Если Lottie не загрузилась из-за краткого обрыва сети, оставляем питомца
+    // на месте статичной картинкой вместо пустого слота со скелетоном.
+    if (!st.dead && el.isConnected && !el.querySelector('.pet-anim, .pet-static')) {
+      const img = document.createElement('img');
+      img.className = 'pet-static';
+      img.alt = '';
+      img.src = `${BASE()}art/pets/${pet}-${mood?.startsWith('sad') ? 'sad' : 'happy'}.svg`;
+      el.appendChild(img);
+    }
+    return;
+  }
   if (st.dead || !el.isConnected) return;
   await slot(); // ограничиваем одновременную инициализацию SVG-анимаций на телефоне
   const reduce = matchMedia('(prefers-reduced-motion: reduce)').matches;

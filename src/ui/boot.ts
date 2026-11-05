@@ -2,22 +2,23 @@
 // Изображения запрашивает сам браузер при показе экрана, без повторного fetch здесь.
 import { mark, saveReport, showStatsOverlay } from './loadstats';
 
-const BASE = import.meta.env.BASE_URL;
 const FONTS = ['400 16px "Factor A"', '700 16px "Factor A"', '800 16px "Factor A"'];
 const MIN_SHOW_MS = 900; // не мелькаем на быстрой сети, но не удерживаем готовую игру несколько секунд
 const GIVE_UP_MS = 4000; // если сеть медленная, показываем карту, а ресурсы догружаются по мере надобности
 
 function overlay(): { paint(p: number): void; remove(): void } {
-  const el = document.createElement('div');
+  const splash = document.querySelector<HTMLElement>('.pre-splash');
+  const el = splash ?? document.createElement('div');
   el.className = 'loading-screen';
-  el.setAttribute('role', 'dialog');
-  el.setAttribute('aria-modal', 'true');
-  el.setAttribute('aria-label', 'Загрузка');
-  el.innerHTML = `<div class="loc-progress" role="progressbar" aria-label="Загрузка" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0"><div class="loc-track"><div class="loc-fill"></div></div></div>`;
+  if (!splash) {
+    el.setAttribute('role', 'dialog');
+    el.setAttribute('aria-modal', 'true');
+    el.setAttribute('aria-label', 'Загрузка');
+    el.innerHTML = `<div class="loc-progress" role="progressbar" aria-label="Загрузка" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0"><div class="loc-track"><div class="loc-fill"></div></div></div>`;
+    document.body.appendChild(el);
+  }
   const fill = el.querySelector<HTMLElement>('.loc-fill')!;
   const bar = el.querySelector<HTMLElement>('.loc-progress')!;
-  fill.style.backgroundImage = `url(${BASE}art/loc/stripe-a.svg)`;
-  document.body.appendChild(el);
   return {
     paint: (p) => { const v = Math.round(p * 100); fill.style.setProperty('--w', `${v}%`); bar.setAttribute('aria-valuenow', String(v)); },
     remove: () => el.remove(),
@@ -46,7 +47,6 @@ export async function bootFirstStep(): Promise<void> {
   screen.paint(1);
   await new Promise((ok) => setTimeout(ok, 250)); // полоска успевает дойти до края
   screen.remove();
-  document.querySelector('.pre-splash')?.remove();
   mark('главный экран');
   showStatsOverlay();
 }

@@ -1,11 +1,11 @@
 import './style.css';
+import './ui/assetSkeletons';
 import { LEVELS, ICON_INDEX, ICON_ABS, type Level, type Task } from './data/tasks';
 import { createGame, currentTask, reduce, STARS_PER_TASK, type Action, type GameState } from './game/state';
 import { PRAISE, INTRO_EN, TRY_AGAIN, TROUBLE, LEVEL_DONE, GAME_DONE, REPEAT_AFTER, QUIZ_ASK, QUIZ_WRONG, LOCKED_HINT, TASK_LOCKED, TASK_AIM, NEXT_HINT, type Phrase, HINT_PLACE, HINT_ITEM, HINT_COLOR, pickPhrase } from './data/phrases';
 import { takePhoto, compressPhoto, stopCamera, type Captured } from './camera/capture';
 import { onCameraPromptClosed } from './camera/prepermission';
 import { targetOf } from './camera/target';
-import { ensureModelsLoaded } from './ui/loading';
 import { verifyPhoto } from './api/verify';
 import { COLOR_RU } from './vision/names';
 import { englishFor } from './data/english';
@@ -163,8 +163,7 @@ async function openCamera(task: Task) {
   if (!host) return;
   camOn = true;
   const target = targetOf(task);
-  // Нейросети (~100 МБ) могли не успеть загрузиться: показываем «Загружаем игру» с полоской и только потом включаем камеру
-  if (target.words?.length || !target.color) await ensureModelsLoaded();
+  // Камера открывается сразу; готовность распознавания показываем прямо поверх видео.
   if (!host.isConnected) { camOn = false; return; } // пока грузилось, ребёнок ушёл с экрана
   void takePhoto(target, host).then((cap) => {
     camOn = false;
@@ -229,42 +228,106 @@ function hud(left: string, mid = '', label = '', right = '') {
 }
 
 function renderOnboarding() {
-  const onboardingVideo = window.matchMedia('(max-width: 767px)').matches
-    ? 'video/onboarding-mobile.mp4'
-    : 'video/onboarding.mp4';
+  const mobileVideo = window.matchMedia('(max-width: 767px)').matches;
+  const onboardingVideo = mobileVideo ? 'video/onboarding-mobile.mp4' : 'video/onboarding.mp4';
   show(`<div class="intro-video-wrap">
+    <div class="intro-poster" aria-hidden="true"><div class="intro-poster-pets">
+      <img src="${import.meta.env.BASE_URL}art/pets/cat-happy.svg" alt=""><img src="${import.meta.env.BASE_URL}art/pets/bear-happy.svg" alt=""><img src="${import.meta.env.BASE_URL}art/pets/dog-happy.svg" alt="">
+    </div><p>Привет! Давай искать!</p></div>
     <video class="intro-video" autoplay playsinline preload="auto" aria-label="Видео-знакомство с игрой">
       <source src="${import.meta.env.BASE_URL}${onboardingVideo}" type="video/mp4">
     </video>
     <button id="intro-play" class="intro-play" type="button" aria-label="Воспроизвести видео" hidden><img class="intro-play-icon" src="${import.meta.env.BASE_URL}art/loc/onboarding-play.svg" alt=""></button>
   </div>`, 'screen-onboarding-video');
   const video = root.querySelector<HTMLVideoElement>('.intro-video')!;
+  const wrap = root.querySelector<HTMLElement>('.intro-video-wrap')!;
   const play = root.querySelector<HTMLButtonElement>('#intro-play')!;
+  const source = video.querySelector<HTMLSourceElement>('source')!;
   let finished = false;
+  let fallbackSource = false;
+  let started = false;
+  let startTimer: ReturnType<typeof setTimeout>;
   // Не смешиваем фоновую музыку игры с оригинальным звуком вступительного ролика.
   setMusicEnabled(false);
   const finish = () => {
     if (finished) return;
     finished = true;
+    clearTimeout(startTimer);
     video.pause();
     markOnboarded();
     setMusicEnabled(!isMuted());
     renderLevels();
   };
+  const onPlaying = () => {
+    started = true;
+    clearTimeout(startTimer);
+    wrap.classList.add('is-playing');
+    play.hidden = true;
+  };
+  const attemptPlay = () => {
+    void video.play().catch(() => { play.hidden = false; });
+  };
+  const onError = () => {
+    if (finished) return;
+    if (mobileVideo && !fallbackSource) {
+      fallbackSource = true;
+      source.src = `${import.meta.env.BASE_URL}video/onboarding.mp4`;
+      video.load();
+      attemptPlay();
+      return;
+    }
+    finish();
+  };
+  video.addEventListener('playing', onPlaying);
   video.addEventListener('ended', finish, { once: true });
-  video.addEventListener('error', finish, { once: true });
-  void video.play().then(() => { play.hidden = true; }).catch(() => { play.hidden = false; });
-  play.addEventListener('click', () => {
-    void video.play().then(() => { play.hidden = true; }).catch(() => { play.hidden = false; });
-  });
+  video.addEventListener('error', onError);
+  startTimer = setTimeout(() => { if (!started && !finished) play.hidden = false; }, 3500);
+  attemptPlay();
+  play.addEventListener('click', attemptPlay);
 }
 
 // Главная по макету: карта-дорожка из мест, плитки идут зигзагом, у каждой своя полоса прогресса; красная «Играть» прибита к низу.
 // Закрытые места остаются видимыми, но открываются только после полного прохождения «Цветов».
 function shakeLocked(b: HTMLElement, list: Phrase[]) {
-  b.classList.remove('shake'); void b.offsetWidth; b.classList.add('shake');
+  // На телефоне попадание по одной закрытой карточке не всегда заметно.
+  // Показываем реакцию на всех местах, сохраняя сами карточки на экране.
+  const tiles = b.closest('.mp-road')?.querySelectorAll<HTMLElement>('.mp-tile') ?? [b];
+  tiles.forEach((tile) => { tile.classList.remove('shake'); void tile.offsetWidth; tile.classList.add('shake'); });
   const line = pickPhrase(list);
   speak(line.text, false, line.who);
+}
+
+function refreshMapTiles(places: Level[]) {
+  targetPlace = places.find((place) => !levelFull(place));
+  root.querySelectorAll<HTMLButtonElement>('.mp-tile').forEach((tile) => {
+    const i = Number(tile.dataset.i);
+    const place = places[i];
+    if (!place) return;
+    const template = document.createElement('template');
+    template.innerHTML = mapTile(place, i);
+    const fresh = template.content.firstElementChild as HTMLButtonElement | null;
+    if (!fresh) return;
+    const shaking = tile.classList.contains('shake');
+    tile.className = `${fresh.className}${shaking ? ' shake' : ''}`;
+    tile.setAttribute('aria-label', fresh.getAttribute('aria-label') ?? '');
+    if (fresh.hasAttribute('aria-disabled')) tile.setAttribute('aria-disabled', 'true');
+    else tile.removeAttribute('aria-disabled');
+    const oldWin = tile.querySelector<HTMLElement>('.mp-win');
+    const newWin = fresh.querySelector<HTMLElement>('.mp-win');
+    if (oldWin && newWin && oldWin.innerHTML !== newWin.innerHTML) oldWin.innerHTML = newWin.innerHTML;
+    const oldCheck = tile.querySelector<HTMLImageElement>('.mp-check');
+    const newCheck = fresh.querySelector<HTMLImageElement>('.mp-check');
+    if (!oldCheck && newCheck) tile.append(newCheck);
+    else if (oldCheck && !newCheck) oldCheck.remove();
+    const oldTrack = tile.querySelector<HTMLElement>('.mp-track');
+    const newTrack = fresh.querySelector<HTMLElement>('.mp-track');
+    if (oldTrack && newTrack) {
+      oldTrack.setAttribute('aria-valuenow', newTrack.getAttribute('aria-valuenow') ?? '0');
+      const oldFill = oldTrack.querySelector<HTMLElement>('.loc-fill');
+      const newFill = newTrack.querySelector<HTMLElement>('.loc-fill');
+      if (oldFill && newFill) oldFill.style.setProperty('--w', newFill.style.getPropertyValue('--w'));
+    }
+  });
 }
 let targetPlace: Level | undefined; // место, которое пульсирует
 function mapTile(l: Level, i: number): string {
@@ -724,8 +787,12 @@ void bootFirstStep().then(() => {
   // Подтягиваем прогресс с сервера (если он настроен) и перерисовываем, не прерывая задание.
   store.load().then((p) => {
     progress = p;
-    // Перерисовываем только карту и меню: онбординг и игру не сбрасываем.
-    if (!state && /screen-(menu|map)/.test(root.className)) render();
+    // Серверный прогресс обновляет существующие карточки на месте: экран не моргает,
+    // и запускающиеся анимации плиток не сбрасываются.
+    if (!state && root.classList.contains('screen-map')) {
+      const places = MAP_ORDER.map((id) => LEVELS.find((l) => l.id === id)).filter((l): l is Level => !!l);
+      refreshMapTiles(places);
+    } else if (!state && root.classList.contains('screen-menu')) render();
   });
 
   // Дальше в простое: звуки и лёгкая модель распознавания. CLIP загружается

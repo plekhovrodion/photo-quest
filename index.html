@@ -6,17 +6,16 @@
     <meta name="theme-color" content="#f0e6ff" />
     <title>ФотоКвест</title>
     <style>
-      /* Заставка до загрузки скрипта: на медленном интернете скрипт качается несколько секунд, и белый экран пугает */
+      /* Тот же индикатор отображается до запуска скрипта и во время загрузки игры. */
       body { margin: 0; background: #fff; }
-      .pre-splash { position: fixed; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 32px; background: radial-gradient(circle at 50% 38%, #f2fff4 0, #d9f6de 55%, #bfeccb 100%); font-family: system-ui, -apple-system, sans-serif; }
-      .pre-splash h2 { margin: 0; font-size: 28px; line-height: 36px; font-weight: 700; color: #221c5f; }
-      .pre-splash .bar { width: min(280px, 70vw); height: 16px; border-radius: 8px; background: rgba(255, 255, 255, .75); overflow: hidden; }
-      .pre-splash .bar i { display: block; width: 40%; height: 100%; border-radius: 8px; background: #6fcb7d; animation: pre-run 1.2s ease-in-out infinite alternate; }
-      @keyframes pre-run { from { transform: translateX(0); } to { transform: translateX(150%); } }
+      .loading-screen.pre-splash { position: fixed; inset: 0; z-index: 80; display: flex; align-items: center; justify-content: center; padding: 24px; background: radial-gradient(circle at 50% 38%, #f2fff4 0, #d9f6de 55%, #bfeccb 100%); }
+      .pre-splash .loc-progress { width: min(100%, 560px); height: 40px; }
+      .pre-splash .loc-track { height: 40px; border-radius: 999px; padding: 4px; background: rgba(255, 255, 255, .75); overflow: hidden; }
+      .pre-splash .loc-fill { display: block; width: var(--w, 0%); height: 100%; border-radius: 999px; background: #66d385; transition: width .25s ease-out; }
     </style>
   </head>
   <body>
-    <div id="app" aria-live="polite"><div class="pre-splash"><div class="bar"><i></i></div></div></div>
+    <div id="app" aria-live="polite"><div class="loading-screen pre-splash"><div class="loc-progress" role="progressbar" aria-label="Загрузка" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0"><div class="loc-track"><div class="loc-fill" style="--w:0%"></div></div></div></div></div>
     <script type="module" src="/src/main.ts"></script>
   </body>
 </html>
