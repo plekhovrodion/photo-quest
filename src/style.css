@@ -221,8 +221,8 @@ button.level small { font-size: 18px; }
 .intro-progress-fill { display: block; width: 0; height: 100%; border-radius: inherit; background: #66cb83; transition: width .18s ease-out; }
 .intro-progress.indeterminate .intro-progress-fill { width: 35% !important; animation: intro-progress-indeterminate .9s ease-in-out infinite alternate; }
 @keyframes intro-progress-indeterminate { to { transform: translateX(180%); } }
-.intro-video { position: absolute; inset: 0; display: block; width: 100%; height: 100%; object-fit: contain; opacity: 0; transition: opacity .2s ease; }
-.intro-video-wrap.is-playing .intro-video { opacity: 1; }
+.intro-video { position: absolute; inset: 0; display: block; width: 100%; height: 100%; object-fit: cover; opacity: 0; transition: opacity .2s ease; }
+.intro-video-wrap.is-ready .intro-video, .intro-video-wrap.is-playing .intro-video { opacity: 1; }
 #app.screen-onboarding-video button.intro-play { position: absolute; inset: 0; z-index: 3; margin: auto; transform-origin: center; width: 120px; min-width: 120px; height: 128px; min-height: 128px; padding: 0; border: 0; border-radius: 0; background: transparent; box-shadow: none; display: grid; place-items: center; animation: intro-play-pulse 1s ease-in-out infinite; }
 #app.screen-onboarding-video button.intro-play[hidden] { display: none; }
 @keyframes intro-play-pulse { 0%, 100% { transform: scale(1); } 50% { transform: scale(1.1); } }
