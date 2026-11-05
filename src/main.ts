@@ -1,7 +1,7 @@
 import './style.css';
 import { LEVELS, ICON_INDEX, ICON_ABS, type Level, type Task } from './data/tasks';
 import { createGame, currentTask, reduce, STARS_PER_TASK, type Action, type GameState } from './game/state';
-import { PRAISE, INTRO_EN, TRY_AGAIN, TROUBLE, LEVEL_DONE, GAME_DONE, REPEAT_AFTER, QUIZ_ASK, QUIZ_WRONG, LOCKED_HINT, TASK_LOCKED, TASK_AIM, NEXT_HINT, levelUpText, type Phrase, HINT_PLACE, HINT_ITEM, HINT_COLOR, pickPhrase } from './data/phrases';
+import { PRAISE, INTRO_EN, TRY_AGAIN, TROUBLE, LEVEL_DONE, GAME_DONE, REPEAT_AFTER, QUIZ_ASK, QUIZ_WRONG, LOCKED_HINT, TASK_LOCKED, TASK_AIM, NEXT_HINT, type Phrase, HINT_PLACE, HINT_ITEM, HINT_COLOR, pickPhrase } from './data/phrases';
 import { takePhoto, compressPhoto, stopCamera, type Captured } from './camera/capture';
 import { onCameraPromptClosed } from './camera/prepermission';
 import { targetOf } from './camera/target';
@@ -23,14 +23,12 @@ import { playSfx, wireSfx, startSfxLoad } from './audio/sfx';
 import { setMusicEnabled, wireMusic } from './audio/music';
 import { bootFirstStep, bootSecondStep } from './ui/boot';
 import { isOnboarded, markOnboarded } from './onboarding';
-import { feed, setLook, stageOf, fedOf, lookOf, ZAVRIKS, ZAVRIK_NAME, HUES, HATS, BADGES, UNLOCK_STAGE, UNLOCK_ALL, MAX_STAGE, zavrikOfArt, type ZavrikId } from './zavrik';
-import { hatSvg, badgeSvg } from './ui/accessories';
 import { objectSvg, colorBallSvg, fitObject } from './map/objects';
 import { album, toSticker, type Sticker } from './album';
 import { CLIP_OBJECTS } from './data/clip';
-import { loadProgress, recordTask, LEVEL_BONUS, type Progress } from './progress';
+import { loadProgress, recordTask, type Progress } from './progress';
 import { createStore } from './storage/store';
-import { flashIcon, lockIcon, checkIcon, backIcon } from './ui/icons';
+import { checkIcon, backIcon } from './ui/icons';
 import { placeSvg } from './map/places';
 import { mapDecor } from './ui/mapDecor';
 
@@ -40,12 +38,10 @@ let progress: Progress = loadProgress();
 let level: Level | null = null;
 let state: GameState | null = null;
 let notice = '';
-let view: 'album' | 'zavrik' | null = null;
-let zv: ZavrikId = 'sonya';
+let view: 'album' | null = null;
 const stickers = new Map<string, Sticker>();
 void album.all().then((all) => all.forEach((x) => stickers.set(x.id, x)));
 let photoUrl = '';
-let shownFlashes = progress.flashes;
 
 function dispatch(a: Action) {
   state = reduce(state!, a);
@@ -100,11 +96,7 @@ function show(html: string, cls = '') {
   const b = root.querySelector<HTMLElement>('.bubble[data-say]');
   const typed = b?.querySelector<HTMLElement>('.typed');
   if (b && typed) typeText(typed, b.dataset.say ?? '', root.querySelector('.char'));
-  // кошелёк «подпрыгивает», когда число вспышек изменилось
-  if (progress.flashes !== shownFlashes) {
-    root.querySelector('.chip.coin')?.classList.add('bump');
-    shownFlashes = progress.flashes;
-  }
+
 }
 
 function on(id: string, fn: () => void) {
@@ -228,53 +220,12 @@ async function processCapture(task: Task, cap: Captured) {
 }
 
 
-// Картинки заврёнков Гриши и Сони (Figma «Иллюстрации. Гриша и Соня. Заврики»).
-const art = (name: string, cls = '') =>
-  `<img class="char ${cls}" src="${import.meta.env.BASE_URL}art/${name}.svg" alt="" aria-hidden="true" style="--hue:${lookOf(progress, zavrikOfArt(name)).hue}deg">`;
-
 // «Найди предмет с красным цветом» -> «предмет с красным цветом»
 const goalOf = (task: Task) => task.prompt.replace(/^Найди\s+/, '').replace(/[!.]$/, '');
 
-const wallet = () =>
-  `<span class="chip coin" role="button" tabindex="0" aria-label="Вспышек: ${progress.flashes}. Нажми, чтобы узнать, что это такое">${flashIcon()}${progress.flashes}</span>`;
-
-// Окно «Что такое вспышки?»: открывается по нажатию на счётчик на любом экране.
-function showFlashInfo() {
-  if (document.querySelector('.modal-overlay')) return;
-  const overlay = document.createElement('div');
-  overlay.className = 'modal-overlay';
-  overlay.setAttribute('role', 'dialog');
-  overlay.setAttribute('aria-modal', 'true');
-  overlay.setAttribute('aria-labelledby', 'fh-title');
-  overlay.innerHTML = `<div class="modal">
-    ${art('sonya-cheer', 'small')}
-    <h2 id="fh-title">Что такое вспышки?</h2>
-    <p class="fh-balance">${flashIcon()}У тебя ${progress.flashes}</p>
-    <ul class="fh-list">
-      <li>Вспышки — награда за каждый найденный предмет.</li>
-      <li>За каждый найденный предмет — 3 вспышки.</li>
-      <li>Нашёл всё в категории — ещё ${LEVEL_BONUS} вспышек в подарок.</li>
-      <li>Вспышками можно кормить Гришу и Соню: они растут, меняют цвет и получают шапки и значки.</li>
-    </ul>
-    <button class="fh-ok secondary" type="button">Понятно</button>
-  </div>`;
-  document.body.appendChild(overlay);
-  const close = () => { overlay.remove(); removeEventListener('keydown', onKey); };
-  const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape') close(); };
-  addEventListener('keydown', onKey);
-  overlay.addEventListener('click', (e) => { if (e.target === overlay) close(); });
-  overlay.querySelector('.fh-ok')!.addEventListener('click', close);
-  overlay.querySelector<HTMLElement>('.fh-ok')!.focus();
-}
-document.addEventListener('click', (e) => { if ((e.target as Element).closest('.chip.coin')) showFlashInfo(); });
-document.addEventListener('keydown', (e) => {
-  const t = e.target as Element;
-  if ((e.key === 'Enter' || e.key === ' ') && t.matches?.('.chip.coin')) { e.preventDefault(); showFlashInfo(); }
-});
-
 function hud(left: string, mid = '', label = '', right = '') {
   const aria = label ? ` role="img" aria-label="${label}"` : ' aria-hidden="true"';
-  return `<div class="hud">${left}<div class="pips"${aria}>${mid}</div><div class="hud-right">${right}${wallet()}</div></div>`;
+  return `<div class="hud">${left}<div class="pips"${aria}>${mid}</div><div class="hud-right">${right}</div></div>`;
 }
 
 function renderOnboarding() {
@@ -360,22 +311,9 @@ function drawRoad(road: HTMLElement) {
 const SHOW_ACCESS_HUD = false;
 const SHOW_BEADS_CHIP = false; // счётчик бусин в шапке карты скрыт (ограничение по бусинам при этом работает)
 
-// Фон карты (макет Figma «01 / Кухня»): облака и холмы поверх светло-сиреневого, собираются из файлов art/map/wide.
-// Две раскладки: широкая (экран от 900 px) и узкая для телефона; облака плавно плывут (класс cloud, см. style.css).
+// Фон карты: один статичный SVG с раскладками для широкого экрана и телефона.
 function mapBg(): string {
-  const u = (n: string) => `${import.meta.env.BASE_URL}art/map/wide/${n}.svg`;
-  const im = (n: string, x: number, y: number, w: number, h: number, extra = '') =>
-    `<image href="${u(n)}" x="${x}" y="${y}" width="${w}" height="${h}" preserveAspectRatio="none"${extra}/>`;
-  const cloud = (n: string, x: number, y: number, w: number, h: number, k: number) => im(n, x, y, w, h, ` class="cloud" style="--k:${k}"`);
-  const wide = `<svg class="mp-bg mp-bg-wide" viewBox="0 0 1438 869" preserveAspectRatio="xMidYMid slice" aria-hidden="true"><rect width="1438" height="869" fill="#ebe0ff"/>
-    ${cloud('cloud-a', 54, 36, 443.2, 230.9, 0)}${cloud('cloud-b', 794.1, 208, 178.7, 118.9, 1)}${cloud('cloud-c', 1162, 104, 218, 145, 2)}
-    ${im('hills-a', -87, 404, 952.955, 675.284)}${im('hills-b', 719, 434, 824.911, 502.014)}
-    ${im('hills-c', -216.24, 710.71, 1789.961, 405.527, ' transform="translate(678.74 913.47) scale(-1 1) translate(-678.74 -913.47)"')}</svg>`;
-  const tall = `<svg class="mp-bg mp-bg-tall" viewBox="0 0 390 844" preserveAspectRatio="xMidYMax slice" aria-hidden="true"><rect width="390" height="844" fill="#ebe0ff"/>
-    ${cloud('cloud-a', -60, -6, 222, 116, 0)}${cloud('cloud-b', 250, 190, 107, 71, 1)}${cloud('cloud-c', 236, -10, 130, 87, 2)}
-    ${im('hills-a', -140, 600, 560, 397)}${im('hills-b', 200, 640, 460, 280)}
-    ${im('hills-c', -330, 770, 1050, 238, ' transform="translate(195 889) scale(-1 1) translate(-195 -889)"')}</svg>`;
-  return wide + tall;
+  return `<img class="mp-bg" src="${import.meta.env.BASE_URL}art/map/background.svg" alt="" aria-hidden="true">`;
 }
 
 // Голосовая подсказка при входе на экран: говорим, только если ребёнок всё ещё на нём (sel есть на экране).
@@ -403,7 +341,7 @@ function renderLevels() {
   const next = places.find((l) => !levelFull(l)) ?? places[0]; // первое непройденное место: оно всегда открыто
   targetPlace = places.find((l) => !levelFull(l));
   const tool = (id: string, icon: string, label: string) => `<button id="${id}" class="loc-btn" aria-label="${label}"><i class="loc-i" style="--m:url(${base}/${icon}.svg)"></i></button>`;
-  show(`<div class="loc mp">${mapBg()}<header class="mp-head"><div class="mp-strip" aria-hidden="true">${['mirror', '', 'mirror'].map((c) => `<img class="mp-art ${c}" src="${import.meta.env.BASE_URL}art/map/header.svg" alt="">`).join('')}</div>
+  show(`<div class="loc mp">${mapBg()}<header class="mp-head">
       ${hud}
       <button id="back" class="loc-btn" aria-label="На главную Учи"><i class="loc-i" style="--m:url(${base}/back.svg)"></i></button>
       <div class="loc-tools">${tool('snd', 'sound', isMuted() ? 'Включить звук' : 'Выключить звук')}${tool('fs', 'fullscreen', 'На весь экран')}</div></header>
@@ -427,81 +365,6 @@ function renderLevels() {
   // Перерисовка только при смене размера (первый вызов наблюдателя пропускаем, иначе он оборвёт анимацию)
   let w = road.offsetWidth, h = road.offsetHeight;
   new ResizeObserver(() => { if (road.offsetWidth !== w || road.offsetHeight !== h) { w = road.offsetWidth; h = road.offsetHeight; drawRoad(road); } }).observe(road);
-}
-
-// Экран «Заврики»: кормим вспышками, растим, одеваем.
-const ZV_ART: Record<ZavrikId, string> = { grisha: 'jet-2', sonya: 'sonya-wave' };
-const STAGE_TITLE = ['Малыш', 'Подросток', 'Смельчак', 'Герой', 'Легенда'];
-
-function renderZavrik(quiet = false) {
-  quietNext = quiet;
-  const id = zv;
-  const fed = fedOf(progress, id);
-  const st = stageOf(fed);
-  const stg = UNLOCK_ALL ? MAX_STAGE : st.stage; // для замков внешнего вида
-  const look = lookOf(progress, id);
-  const pct = st.need ? Math.round((st.into / st.need) * 100) : 100;
-  const tabs = ZAVRIKS.map((z) => `<button class="zv-tab ${z === id ? 'on' : ''}" data-z="${z}" aria-pressed="${z === id}">${ZAVRIK_NAME[z]}<small>ур. ${stageOf(fedOf(progress, z)).stage}</small></button>`).join('');
-  const lock = (need: number) => `<span class="zv-lock">${lockIcon()}ур. ${need}</span>`;
-  const chip = (kind: string, val: string, on: boolean, ok: boolean, inner: string, label: string) =>
-    `<button class="zv-chip ${on ? 'on' : ''}" data-k="${kind}" data-v="${val}" ${ok ? '' : 'disabled'} aria-label="${label}${ok ? '' : ', закрыто'}" aria-pressed="${on}">${inner}</button>`;
-  const hues = HUES.map((h) => chip('hue', String(h), look.hue === h, stg >= UNLOCK_STAGE.color,
-    `<span class="zv-dot" style="filter:hue-rotate(${h}deg)"></span>`, 'Цвет')).join('');
-  const hats = [chip('hat', '', look.hat === null, true, '—', 'Без шапки'), ...HATS.map((h) =>
-    chip('hat', h.id, look.hat === h.id, stg >= h.stage, hatSvg(h.id, 'zv-mini'), h.name))].join('');
-  const badges = [chip('badge', '', look.badge === null, true, '—', 'Без значка'), ...BADGES.map((b) =>
-    chip('badge', b.id, look.badge === b.id, stg >= b.stage, badgeSvg(b.id, 'zv-mini'), b.name))].join('');
-  const next = st.need ? `${st.into} из ${st.need}` : 'самый большой';
-  show(`${hud(`<button id="back" class="secondary small" aria-label="Назад">${backIcon()}</button>`)}
-    <h1>Заврики</h1>
-    <div class="zv-tabs">${tabs}</div>
-    <div class="zv-stage s${st.stage}" style="--hue:${look.hue}deg;aspect-ratio:${id === 'grisha' ? '118 / 222' : '117 / 190'}">
-      <img class="zv-char" src="${import.meta.env.BASE_URL}art/${ZV_ART[id]}.svg" alt="${ZAVRIK_NAME[id]}">
-      ${look.hat ? hatSvg(look.hat, `acc-hat hat-${id}`) : ''}${look.badge ? badgeSvg(look.badge, `acc-badge badge-${id}`) : ''}
-    </div>
-    <div class="zv-info"><b>${ZAVRIK_NAME[id]}: ${STAGE_TITLE[st.stage - 1]}, уровень ${st.stage}</b>
-      <div class="zv-bar" role="progressbar" aria-valuenow="${pct}" aria-valuemin="0" aria-valuemax="100"><i style="width:${pct}%"></i></div>
-      <small>${st.need ? `До следующего уровня: ${next}` : 'Выросли до самого большого уровня!'}</small></div>
-    <button id="feed" class="breathe" ${progress.flashes < 1 ? 'disabled' : ''}>${flashIcon()}Покормить за 1 вспышку</button>
-    <div class="zv-wardrobe">
-      <div class="zv-row"><span>Цвет ${stg >= UNLOCK_STAGE.color ? '' : lock(UNLOCK_STAGE.color)}</span><div>${hues}</div></div>
-      <div class="zv-row"><span>Шапка ${stg >= UNLOCK_STAGE.hat ? '' : lock(UNLOCK_STAGE.hat)}</span><div>${hats}</div></div>
-      <div class="zv-row"><span>Значок ${stg >= UNLOCK_STAGE.badge ? '' : lock(UNLOCK_STAGE.badge)}</span><div>${badges}</div></div>
-    </div>`, 'screen-zavrik');
-  on('back', () => { goBack(); view = null; render(); });
-  root.querySelectorAll<HTMLButtonElement>('.zv-tab').forEach((b) =>
-    b.addEventListener('click', () => { zv = b.dataset.z as ZavrikId; renderZavrik(true); }));
-  root.querySelectorAll<HTMLButtonElement>('.zv-chip:not([disabled])').forEach((b) =>
-    b.addEventListener('click', () => {
-      const v = b.dataset.v!;
-      const patch = b.dataset.k === 'hue' ? { hue: Number(v) } : b.dataset.k === 'hat' ? { hat: v || null } : { badge: v || null };
-      progress = setLook(progress, id, patch);
-      void store.save(progress);
-      renderZavrik(true);
-    }));
-  on('feed', () => {
-    const res = feed(progress, id);
-    if (res.progress === progress) return;
-    progress = res.progress;
-    void store.save(progress);
-    if (res.levelUp) { confetti(1600); speak(levelUpText(ZAVRIK_NAME[id], res.levelUp), false, 'sonya'); }
-    renderZavrik(true);
-    const stage = root.querySelector('.zv-stage');
-    stage?.classList.add('chomp');
-    const spark = document.createElement('span');
-    spark.className = 'zv-spark';
-    spark.innerHTML = flashIcon();
-    stage?.appendChild(spark);
-    if (res.levelUp) {
-      const t = document.createElement('div');
-      t.className = 'zv-up';
-      const unlock = res.levelUp === UNLOCK_STAGE.color ? 'Теперь можно менять цвет!' : res.levelUp === UNLOCK_STAGE.hat ? 'Открылись шапки!'
-        : res.levelUp === UNLOCK_STAGE.badge ? 'Открылись значки!' : res.levelUp === MAX_STAGE ? 'Открылась корона!' : '';
-      t.textContent = `Уровень ${res.levelUp}! ${unlock}`;
-      root.appendChild(t);
-      setTimeout(() => t.remove(), 3200);
-    }
-  });
 }
 
 // Картинка к заданию: цветное пятно для цвета, контурный значок для предмета (ребёнок, который не читает, поймёт без звука).
@@ -704,7 +567,7 @@ function renderMap(l: Level) {
   const nextI = l.tasks.findIndex((t) => progress.found[t.id] === undefined); // это задание пульсирует
   const cards = l.tasks.map((t, i) => {
     const done = progress.found[t.id] !== undefined;
-    const locked = !UNLOCK_ALL && nextI >= 0 && i > nextI; // задания идут по порядку: следующее открывается, когда найдено предыдущее
+    const locked = false; // задания идут по порядку: следующее открывается, когда найдено предыдущее
     return `<button class="loc-card ${done ? 'done' : ''}${locked ? ' locked' : ''}${i === nextI ? ' pulse' : ''}" data-i="${i}" style="--i:${i}" ${locked ? 'aria-disabled="true"' : ''} aria-label="${taskName(t)}${done ? ', найдено' : ''}${locked ? ', закрыто: сначала найди предыдущее' : ''}">${taskIcon(l, t)}${done ? `<img class="loc-check" src="${base}/check.svg" alt="">` : ''}</button>`;
   }).join('');
   const pct = n ? Math.round((found / n) * 100) : 0;
@@ -726,29 +589,13 @@ function renderMap(l: Level) {
 }
 
 // Экран «Все найдено!» пока выключен: когда место пройдено, ребёнок возвращается к заданиям места и слышит только озвучку.
-const SHOW_LEVEL_DONE_SCREEN = false;
 function renderLevelDone() {
   playSfx('level-up');
-  // все задания всех мест найдены: отдельная большая похвала вместо обычной
   const everything = LEVELS.every((l) => l.tasks.every((t) => progress.found[t.id] !== undefined));
   const doneLine = pickPhrase(everything ? GAME_DONE : LEVEL_DONE);
-  if (!SHOW_LEVEL_DONE_SCREEN) {
-    renderMap(level!);
-    const seq = screenSeq;
-    setTimeout(() => { if (seq === screenSeq) speak(doneLine.text, false, doneLine.who); }, 700); // после звука
-    return;
-  }
-  // Комната места на весь экран, в центре большой радостный питомец; поверх заголовок и кнопки.
-  const stage = hasRoom(level!.id)
-    ? `<div class="done-stage">${roomHtml(level!.id, true, 'head-', 'happy-loop')}</div>`
-    : `<div class="done-stage"><div class="duo">${art('grisha-cheer', 'cheer')}${art('sonya-cheer', 'cheer')}</div></div>`;
-  show(`${stage}<div class="done-top"><h1>Все найдено!</h1><div class="reward">${flashIcon()}бонус +${LEVEL_BONUS}</div></div>
-    <div class="done-btns"><button id="map" class="green">К заданиям</button><button id="home" class="secondary">На главную</button></div>`, 'screen-done');
-  confetti(2200);
+  renderMap(level!);
   const seq = screenSeq;
-  setTimeout(() => { if (seq === screenSeq && root.querySelector('#map')) speak(doneLine.text, false, doneLine.who); }, 700); // озвучка после фанфар
-  on('map', toMap);
-  on('home', toMenu);
+  setTimeout(() => { if (seq === screenSeq) speak(doneLine.text, false, doneLine.who); }, 700);
 }
 
 // Мини-раунд после найденного предмета: звучит английское слово, ребёнок выбирает одну из двух картинок.
@@ -788,7 +635,6 @@ function renderQuiz(L: Level, justFound: Task, proceed: () => void) {
 
 function render() {
   if (view === 'album') return renderAlbum();
-  if (view === 'zavrik') return renderZavrik();
   if (!level) return !ONBOARDING || isOnboarded() ? renderLevels() : renderOnboarding();
   if (!state) return renderMap(level);
   const s = state;

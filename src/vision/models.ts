@@ -42,31 +42,6 @@ export async function fetchWithProgress(url: string, key: 'clip'): Promise<Array
 }
 export function setClipReady(): void { status.clip = 1; emit(); }
 
-// Скачиваем model.json и все куски весов с подсчётом процентов; потом загрузчик tfjs берёт их из кэша браузера.
-async function prefetch(modelUrl: string, key: 'coco'): Promise<void> {
-  const base = modelUrl.slice(0, modelUrl.lastIndexOf('/') + 1);
-  const manifest = await (await fetch(modelUrl)).json();
-  const paths: string[] = manifest.weightsManifest.flatMap((g: { paths: string[] }) => g.paths);
-  const part = new Array(paths.length).fill(0);
-  const report = () => { status[key] = Math.min(0.95, part.reduce((a, b) => a + b, 0) / paths.length); emit(); };
-  await Promise.all(paths.map(async (p, i) => {
-    const res = await fetch(base + p);
-    const total = Number(res.headers.get('content-length')) || 4_194_304;
-    const reader = res.body?.getReader();
-    if (!reader) { await res.arrayBuffer(); part[i] = 1; report(); return; }
-    let got = 0;
-    for (;;) {
-      const { done, value } = await reader.read();
-      if (done) break;
-      got += value.length;
-      part[i] = Math.min(1, got / total);
-      report();
-    }
-    part[i] = 1;
-    report();
-  }));
-}
-
 let tfP: Promise<typeof import('@tensorflow/tfjs')> | null = null;
 function loadTf() {
   tfP ??= (async () => {
@@ -90,7 +65,7 @@ const blank = (w: number, h: number) => {
 let cocoP: Promise<CocoModel> | null = null;
 export function loadCoco(): Promise<CocoModel> {
   cocoP ??= (async () => {
-    const [, coco] = await Promise.all([loadTf().then(() => prefetch(COCO_URL, 'coco')), import('@tensorflow-models/coco-ssd')]);
+    const [, coco] = await Promise.all([loadTf(), import('@tensorflow-models/coco-ssd')]);
     const model = (await coco.load({ base: 'lite_mobilenet_v2', modelUrl: COCO_URL })) as unknown as CocoModel;
     try { await model.detect(blank(320, 240), 1, 0.9); } catch { /* прогрев не обязателен */ }
     status.coco = 1;

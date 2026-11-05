@@ -119,7 +119,7 @@ export function showCameraProblem(kind: CamProblem): Promise<'retry' | 'close'> 
         el.querySelector('.cp-btn')!.addEventListener('click', () => finish('retry'));
       } else {
         el.setAttribute('aria-label', s.title);
-        el.innerHTML = `${backBtn}<main class="cp-main"><section class="cp-card"><img class="cp-ico" src="${base}/fox-camera.png" alt="">
+        el.innerHTML = `${backBtn}<main class="cp-main"><section class="cp-card"><img class="cp-ico" src="${base}/fox-camera.svg" alt="">
           <h2>${esc(s.title)}</h2><p>${esc(s.body)}</p></section></main>
           <div class="cp-bar"><button class="cp-btn" type="button">${esc(s.button)}</button></div>`;
         el.querySelector('.cp-btn')!.addEventListener('click', () => (s.next === 'instructions' ? render('steps') : finish(s.next)));

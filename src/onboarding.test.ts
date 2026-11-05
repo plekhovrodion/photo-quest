@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it } from 'vitest';
-import { SLIDES, isOnboarded, markOnboarded } from './onboarding';
+import { isOnboarded, markOnboarded } from './onboarding';
 
 const store = new Map<string, string>();
 beforeEach(() => {
@@ -20,8 +20,5 @@ describe('onboarding', () => {
     (globalThis as any).localStorage = { getItem: () => { throw new Error('no'); }, setItem: () => { throw new Error('no'); } };
     expect(isOnboarded()).toBe(false);
     expect(() => markOnboarded()).not.toThrow();
-  });
-  it('у каждого слайда есть текст', () => {
-    expect(SLIDES.every((s) => s.who && s.text && s.art)).toBe(true);
   });
 });

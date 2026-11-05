@@ -7,4 +7,3 @@ dist
 .eval-data
 .env.voice
 .DS_Store
-public/models/yolox/

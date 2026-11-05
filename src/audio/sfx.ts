@@ -1,24 +1,19 @@
 // Звуки интерфейса: клики, переходы, успех и ошибка. Файлы из библиотеки Uchi Sound Lab лежат в public/sfx
-// (скачиваются `node scripts/fetch-sfx.mjs`). Вариантов у звука несколько, подряд один и тот же не играет.
-// Играем через Web Audio: мало задержки, звук готов, когда ребёнок нажал. Загрузка начинается с первого касания.
+// (скачиваются `node scripts/fetch-sfx.mjs`). Каждый нужный сигнал хранится в одном файле.
+// Играем через Web Audio; после первого экрана заранее загружается только звук нажатия.
 
-// название -> число вариантов (имя файла: <название>-<номер>.m4a)
+// название -> число файлов (имя файла: <название>-0.m4a)
 export const SFX = {
-  tap: 6,
-  'tap-soft': 4,
-  'tap-heavy': 4,
-  forward: 3,
-  back: 3,
-  'toggle-on': 3,
-  'toggle-off': 3,
-  'modal-open': 3,
-  'modal-close': 3,
-  correct: 3,
-  'perfect-answer': 3,
-  star: 3,
-  'wrong-soft': 3,
-  'level-up': 3,
-  'unit-complete': 1,
+  tap: 1,
+  forward: 1,
+  back: 1,
+  'toggle-on': 1,
+  'toggle-off': 1,
+  'modal-open': 1,
+  correct: 1,
+  star: 1,
+  'wrong-soft': 1,
+  'level-up': 1,
 } as const;
 export type SfxName = keyof typeof SFX;
 
@@ -27,18 +22,14 @@ let ctx: AudioContext | null = null;
 let enabled = () => true;
 const buffers = new Map<string, AudioBuffer>();
 const pending = new Map<string, Promise<AudioBuffer | null>>();
-const last = new Map<SfxName, number>();
 
 // Выключатель звука (общий с озвучкой) подключается из sounds.ts, чтобы модули не зависели друг от друга
 export const setSfxGate = (fn: () => boolean) => { enabled = fn; };
 
 const url = (name: string, i: number) => `${import.meta.env.BASE_URL}sfx/${name}-${i}.m4a`;
 
-// Частые звуки готовы сразу после главного экрана; остальные варианты грузятся при первом использовании.
+// Звук нажатия готов сразу после главного экрана; остальные грузятся при первом использовании.
 let allowed = false;
-const CORE: SfxName[] = ['tap', 'tap-soft', 'tap-heavy', 'forward', 'back', 'toggle-on', 'toggle-off', 'correct', 'wrong-soft', 'star', 'level-up'];
-const PARALLEL = 3;
-let coreLoading: Promise<void> | null = null;
 
 function loadVariant(name: SfxName, i: number): Promise<AudioBuffer | null> {
   const key = `${name}-${i}`;
@@ -59,21 +50,10 @@ function loadVariant(name: SfxName, i: number): Promise<AudioBuffer | null> {
   return request;
 }
 
-function loadCore(): Promise<void> {
-  if (!ctx || !allowed || !enabled()) return Promise.resolve();
-  if (coreLoading) return coreLoading;
-  const queue = CORE.map((name) => [name, 0] as const);
-  const worker = async () => {
-    for (let item = queue.shift(); item; item = queue.shift()) await loadVariant(item[0], item[1]);
-  };
-  coreLoading = Promise.all(Array.from({ length: PARALLEL }, worker)).then(() => {}).finally(() => { coreLoading = null; });
-  return coreLoading;
-}
-
 // Разрешает загрузку звуков (после первого экрана).
 export function startSfxLoad() {
   allowed = true;
-  try { ctx ??= new AudioContext(); void loadCore(); } catch { /* без Web Audio звуков не будет */ }
+  try { ctx ??= new AudioContext(); if (enabled()) void loadVariant('tap', 0); } catch { /* без Web Audio звуков не будет */ }
 }
 
 // Браузеры разрешают звук только после касания: на первом касании создаём контекст и грузим звуки
@@ -81,7 +61,7 @@ export function unlockSfx() {
   try {
     ctx ??= new AudioContext();
     if (ctx.state === 'suspended') void ctx.resume();
-    if (allowed) void loadCore();
+    if (allowed && enabled()) void loadVariant('tap', 0);
   } catch { /* без Web Audio звуков интерфейса не будет */ }
 }
 
@@ -99,45 +79,10 @@ function playBuffer(name: SfxName, i: number, volume: number) {
 
 export function playSfx(name: SfxName, volume = 1) {
   if (!ctx || !enabled()) return;
-  const n = SFX[name];
-  const ready = Array.from({ length: n }, (_, i) => i).filter((i) => buffers.has(`${name}-${i}`));
-  if (ready.length) {
-    const choices = ready.length > 1 ? ready.filter((i) => i !== last.get(name)) : ready;
-    const i = choices[Math.floor(Math.random() * choices.length)];
-    last.set(name, i);
-    playBuffer(name, i, volume);
-
-    // Подгружаем не больше второго варианта для звуков, которые действительно используются.
-    const hasPendingVariant = Array.from({ length: n }, (_, j) => pending.has(`${name}-${j}`)).some(Boolean);
-    if (allowed && ready.length < Math.min(2, n) && !hasPendingVariant) {
-      const next = Array.from({ length: n }, (_, j) => j).find((j) => !buffers.has(`${name}-${j}`) && !pending.has(`${name}-${j}`));
-      if (next !== undefined) void loadVariant(name, next);
-    }
-    return;
-  }
-
-  const inFlightIndex = Array.from({ length: n }, (_, i) => i).find((i) => pending.has(`${name}-${i}`));
-  if (inFlightIndex !== undefined) {
-    void pending.get(`${name}-${inFlightIndex}`)!.then((buffer) => {
-      if (!buffer || !enabled()) return;
-      last.set(name, inFlightIndex);
-      playBuffer(name, inFlightIndex, volume);
-    });
-    return;
-  }
-
-  // Редкий звук загружается только при первом вызове и играет после декодирования.
+  if (buffers.has(`${name}-0`)) return playBuffer(name, 0, volume);
   if (!allowed) return;
-  const i = Math.floor(Math.random() * n);
-  void loadVariant(name, i).then((buffer) => {
-    if (!buffer || !enabled()) return;
-    last.set(name, i);
-    playBuffer(name, i, volume);
-    const hasPendingVariant = Array.from({ length: n }, (_, j) => pending.has(`${name}-${j}`)).some(Boolean);
-    if (n > 1 && !hasPendingVariant) {
-      const next = Array.from({ length: n }, (_, j) => j).find((j) => j !== i && !buffers.has(`${name}-${j}`) && !pending.has(`${name}-${j}`));
-      if (next !== undefined) void loadVariant(name, next);
-    }
+  void loadVariant(name, 0).then((buffer) => {
+    if (buffer && enabled()) playBuffer(name, 0, volume);
   });
 }
 
@@ -148,8 +93,7 @@ const CLICK_VOLUME = 0.4;
 const BY_SELECTOR: [string, SfxName][] = [
   ['.mp-tile, .loc-card', 'forward'],
   ['#back, .cam-back, .cp-back', 'back'],
-  ['#fs', 'tap-soft'],
-  ['.loc-play, #play, #next, .cam-shoot', 'tap-heavy'],
+  ['#fs, .loc-play, #play, #next, .cam-shoot', 'tap'],
 ];
 
 // Минимальный вид элемента (так функцию можно проверить без DOM)

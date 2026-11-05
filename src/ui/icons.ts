@@ -2,10 +2,6 @@
 const svg = (inner: string, vb = '0 0 24 24', cls = 'ico') =>
   `<svg class="${cls}" viewBox="${vb}" aria-hidden="true" focusable="false">${inner}</svg>`;
 
-// Вспышка — внутренняя валюта: аккуратная молния со скруглёнными углами, цвет задаёт CSS (currentColor)
-export const flashIcon = () =>
-  svg(`<path d="M13.4 2.2c.5-.6 1.5-.1 1.3.7l-1.3 6.6h4.6c.8 0 1.2.9.7 1.5l-8.5 10.9c-.5.6-1.5.1-1.3-.7l1.4-7H5.7c-.8 0-1.2-.9-.7-1.5z" fill="currentColor"/>`, '0 0 24 24', 'ico ico-flash');
-
 export const starIcon = () =>
   svg(`<path d="M12 2.2l2.9 6.3 6.9.8-5.1 4.7 1.4 6.8L12 17.3 5.9 20.8l1.4-6.8L2.2 9.3l6.9-.8z" fill="currentColor" stroke="currentColor" stroke-width="1.4" stroke-linejoin="round"/>`);
 

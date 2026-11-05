@@ -1,8 +1,8 @@
 import { describe, expect, it, vi } from 'vitest';
-import { computeFlashes, mergeProgress, priceOf, LEVEL_BONUS, type Progress } from '../progress';
+import { mergeProgress, type Progress } from '../progress';
 import { FoundApiStore, SyncedStore, progressFromFound, type ProgressStore } from './store';
 
-const P = (over: Partial<Progress> = {}): Progress => ({ levels: {}, found: {}, flashes: 0, owned: [], ...over });
+const P = (over: Partial<Progress> = {}): Progress => ({ levels: {}, found: {}, ...over });
 const mem = (init: Progress): ProgressStore & { data: Progress } => {
   const s = { data: init, async load() { return s.data; }, async save(p: Progress) { s.data = p; } };
   return s;
@@ -14,22 +14,7 @@ describe('mergeProgress', () => {
     const b = P({ found: { y: 3, z: 2 } });
     expect(mergeProgress(a, b).found).toEqual({ x: 3, y: 3, z: 2 });
   });
-  it('объединяет покупки и не теряет траты', () => {
-    const price = priceOf('kitchen');
-    const a = P({ found: { x: 3, y: 3, z: 3, w: 3 }, owned: ['kitchen'], flashes: 12 - price });
-    const b = P({ found: { x: 3 }, flashes: 3 });
-    const m = mergeProgress(a, b);
-    expect(m.owned).toEqual(['kitchen']);
-    expect(m.flashes).toBe(Math.max(0, 12 - price)); // найдено 12, потрачено на открытие места
-  });
-  it('бонус за категорию учитывается один раз', () => {
-    const lv = { stars: 5, passed: true };
-    const m = mergeProgress(P({ levels: { a: lv }, found: { t: 5 } }), P({ levels: { a: lv }, found: { t: 5 } }));
-    expect(m.flashes).toBe(5 + LEVEL_BONUS);
-  });
-  it('computeFlashes не уходит в минус', () => {
-    expect(computeFlashes(P({ owned: ['kitchen'] }))).toBe(0);
-  });
+
 });
 
 describe('SyncedStore', () => {
@@ -68,7 +53,7 @@ describe('SyncedStore', () => {
 describe('FoundApiStore (бэкенд photo-quest-api)', () => {
   const okJson = (data: unknown) => ({ ok: true, status: 200, json: async () => data }) as Response;
 
-  it('load: берёт found с сервера и выводит категории и вспышки', async () => {
+  it('load: берёт found с сервера и выводит категории', async () => {
     const fetchMock = vi.fn().mockResolvedValue(okJson({ found: { 'color-red': 3 } }));
     vi.stubGlobal('fetch', fetchMock);
     const p = await new FoundApiStore('/api/v1', () => ({ 'Uchi-User-Id': '5' })).load();
@@ -81,7 +66,7 @@ describe('FoundApiStore (бэкенд photo-quest-api)', () => {
   it('save: отправляет только found через /progress/sync', async () => {
     const fetchMock = vi.fn().mockResolvedValue(okJson({ found: {} }));
     vi.stubGlobal('fetch', fetchMock);
-    await new FoundApiStore('/api/v1').save(P({ found: { a: 2 }, flashes: 9 }));
+    await new FoundApiStore('/api/v1').save(P({ found: { a: 2 } }));
     const [url, init] = fetchMock.mock.calls[0];
     expect(url).toBe('/api/v1/progress/sync');
     expect(init.method).toBe('POST');

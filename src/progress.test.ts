@@ -1,14 +1,13 @@
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 import { LEVELS } from './data/tasks';
-import { LEVEL_BONUS, loadProgress, priceOf, recordTask, sanitizeOwned } from './progress';
+import { loadProgress, recordTask } from './progress';
 
 const fresh = () => loadProgress();
 const lvl = { id: 'a', tasks: [{ id: 't1' }, { id: 't2' }] };
 
 describe('recordTask', () => {
-  it('начисляет вспышки за первое нахождение', () => {
+  it('сохраняет первое нахождение', () => {
     const { progress, levelDone } = recordTask(fresh(), lvl, 't1', 3);
-    expect(progress.flashes).toBe(3);
     expect(progress.found.t1).toBe(3);
     expect(levelDone).toBe(false);
   });
@@ -18,12 +17,21 @@ describe('recordTask', () => {
     expect(again.progress).toBe(once);
     expect(again.levelDone).toBe(false);
   });
-  it('бонус за категорию, когда найдены все задания, один раз', () => {
+  it('отмечает категорию, когда найдены все задания', () => {
     const a = recordTask(fresh(), lvl, 't1', 3).progress;
     const b = recordTask(a, lvl, 't2', 2);
     expect(b.levelDone).toBe(true);
-    expect(b.progress.flashes).toBe(3 + 2 + LEVEL_BONUS);
     expect(b.progress.levels.a).toEqual({ stars: 5, passed: true });
+  });
+});
+
+describe('старый прогресс', () => {
+  it('сохраняет находки и убирает удалённую валюту', () => {
+    vi.stubGlobal('localStorage', {
+      getItem: () => JSON.stringify({ found: { 'color-red': 3 }, levels: {}, flashes: 12, owned: ['kitchen'], fed: { sonya: 2 } }),
+    });
+    expect(loadProgress()).toEqual({ found: { 'color-red': 3 }, levels: {} });
+    vi.unstubAllGlobals();
   });
 });
 

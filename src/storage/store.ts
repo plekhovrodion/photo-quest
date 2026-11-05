@@ -14,7 +14,7 @@ export class LocalStore implements ProgressStore {
   async save(p: Progress) { saveProgress(p); }
 }
 
-// Бэкенд photo-quest-api (Go): хранит только найденные задания. Остальное (категории, вспышки) выводится из них.
+// Бэкенд photo-quest-api (Go): хранит только найденные задания. Категории выводятся из них.
 // GET {base}/progress -> {found}, POST {base}/progress/sync {found} -> {found}. Ученика определяет шлюз Учи по заголовку Uchi-User-Id;
 // на локальной разработке id подставляем из VITE_DEV_USER_ID.
 export function progressFromFound(found: Record<string, number>): Progress {
@@ -24,7 +24,7 @@ export function progressFromFound(found: Record<string, number>): Progress {
       levels[l.id] = { stars: l.tasks.reduce((n, t) => n + (found[t.id] ?? 0), 0), passed: true };
     }
   }
-  return { levels, found, flashes: 0, owned: [] };
+  return { levels, found };
 }
 
 export class FoundApiStore implements ProgressStore {
@@ -50,7 +50,7 @@ export class FoundApiStore implements ProgressStore {
 
   async load(): Promise<Progress> {
     const { found } = await this.req('/progress', 'GET');
-    return mergeProgress({ levels: {}, found: {}, flashes: 0, owned: [] }, progressFromFound(found));
+    return mergeProgress({ levels: {}, found: {} }, progressFromFound(found));
   }
 
   async save(p: Progress): Promise<void> {
@@ -60,7 +60,7 @@ export class FoundApiStore implements ProgressStore {
   // Отправить находки с устройства и принять итог сервера: то, на что не хватило бусин (rejected), в прогресс не попадает
   async reconcile(p: Progress): Promise<Progress> {
     const { found } = Object.keys(p.found).length ? await this.req('/progress/sync', 'POST', { found: p.found }) : await this.req('/progress', 'GET');
-    return mergeProgress({ levels: {}, found: {}, flashes: 0, owned: [] }, { ...progressFromFound(found), look: p.look, fed: p.fed });
+    return mergeProgress({ levels: {}, found: {} }, progressFromFound(found));
   }
 }
 

@@ -43,7 +43,6 @@ button:focus-visible { outline: 4px solid var(--blue); outline-offset: 3px; }
   justify-content: space-between; gap: 10px; padding: calc(10px + var(--safe-top)) 12px 10px; }
 .chip { background: var(--panel); border-radius: 999px; padding: 6px 16px; font-size: 20px; font-weight: 800;
   display: inline-flex; gap: 6px; align-items: center; }
-.chip.coin { border: 3px solid var(--gold); }
 .pips { display: flex; gap: 6px; flex: 1; justify-content: center; flex-wrap: wrap; max-width: 60vw; }
 
 /* Маскот и реплика */
@@ -63,15 +62,12 @@ button.level { display: flex; flex-direction: column; align-items: center; gap: 
 button.level:nth-child(odd) { transform: rotate(-1.2deg); }
 button.level:nth-child(even) { transform: rotate(1.2deg) translateY(10px); }
 button.level.done { background: #eafff3; }
-button.level.owned { background: #eafff3; opacity: 1; }
 button.level small { font-size: 15px; font-weight: 700; color: #3d4a6b; }
 
 .badge { font-size: 16px; }
 
 /* Результат / крупные эмодзи */
 
-.reward { display: inline-flex; gap: 8px; align-items: center; background: var(--panel); border: 3px solid var(--gold);
-  border-radius: 999px; padding: 8px 22px; font-size: 30px; font-weight: 900; animation: pop .6s .2s ease both; }
 @keyframes pop { 0% { transform: scale(.3); } 60% { transform: scale(1.25); } 100% { transform: scale(1); } }
 
  
@@ -104,7 +100,7 @@ button.stop:active:not(:disabled) { transform: translate(-50%, -50%) scale(.94);
 
 /* Тема «инопланетный мир»: светлый текст на тёмном фоне, светлые панели с тёмным текстом */
 p { text-shadow: 0 2px 0 rgba(20, 10, 60, .5); }
-.bubble, .hint, .notice, .chip, .reward, .hud button.secondary { color: var(--ink); text-shadow: none; }
+.bubble, .hint, .notice, .chip, .hud button.secondary { color: var(--ink); text-shadow: none; }
 .char { display: block; height: clamp(150px, 26vh, 250px); width: auto; filter: drop-shadow(0 8px 14px rgba(10, 5, 40, .45));
   animation: bob 2.6s ease-in-out infinite; }
 .char.small { height: clamp(100px, 16vh, 140px); }
@@ -162,7 +158,6 @@ body::after { background-size: 270px 230px; background-position: 90px 60px; anim
 @keyframes drop-in { from { opacity: 0; transform: translateY(-14px) scale(.92); } }
 @keyframes pop-in { from { opacity: 0; transform: scale(.5); } }
 
-.chip.coin.bump { animation: bump .7s var(--spring); }
 @keyframes bump { 30% { transform: scale(1.35) rotate(-4deg); } 60% { transform: scale(.95); } }
 .star.on { animation: pop .55s var(--d, 0s) var(--spring) backwards, twinkle-star 2.4s calc(var(--d, 0s) + .8s) ease-in-out infinite; }
 @keyframes twinkle-star { 50% { transform: scale(1.12) rotate(6deg); filter: brightness(1.2); } }
@@ -176,7 +171,6 @@ button.breathe { animation: slide-in .45s var(--ease) .24s backwards, breathe 2.
 }
 
 button.level { animation: pop-in .5s calc(var(--i, 0) * 70ms + .2s) var(--spring) backwards; }
-button.level.owned { animation: pop-in .5s calc(var(--i, 0) * 70ms + .2s) var(--spring) backwards; }
 
 /* Карта заданий: бегущие точки и точки-«выскакиваюшки» */
 .map > svg path { animation: march 1.1s linear infinite; }
@@ -249,13 +243,11 @@ button.stop.done { background: #16a34a; border-color: #166534; color: #fff; box-
 
 /* ===== Иконки вместо эмодзи ===== */
 .ico { width: 1.15em; height: 1.15em; flex: none; display: inline-block; vertical-align: -.2em; }
-.ico-flash { filter: drop-shadow(0 2px 0 rgba(180, 83, 9, .35)); }
 button .ico { width: 1.2em; height: 1.2em; }
-.chip .ico, .reward .ico { width: 1.15em; height: 1.15em; margin-right: .1em; }
+.chip .ico { width: 1.15em; height: 1.15em; margin-right: .1em; }
 .hint { display: flex; align-items: center; gap: 10px; text-align: left; }
 .hint .ico { width: 34px; height: 34px; }
 
-button.level .price { display: inline-flex; align-items: center; gap: 4px; }
 button.level small .ico { width: 1.1em; height: 1.1em; }
 
 .star .ico { width: 1em; height: 1em; vertical-align: 0; display: block; }
@@ -271,19 +263,11 @@ button.stop { border-color: var(--btn2); box-shadow: 0 5px 0 var(--btn2-d); }
 button.stop.next { border-color: #f59e0b; box-shadow: 0 5px 0 #b45309; }
 
 /* ===== Однотонные иконки ===== */
-.ico-flash { filter: none; }
 .hint .ico { color: #92400e; }/* ===== Обрезка снимка ===== *//* тень рамки обрезки не должна затемнять заголовок и кнопки *//* ===== Живая камера с поиском предмета ===== */
 .cam-boxes { position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none; }
 .cam-hint { color: #fff; font-size: 24px; font-weight: 800; text-align: center; min-height: 1.4em; margin: 0; text-shadow: 0 2px 0 rgba(20, 10, 60, .55); }
 /* общий стиль кнопок не должен перебивать атрибут hidden */
 button[hidden] { display: none !important; }
-
-/* ===== Плашка вспышек: розовая, как кнопки, с белой молнией ===== */
-.chip.coin, .reward { background: var(--btn2); color: #fff; text-shadow: 0 2px 0 rgba(131, 24, 67, .55);
-  border: 3px solid #fff; box-shadow: 0 5px 0 var(--btn2-d); }
-.chip.coin .ico-flash, .reward .ico-flash { color: #fff; filter: drop-shadow(0 2px 0 rgba(131, 24, 67, .5)); }
-.chip.coin .ico, .reward .ico { width: 1.05em; height: 1.05em; margin-right: .2em; }
-button.level small .ico-flash { color: var(--btn); }
 
 /* ===== Отладочная панель камеры (?debug=1) ===== */
 .cam-debug { margin: 0; max-width: min(100%, 720px); color: #bbf7d0; background: rgba(0, 0, 0, .55); border-radius: 12px; padding: 8px 12px;
@@ -296,26 +280,14 @@ button.level small .ico-flash { color: var(--btn); }
 
 /* ===== Главная: места-диорамы вместо кубиков ===== */
 
-/* ===== Окно «Что такое вспышки?» ===== */
-.chip.coin { cursor: pointer; transition: transform .15s var(--spring); user-select: none; }
-.chip.coin:hover { transform: scale(1.06); }
-.chip.coin:active { transform: scale(.96); }
-.chip.coin:focus-visible { outline: 4px solid #fde68a; outline-offset: 3px; }
+/* ===== Закрытые места и покупка ===== */
+
 .modal-overlay { position: fixed; inset: 0; z-index: 60; display: grid; place-items: center; padding: 16px; overflow-y: auto;
   background: rgba(20, 8, 60, .78); animation: fade-in .25s ease; }
 .modal { width: min(100%, 440px); display: flex; flex-direction: column; align-items: center; gap: 12px; text-align: center;
   background: #fff; color: var(--ink); border-radius: 30px; padding: 22px 20px 24px; box-shadow: 0 10px 0 rgba(10, 5, 40, .3);
   animation: pop-in .45s var(--spring) backwards; text-shadow: none; }
-.modal .char { height: 110px; animation: none; }
 .modal h2 { margin: 0; font-size: 30px; line-height: 1.1; }
-.fh-balance { display: inline-flex; align-items: center; gap: 6px; background: var(--btn2); color: #fff; border-radius: 999px; padding: 6px 18px;
-  font-size: 22px; font-weight: 800; text-shadow: none; }
-.fh-balance .ico { width: 1.1em; height: 1.1em; }
-.fh-list { list-style: none; margin: 0; padding: 0; text-align: left; display: flex; flex-direction: column; gap: 10px; font-size: 19px; font-weight: 700; line-height: 1.3; }
-.fh-list li { position: relative; padding-left: 28px; }
-.fh-list li::before { content: ''; position: absolute; left: 4px; top: .45em; width: 14px; height: 14px; border-radius: 50%; background: var(--btn2); }
-
-/* ===== Закрытые места и покупка ===== */
 
 .modal-place { width: min(70%, 230px); }
 .modal-place .place-svg { display: block; width: 100%; height: auto; filter: drop-shadow(0 6px 0 rgba(10, 5, 40, .15)); }
@@ -347,48 +319,7 @@ button.stop.done .ico { width: 62%; height: 62%; }
 
 .sticker-modal .sticker-big { width: min(80%, 300px); aspect-ratio: 1; object-fit: cover; border-radius: 22px; box-shadow: 0 6px 0 rgba(10, 5, 40, .2); transform: rotate(-2deg); }
 
-/* ===== Заврики: рост и одежда ===== */
-.char { filter: hue-rotate(var(--hue, 0deg)) drop-shadow(0 8px 14px rgba(10, 5, 40, .45)); }
-
 #app.quiet > * { animation: none !important; }
-.screen-zavrik { gap: 12px; }
-.zv-tabs { display: flex; gap: 10px; width: min(100%, 420px); }
-:is(#app, .ghost) .zv-tab { flex: 1; height: auto; min-height: 56px; padding: 8px 12px; display: flex; flex-direction: column; align-items: center; gap: 2px;
-  font-size: 22px; background: rgba(255, 255, 255, .18); color: #fff; box-shadow: none; border: 3px solid transparent; border-radius: 20px; }
-:is(#app, .ghost) .zv-tab small { font-size: 14px; font-weight: 800; opacity: .85; }
-:is(#app, .ghost) .zv-tab.on { background: var(--btn); border-color: #fff; box-shadow: 0 5px 0 var(--btn-d); }
-.zv-stage { position: relative; width: min(50%, 210px); display: grid; place-items: center; --grow: 1; transition: transform .4s var(--spring); transform: scale(var(--grow)); }
-.zv-stage.s1 { --grow: .8; } .zv-stage.s2 { --grow: .88; } .zv-stage.s3 { --grow: .96; } .zv-stage.s4 { --grow: 1.04; } .zv-stage.s5 { --grow: 1.12; }
-.zv-stage.s5::before { content: ''; position: absolute; inset: -12%; border-radius: 50%; background: radial-gradient(circle, rgba(253, 224, 71, .55), transparent 65%); animation: pulse-glow 2.4s ease-in-out infinite; }
-@keyframes pulse-glow { 50% { opacity: .55; transform: scale(1.08); } }
-.zv-char { position: relative; width: 100%; height: 100%; object-fit: contain; filter: hue-rotate(var(--hue, 0deg)) drop-shadow(0 8px 14px rgba(10, 5, 40, .45)); animation: bob 2.6s ease-in-out infinite; }
-.acc-hat { position: absolute; pointer-events: none; animation: bob 2.6s ease-in-out infinite; filter: drop-shadow(0 4px 6px rgba(10, 5, 40, .4)); }
-.acc-hat.hat-sonya { left: 26%; top: -4%; width: 48%; }
-.acc-hat.hat-grisha { left: 42%; top: -3%; width: 36%; }
-.acc-badge { position: absolute; pointer-events: none; width: 20%; filter: drop-shadow(0 3px 4px rgba(10, 5, 40, .4)); animation: bob 2.6s ease-in-out infinite; }
-.acc-badge.badge-sonya { left: 30%; top: 58%; } .acc-badge.badge-grisha { left: 28%; top: 54%; }
-.zv-stage.chomp { animation: chomp .5s var(--spring); }
-@keyframes chomp { 30% { transform: scale(calc(var(--grow) * 1.14), calc(var(--grow) * .9)); } 60% { transform: scale(calc(var(--grow) * .96), calc(var(--grow) * 1.06)); } }
-.zv-spark { position: absolute; left: 50%; top: 110%; width: 44px; height: 44px; margin-left: -22px; color: #fde047; pointer-events: none; animation: spark-up .7s ease-in forwards; }
-.zv-spark .ico { width: 100%; height: 100%; filter: drop-shadow(0 0 8px #fde047); }
-@keyframes spark-up { to { top: 30%; opacity: 0; transform: scale(.4) rotate(40deg); } }
-.zv-info { display: flex; flex-direction: column; align-items: center; gap: 6px; width: min(100%, 360px); text-align: center; color: #fff; font-size: 20px; }
-.zv-info small { font-size: 15px; font-weight: 700; opacity: .9; }
-.zv-bar { width: 100%; height: 16px; border-radius: 999px; background: rgba(255, 255, 255, .25); overflow: hidden; }
-.zv-bar i { display: block; height: 100%; border-radius: 999px; background: linear-gradient(90deg, #fde047, #f59e0b); transition: width .5s var(--ease); }
-.zv-wardrobe { display: flex; flex-direction: column; gap: 10px; width: min(100%, 420px); background: rgba(255, 255, 255, .14); border-radius: 22px; padding: 12px; }
-.zv-row { display: flex; flex-direction: column; gap: 6px; color: #fff; font-weight: 800; font-size: 17px; }
-.zv-row > div { display: flex; gap: 8px; flex-wrap: wrap; }
-.zv-lock { display: inline-flex; align-items: center; gap: 4px; margin-left: 8px; font-size: 14px; background: rgba(0, 0, 0, .3); border-radius: 999px; padding: 2px 10px; }
-.zv-lock .ico { width: 14px; height: 14px; vertical-align: 0; }
-:is(#app, .ghost) .zv-chip { width: 52px; height: 52px; min-height: 0; min-width: 0; padding: 4px; display: grid; place-items: center; font-size: 22px; font-weight: 900;
-  background: #fff; color: var(--ink); border: 3px solid transparent; border-radius: 16px; box-shadow: 0 4px 0 rgba(10, 5, 40, .3); text-shadow: none; }
-:is(#app, .ghost) .zv-chip.on { border-color: var(--btn); box-shadow: 0 4px 0 var(--btn-d); }
-:is(#app, .ghost) .zv-chip:disabled { opacity: .35; filter: grayscale(1); box-shadow: none; }
-.zv-mini { width: 100%; height: 100%; }
-.zv-dot { display: block; width: 30px; height: 30px; border-radius: 50%; background: conic-gradient(#ec4899, #f59e0b, #22c55e, #3b82f6, #ec4899); }
-.zv-up { position: fixed; left: 50%; top: 16%; transform: translateX(-50%); z-index: 70; background: #fff; color: var(--ink); font-weight: 900; font-size: 22px; padding: 12px 22px;
-  border-radius: 22px; box-shadow: 0 8px 0 rgba(10, 5, 40, .3); text-align: center; animation: pop-in .5s var(--spring); max-width: 90vw; }
 
 /* =====================================================================
    Дизайн v2: три роли элементов и три вида движения
@@ -407,8 +338,6 @@ button.stop.done .ico { width: 62%; height: 62%; }
 :is(#app, .ghost) button.secondary.small { width: 56px; min-width: 56px; height: 56px; min-height: 56px; padding: 0; border-radius: 50%; display: grid; place-items: center; background: rgba(255, 255, 255, .12); }
 :is(#app, .ghost) button.secondary.small .ico { width: 28px; height: 28px; vertical-align: 0; }
 
-.chip.coin, .reward { background: rgba(255, 255, 255, .16); border: 2px solid rgba(255, 255, 255, .4); box-shadow: none; text-shadow: none; color: #fff; }
-.chip.coin .ico-flash, .reward .ico-flash { color: #fde047; filter: none; }
 
 /* --- Верхняя панель главной: иконка с подписью{ width: 76px; min-width: 76px; height: 82px; min-height: 82px; padding: 6px 2px 4px; display: flex; flex-direction: column; align-items: center;
   justify-content: center; gap: 3px; border-radius: 22px; background: rgba(255, 255, 255, .14); border: 2px solid rgba(255, 255, 255, .4);
@@ -476,14 +405,7 @@ body::before, body::after { animation: none; }
   .screen-album .album { width: min(100%, 1000px); }
   .screen-album .album-grid { grid-template-columns: repeat(6, 1fr); gap: 16px; }
 
-  /* Заврики: слева заврик, справа кормление и гардероб */
-  #app.screen-zavrik, .ghost.screen-zavrik { display: grid; grid-template-columns: minmax(0, 420px) minmax(0, 460px); justify-content: center; align-content: center;
-    column-gap: 64px; row-gap: 14px; padding: calc(84px + var(--safe-top)) 40px 40px; }
-  .screen-zavrik > h1, .screen-zavrik > .zv-tabs { grid-column: 1 / -1; justify-self: center; width: min(100%, 460px); }
-  .screen-zavrik .zv-stage { grid-column: 1; grid-row: 3 / span 3; align-self: center; justify-self: center; width: min(100%, 320px); }
-  .screen-zavrik .zv-info { grid-column: 2; grid-row: 3; width: 100%; }
-  .screen-zavrik #feed { grid-column: 2; grid-row: 4; width: 100%; }
-  .screen-zavrik .zv-wardrobe { grid-column: 2; grid-row: 5; width: 100%; }
+
 }
 
 @media (min-width: 1400px) {
@@ -555,10 +477,7 @@ body::before, body::after { animation: none; }
 /* «Снять» оживает{ box-shadow: 0 9px 0 #166534, 0 0 0 6px rgba(134, 239, 172, .75); animation: ready-pulse 1s ease-in-out infinite; }
 @keyframes ready-pulse { 50% { transform: scale(1.04); } }
 
-/* Вспышки временно скрыты: счётчик, награда за предмет и бонус, цены на местах.
-   Чтобы вернуть, удалите этот блок. */
-:is(#app, .ghost) .chip.coin,
-:is(#app, .ghost) .reward{ display: none !important; }/* Карточка английского слова на экране находки */
+/* Карточка английского слова на экране находки */
 
 /* ===== Главная: карточки мест (макет Figma) ===== */
 
@@ -746,9 +665,6 @@ button.pw-back:not(.level):not(.stop):not(.cube-btn) { position: absolute; top: 
 /* ===== Главная: карта-дорожка из мест (макет «01 / Кухня») ===== */
 #app.screen-map > .loc { --lbg: #8a5eff; --lfill: #66d385; --lbtns: #cbb7ff; } /* подложки кнопок шапки того же сиреневого, что у первой карточки (кухня) */
 .mp-head { position: relative; height: 216px; flex: none; display: flex; justify-content: center; background: linear-gradient(#d9c8ff 70%, #8a5eff); overflow: hidden; }
-.mp-strip { display: flex; flex: none; height: 100%; }
-.mp-art { display: block; height: 100%; width: auto; max-width: none; flex: none; margin: 0 -.5px; } /* нахлёст в полпикселя, чтобы на стыках копий не было шва */
-.mp-art.mirror { transform: scaleX(-1); } /* зеркальные копии слева и справа продолжают пейзаж, края сцены сходятся без шва */
 .mp-road { position: relative; width: 100%; max-width: 360px; display: flex; flex-direction: column; gap: 48px; margin: 0 auto; }
 #app.screen-map .loc-body { padding: 24px 24px 16px; }
 #app.screen-map button.mp-tile { width: 188px; min-width: 0; height: auto; min-height: 0; padding: 8px; border: 0; border-radius: 24px; background: #fff; box-shadow: 0 6px 0 rgba(0, 0, 0, .1);
@@ -777,14 +693,9 @@ button.pw-back:not(.level):not(.stop):not(.cube-btn) { position: absolute; top: 
 @media (prefers-reduced-motion: reduce) { #app.screen-map button.mp-tile { animation: none; } }
 /* Карта по макету Figma «01 / Кухня»: места сеткой на фоне из облаков и холмов, без шапки-пейзажа, дороги и кнопки «Играть».
    Телефон: две колонки; широкий экран (от 900 px): четыре колонки и две строки. */
-.mp-bg { position: fixed; inset: 0; width: 100%; height: 100%; z-index: 0; pointer-events: none; }
-.mp-bg-wide { display: none; }
-.mp-bg .cloud { animation: mp-cloud calc(7s + var(--k) * 2s) ease-in-out calc(var(--k) * -3s) infinite alternate; }
-@keyframes mp-cloud { from { transform: translate(-40px, -6px); } to { transform: translate(56px, 8px); } }
-@media (prefers-reduced-motion: reduce) { .mp-bg .cloud { animation: none; } }
+.mp-bg { position: fixed; inset: 0; width: 100%; height: 100%; object-fit: cover; z-index: 0; pointer-events: none; }
 #app.screen-map > .loc { background: #ebe0ff; }
 .mp .mp-head { position: relative; z-index: 1; height: 104px; background: none; overflow: visible; }
-.mp .mp-strip { display: none; }
 #app.screen-map .loc-body { position: relative; z-index: 1; padding: 0 16px 32px; align-items: flex-start; }
 .mp-road { max-width: 720px; width: 100%; margin: 0 auto; display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; }
 .mp-path, .mp-decor { display: none; }
@@ -803,7 +714,6 @@ button.pw-back:not(.level):not(.stop):not(.cube-btn) { position: absolute; top: 
 #app.screen-map button.mp-tile, #app.screen-map button.mp-tile.left, #app.screen-map button.mp-tile.right { aspect-ratio: 1; align-self: start; }
 .mp .mp-win { flex: 1 1 0; min-height: 0; aspect-ratio: auto; }
 @media (min-width: 900px) {
-  .mp-bg-wide { display: block; } .mp-bg-tall { display: none; }
   #app.screen-map .loc-body { padding: 0 64px 64px; align-items: center; } /* на высоком экране сетка по центру, а не растягивается */
   .mp-road { max-width: 1312px; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 32px; }
   #app.screen-map button.mp-tile, #app.screen-map button.mp-tile.left, #app.screen-map button.mp-tile.right { padding: 16px; gap: 16px; border-radius: 32px; box-shadow: 0 10px 0 #cbb7ff; }
@@ -966,8 +876,8 @@ button.pw-back:not(.level):not(.stop):not(.cube-btn) { position: absolute; top: 
   #app.screen-tk.tk-task .tk-cam::before { border-radius: 0; }
   #app.screen-tk.tk-task .tk-cam .cam-hint { top: 96px; bottom: auto; }
   #app.screen-tk.tk-task .tk-live .tk-head { position: fixed; z-index: 4; left: 0; right: 0; bottom: 0; max-width: 600px; margin: 0 auto; padding: 20px; gap: 8px; background: #fff; border-radius: 32px 32px 0 0; box-shadow: 0 10px 0 #cbb7ff; }
-  #app.screen-tk.tk-task .tk-card.tk-live { --tkico: 80px; }
-  #app.screen-tk.tk-task .tk-live .tk-head .tk-text { font-size: 22px; line-height: 28px; color: #221c5f; }
+  #app.screen-tk.tk-task .tk-card.tk-live { --tkico: 112px; }
+  #app.screen-tk.tk-task .tk-live .tk-head .tk-text { font-size: 28px; line-height: 34px; color: #221c5f; }
   #app.screen-tk.tk-task .loc-head { --lbtn: #7a5ad0; --lbtns: #977eda; }
 }
 

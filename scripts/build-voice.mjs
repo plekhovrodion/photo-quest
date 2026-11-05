@@ -38,7 +38,6 @@ const limit = Number((args.find((a) => a.startsWith('--limit=')) ?? '').slice(8)
 const only = (args.find((a) => a.startsWith('--only=')) ?? '').slice(7).split(',').filter(Boolean);
 
 const { ALL_PHRASES } = await import('../src/data/phrases.ts');
-const { SLIDES } = await import('../src/onboarding.ts');
 const { LEVELS } = await import('../src/data/tasks.ts');
 const { ENGLISH } = await import('../src/data/english.ts');
 
@@ -47,7 +46,6 @@ const LEGACY = { 'color-red': 'task-red', 'color-blue': 'task-blue' };
 
 const items = [];
 for (const p of ALL_PHRASES) items.push({ file: p.id, text: p.text, voice: p.who, table: 'say' });
-SLIDES.forEach((sl, i) => items.push({ file: `onboard-${i + 1}`, text: sl.text, voice: sl.who === 'Соня' ? 'sonya' : 'grisha', table: 'say' }));
 for (const l of LEVELS) for (const t of l.tasks) items.push({ file: LEGACY[t.id] ?? `task-${t.id}`, text: t.prompt, voice: 'grisha', table: 'say' });
 for (const [id, w] of Object.entries(ENGLISH)) items.push({ file: `word-${id.replace(/^(color|object)-/, '')}`, text: w.en, voice: 'en', table: 'en' });
 

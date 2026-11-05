@@ -1,36 +1,11 @@
-// Загрузка игры по ступеням, чтобы на слабом мобильном интернете главный экран открывался быстро:
-// 1) основа (шрифты и картинки главного экрана, около 110 КБ): показываем заставку «Загружаем игру» с полоской, пока она не загрузится;
-// 2) после первого экрана, в простое: спрайт иконок, звуки, музыка (по несколько файлов за раз, чтобы не забивать канал);
-// 3) модели распознавания (десятки МБ) стартуют только после второй ступени (см. main.ts).
+// Загрузка игры по ступеням: сначала шрифты, затем экран, потом звуки и модели.
+// Изображения запрашивает сам браузер при показе экрана, без повторного fetch здесь.
 import { mark, saveReport, showStatsOverlay } from './loadstats';
 
 const BASE = import.meta.env.BASE_URL;
-const FIRST_SCREEN = [
-  'art/map/header.svg', 'art/map/wide/cloud-a.svg', 'art/map/wide/cloud-b.svg', 'art/map/wide/cloud-c.svg',
-  'art/map/wide/hills-a.svg', 'art/map/wide/hills-b.svg', 'art/map/wide/hills-c.svg',
-  'art/rooms/head-colors-bare.svg', 'art/rooms/head-room-bare.svg', 'art/rooms/head-kitchen-bare.svg', 'art/rooms/head-school-bare.svg',
-  'art/rooms/head-food-bare.svg', 'art/rooms/head-bath-bare.svg', 'art/rooms/head-hall-bare.svg', 'art/rooms/head-outdoor-bare.svg',
-  'art/loc/back.svg', 'art/loc/fullscreen.svg', 'art/loc/sound.svg', 'art/loc/play.svg', 'art/loc/onboarding-play.svg', 'art/loc/stripe-a.svg',
-];
-// Иконки комнаты, задания и результата запрашиваются браузером при переходе на эти экраны.
-// Не скачиваем их вместе с картой: это лишние запросы до первого действия игрока.
-const REQUIRED = FIRST_SCREEN;
 const FONTS = ['400 16px "Factor A"', '700 16px "Factor A"', '800 16px "Factor A"'];
 const MIN_SHOW_MS = 900; // не мелькаем на быстрой сети, но не удерживаем готовую игру несколько секунд
 const GIVE_UP_MS = 4000; // если сеть медленная, показываем карту, а ресурсы догружаются по мере надобности
-
-export const LOW: RequestInit = { priority: 'low' } as RequestInit; // подсказка браузеру: файл не срочный, не отнимай канал у главного экрана
-
-async function fetchAll(urls: string[], onEach: () => void, parallel = 4, init?: RequestInit): Promise<void> {
-  const queue = [...urls];
-  const worker = async () => {
-    for (let u = queue.shift(); u; u = queue.shift()) {
-      try { await (await fetch(BASE + u, init)).arrayBuffer(); } catch { /* файла нет или нет сети: игра подгрузит его сама */ }
-      onEach();
-    }
-  };
-  await Promise.all(Array.from({ length: Math.min(parallel, urls.length) }, worker));
-}
 
 function overlay(): { paint(p: number): void; remove(): void } {
   const el = document.createElement('div');
@@ -55,7 +30,7 @@ export const whenBootDone = (): Promise<void> => secondDone ?? Promise.resolve()
 // Первая ступень: заставка без текста, не меньше MIN_SHOW_MS; полоска идёт по меньшему из «реально загружено» и «прошло времени».
 export async function bootFirstStep(): Promise<void> {
   mark('старт');
-  const total = REQUIRED.length + FONTS.length;
+  const total = FONTS.length;
   const t0 = performance.now();
   let done = 0;
   const screen = overlay();
@@ -64,7 +39,7 @@ export async function bootFirstStep(): Promise<void> {
   const timer = setInterval(paint, 100);
   const fonts = Promise.all(FONTS.map((f) => document.fonts?.load(f).catch(() => []).finally(tick)));
   await Promise.race([
-    Promise.all([fetchAll(REQUIRED, tick, 8), fonts, new Promise((ok) => setTimeout(ok, MIN_SHOW_MS))]),
+    Promise.all([fonts, new Promise((ok) => setTimeout(ok, MIN_SHOW_MS))]),
     new Promise((ok) => setTimeout(ok, GIVE_UP_MS)),
   ]);
   clearInterval(timer);

@@ -109,8 +109,8 @@ npm run eval:open-images -- --per-class 12
 python3 -m venv .eval-data/venv
 .eval-data/venv/bin/pip install numpy pillow onnxruntime
 npm run eval:clip
-npm run eval:run
 ```
 
-Подробные отчёты создаются в `.eval-data/open-images/clip-report.json` и
-`.eval-data/open-images/report.json`; они не добавляются в Git.
+Подробный отчёт создаётся в `.eval-data/open-images/clip-report.json`;
+он не добавляется в Git. Приведённые выше результаты браузерного замера
+COCO и CLIP сохранены как исторические данные; страница benchmark удалена.

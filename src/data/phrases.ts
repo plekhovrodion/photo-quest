@@ -113,10 +113,6 @@ export const TASK_AIM: Phrase = P('aim-1', 'sonya', 'Наведи камеру!'
 // После найденного предмета: что делать дальше (говорит Соня).
 export const NEXT_HINT: Phrase = P('next-1', 'sonya', 'Идём дальше! Нажми на кнопку внизу');
 
-// Заврик вырос: «Гриша вырос! Уровень 2!» (говорит Соня); уровни 2..5, имена как в zavrik.ts.
-export const levelUpText = (name: string, level: number) => `${name} ${name === 'Соня' ? 'выросла' : 'вырос'}! Уровень ${level}!`;
-export const LEVEL_UP: Phrase[] = ['Гриша', 'Соня'].flatMap((name) => [2, 3, 4, 5].map((n) => P(`levelup-${name === 'Гриша' ? 'g' : 's'}${n}`, 'sonya', levelUpText(name, n))));
-
 // Видео-приветствие на 15 секунд (docs/video-onboarding-prompt.md): три питомца, закадровый голос Сони.
 export const VIDEO_LINES: Phrase[] = [
   P('video-1', 'sonya', 'Привет! Давай вместе искать предметы!'),
@@ -126,7 +122,7 @@ export const VIDEO_LINES: Phrase[] = [
   P('video-5', 'sonya', 'Давай играть!'),
 ];
 
-export const ALL_PHRASES: Phrase[] = [TASK_AIM, ...VIDEO_LINES, NEXT_HINT, ...LEVEL_UP, ...PRAISE, ...INTRO_EN, ASK_CAMERA, ...TRY_AGAIN, ...TROUBLE, ...LEVEL_DONE, ...GAME_DONE, ...REPEAT_AFTER, QUIZ_ASK, ...QUIZ_WRONG, ...HINT_PLACE, ...HINT_ITEM, ...HINT_COLOR, ...LOCKED_HINT, ...TASK_LOCKED];
+export const ALL_PHRASES: Phrase[] = [TASK_AIM, ...VIDEO_LINES, NEXT_HINT, ...PRAISE, ...INTRO_EN, ASK_CAMERA, ...TRY_AGAIN, ...TROUBLE, ...LEVEL_DONE, ...GAME_DONE, ...REPEAT_AFTER, QUIZ_ASK, ...QUIZ_WRONG, ...HINT_PLACE, ...HINT_ITEM, ...HINT_COLOR, ...LOCKED_HINT, ...TASK_LOCKED];
 
 // Случайная фраза, не повторяющая предыдущую из этого же списка.
 const last = new Map<Phrase[], string>();

@@ -13,7 +13,7 @@ describe('звуки интерфейса', () => {
     expect(sfxForClick(btn('', 'loc-card'))).toBe('forward');
     expect(sfxForClick(btn('back'))).toBe('back');
     expect(sfxForClick(btn('', 'cp-back'))).toBe('back');
-    expect(sfxForClick(btn('', 'loc-play'))).toBe('tap-heavy');
+    expect(sfxForClick(btn('', 'loc-play'))).toBe('tap');
     expect(sfxForClick(btn('', 'cp-btn'))).toBe('tap');
   });
   it('у кнопки звука свои звуки, мимо кнопок звука нет', () => {
@@ -21,7 +21,7 @@ describe('звуки интерфейса', () => {
     expect(sfxForClick(notBtn)).toBeNull();
     expect(sfxForClick(null)).toBeNull();
   });
-  it('у каждого звука есть хотя бы один вариант', () => {
-    for (const n of Object.values(SFX)) expect(n).toBeGreaterThan(0);
+  it('у каждого нужного звука один файл', () => {
+    for (const n of Object.values(SFX)) expect(n).toBe(1);
   });
 });
