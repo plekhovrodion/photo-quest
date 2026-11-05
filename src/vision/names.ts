@@ -40,7 +40,7 @@ const RU: Record<string, string> = {
   cheeseburger: 'чизбургер', hotdog: 'хот-дог', hamburger: 'гамбургер', purse: 'сумка', 'plastic bag': 'пакет',
   cab: 'машина', 'beach wagon': 'машина', bike: 'велосипед', bunting: 'птица', 'park bench': 'скамейка',
   'bath towel': 'полотенце', 'paper towel': 'бумажное полотенце', knapsack: 'рюкзак', 
-  // классы COCO из выхода YOLOv10s, которых нет выше
+  // классы детектора COCO-SSD, которых нет выше
   'sports ball': 'мяч', 'teddy bear': 'плюшевый мишка', 'cell phone': 'телефон', 'wine glass': 'бокал',
   'dining table': 'стол', 'potted plant': 'комнатное растение', 'hair drier': 'фен', 'traffic light': 'светофор',
   scissors: 'ножницы', toothbrush: 'зубная щётка', mouse: 'компьютерная мышка', banana: 'банан', apple: 'яблоко',

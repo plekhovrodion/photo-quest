@@ -9,7 +9,7 @@ import { targetOf } from './camera/target';
 import { verifyPhoto } from './api/verify';
 import { COLOR_RU } from './vision/names';
 import { englishFor } from './data/english';
-import { loadDetectorModel } from './vision/models';
+import { preloadModels, loadCoco, modelStatus, onModelStatus } from './vision/models';
 import { confetti, confettiBehind } from './fx/confetti';
 import { typeText, stopTyping } from './fx/typewriter';
 import { speak, speakEnglish, speakPause, stopSpeech, isMuted, setMuted } from './audio/sounds';
@@ -25,6 +25,7 @@ import { bootFirstStep, bootSecondStep } from './ui/boot';
 import { isOnboarded, markOnboarded } from './onboarding';
 import { objectSvg, colorBallSvg, fitObject } from './map/objects';
 import { album, toSticker, type Sticker } from './album';
+import { CLIP_OBJECTS } from './data/clip';
 import { loadProgress, recordTask, type Progress } from './progress';
 import { createStore } from './storage/store';
 import { checkIcon, backIcon } from './ui/icons';
@@ -105,6 +106,9 @@ function on(id: string, fn: () => void) {
 
 function startLevel(l: Level) {
   if (!isUnlocked(l)) return; // закрытое место не открываем даже напрямую
+  if (l.tasks.some((task) => targetOf(task).requiresModels)) {
+    setTimeout(() => preloadModels(), 900); // предметные модели начинают грузиться при входе в подходящее место
+  }
   level = l;
   state = null;
   render();
@@ -118,13 +122,92 @@ function nextTaskAfter(l: Level, cur: Task): Task | null {
 }
 
 let promptSpoken: string | null = null;
+let taskLoadToken = 0;
+
+function modelLoadingScreen(): {
+  paint(progress: number): void;
+  fail(retry: () => void, back: () => void): void;
+} {
+  show(`<div class="loading-screen model-loading-screen" role="status" aria-label="Загрузка распознавания">
+    <div class="loc-progress" role="progressbar" aria-label="Загрузка распознавания" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0"><div class="loc-track"><div class="loc-fill" style="background-image:url('${import.meta.env.BASE_URL}art/loc/stripe-a.svg')"></div></div></div>
+    <p class="model-load-error" hidden>Не удалось загрузить распознавание</p>
+    <div class="model-load-actions" hidden><button id="model-retry" type="button">Повторить</button><button id="model-back" type="button">Назад</button></div>
+  </div>`, 'screen-model-loading');
+  const screen = root.querySelector<HTMLElement>('.model-loading-screen')!;
+  const fill = screen.querySelector<HTMLElement>('.loc-fill')!;
+  const bar = screen.querySelector<HTMLElement>('.loc-progress')!;
+  return {
+    paint(value) {
+      const percent = Math.round(value * 100);
+      fill.style.setProperty('--w', `${percent}%`);
+      bar.setAttribute('aria-valuenow', String(percent));
+    },
+    fail(retry, back) {
+      screen.querySelector<HTMLElement>('.model-load-error')!.hidden = false;
+      screen.querySelector<HTMLElement>('.model-load-actions')!.hidden = false;
+      screen.querySelector<HTMLButtonElement>('#model-retry')!.onclick = retry;
+      screen.querySelector<HTMLButtonElement>('#model-back')!.onclick = back;
+    },
+  };
+}
+
+async function prepareTask(task: Task, token: number): Promise<void> {
+  const needsModels = targetOf(task).requiresModels ?? true;
+  const needCoco = needsModels;
+  const needClip = needsModels;
+  const initial = modelStatus();
+  const cocoReady = !needCoco || initial.coco >= 1;
+  const clipReady = !needClip || initial.clip >= 1;
+  if (cocoReady && clipReady) {
+    if (token === taskLoadToken) { state = createGame([task]); render(); }
+    return;
+  }
+
+  sayCurrentTask = null;
+  let active = true;
+  const startedAt = performance.now();
+  const screen = modelLoadingScreen();
+  const paint = () => {
+    if (!active) return;
+    const status = modelStatus();
+    const elapsed = performance.now() - startedAt;
+    // COCO SSD doesn't expose byte-level progress; ease its estimate forward while it loads.
+    const cocoProgress = status.coco >= 1 ? 1 : 0.92 * (1 - Math.exp(-elapsed / 12000));
+    const parts = [
+      ...(needCoco ? [cocoProgress] : []),
+      ...(needClip ? [status.clip] : []),
+    ];
+    screen.paint(parts.length ? Math.min(0.96, parts.reduce((sum, part) => sum + part, 0) / parts.length) : 0.96);
+  };
+  const unsubscribe = onModelStatus(paint);
+  const timer = window.setInterval(paint, 120);
+  try {
+    const pending: Promise<unknown>[] = [];
+    if (needCoco && initial.coco < 1) pending.push(loadCoco());
+    if (needClip && initial.clip < 1) pending.push(import('./vision/clip').then((clip) => clip.loadClip()));
+    await Promise.all(pending);
+    active = false;
+    unsubscribe();
+    clearInterval(timer);
+    if (token === taskLoadToken) { state = createGame([task]); render(); }
+  } catch {
+    active = false;
+    unsubscribe();
+    clearInterval(timer);
+    if (token !== taskLoadToken) return;
+    screen.fail(
+      () => { void prepareTask(task, token); },
+      () => { taskLoadToken++; toMap(); },
+    );
+  }
+}
+
 function startTask(task: Task) {
   if (!canAfford(progress.found[task.id] !== undefined)) { void showNoBeads(); return; }
+  const token = ++taskLoadToken;
   promptSpoken = null;
   recorded = null; // новое прохождение задания: прежний итог не переиспользуем
-  if (targetOf(task).words?.length) void loadDetectorModel().catch(() => {});
-  state = createGame([task]);
-  render();
+  void prepareTask(task, token);
 }
 
 // Бусины закончились: новое задание не открыть, найденные доступны. Если подключён пейвол, предлагаем полный доступ.
@@ -184,7 +267,7 @@ async function processCapture(task: Task, cap: Captured) {
     if (photoUrl) URL.revokeObjectURL(photoUrl);
     photoUrl = URL.createObjectURL(photo);
     dispatch({ type: 'photo-taken' });
-    const verdict = await verifyPhoto(photo, task, { cropped: wasCropped, liveClass: cap.liveClass });
+    const verdict = await verifyPhoto(photo, task, { cropped: wasCropped, liveClass: cap.liveClass, liveClip: cap.liveClip });
     let match = verdict.match;
     // Почти подошло: не переспрашиваем ребёнка и не отказываем, а засчитываем и называем предмет по заданию.
     if (!match && verdict.maybe) {
@@ -498,6 +581,7 @@ function taskArt(t: Task, cls = 'obj3d'): string {
 // Название предмета задания в именительном падеже для подписи наклейки.
 function taskName(t: Task): string {
   if (t.local?.kind === 'color') return `${COLOR_RU[t.local.color]} цвет`;
+  if (t.local?.kind === 'labels' && t.local.clip) return CLIP_OBJECTS[t.local.clip] ?? goalOf(t);
   return goalOf(t);
 }
 
@@ -850,7 +934,8 @@ void bootFirstStep().then(() => {
     } else if (!state && root.classList.contains('screen-menu')) render();
   });
 
-  // Дальше в простое: звуки. YOLO загружается при открытии первого задания на предмет.
+  // Дальше в простое: звуки и лёгкая модель распознавания. CLIP загружается
+  // после входа в уровень, чтобы главный экран открылся без ожидания 85 МБ.
   bootSecondStep(() => {
     startSfxLoad();
   });

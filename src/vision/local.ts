@@ -3,7 +3,9 @@ import { colorShares, type ColorName } from './color';
 import { evaluate, isMaybe, type Ctx } from './evaluate';
 import { matchesLabels, PROB_MIN, type Prediction } from './labels';
 import { COLOR_RU, ruName } from './names';
-import { loadDetectorModel } from './models';
+import { heavyModelsAllowed, loadCoco } from './models';
+import type { ClipRank } from './clip';
+import { CLIP_OBJECTS } from '../data/clip';
 
 const SAMPLE = 96;
 
@@ -61,7 +63,8 @@ export function fusePredictions(top: Prediction[], liveClass?: string): Predicti
 
 export interface VerifyOpts {
   cropped?: boolean; // кадр уже вырезан по предмету — цвет считаем по всему кадру
-  liveClass?: string; // класс, который YOLO нашла в рамке, учитывается как ещё один сигнал
+  liveClass?: string; // класс, который живая камера нашла в рамке (COCO), учитывается как ещё один сигнал
+  liveClip?: boolean; // CLIP уже узнал нужный предмет в этом кадре в живой камере
 }
 
 export async function localVerify(
@@ -81,21 +84,34 @@ export async function localVerify(
     }
     return cache.shares;
   };
-  // Сигналы: детектор YOLO по снимку (80 классов COCO)
+  // Сигналы: детектор COCO по снимку (80 классов, знает вилку, ножницы, зубную щётку, птицу, морковку)
   // и класс, найденный живой камерой.
   const getPreds = async () => {
     if (!cache.preds) {
-      const dets = await loadDetectorModel().then((m) => m.detect(canvas, 6, 0.3)).catch(() => []);
+      const dets = await loadCoco().then((m) => m.detect(canvas, 6, 0.3)).catch(() => []);
       cache.preds = fusePredictions(dets.map((d) => ({ className: d.class, probability: d.score })), opts.liveClass);
     }
     return cache.preds;
   };
-  const ctx: Ctx = { shares: getShares, predictions: getPreds };
+  let clipRanks: ClipRank[] | null | undefined;
+  const getClip = async () => {
+    if (clipRanks === undefined) {
+      if (!heavyModelsAllowed()) clipRanks = null;
+      else {
+        const clip = await import('./clip');
+        clipRanks = await clip.rankObjects(canvas, canvas.width, canvas.height).catch(() => null);
+      }
+    }
+    return clipRanks;
+  };
+  const ctx: Ctx = { shares: getShares, predictions: getPreds, clip: getClip, liveClip: opts.liveClip };
   const match = await evaluate(check, ctx);
   const reason = cache.preds?.[0]?.className ?? 'local';
   if (match) {
     const byPreds = pickLabel(cache.preds, check);
-    return { match, reason, label: byPreds };
+    const viaClip = check.kind === 'labels' && check.clip && (opts.liveClip || (clipRanks && (await import('./clip')).clipAccepts(clipRanks, check.clip)));
+    // Если предмет узнал только CLIP, называем его по заданию, а не по случайному классу детектора.
+    return { match, reason, label: viaClip ? CLIP_OBJECTS[check.clip!] : byPreds };
   }
 
   // Неверно: объясняем, что заврик увидел на фото.
@@ -104,7 +120,10 @@ export async function localVerify(
   if (check.kind === 'color' || check.kind === 'multicolor') {
     found = colorPhrase(getShares());
   } else {
-    foundLabel = anyLabel(await getPreds());
+    // Что на фото: если CLIP уверен — берём его ответ (он знает предметы игры лучше), иначе первый ответ MobileNet
+    const clipTop = (await getClip())?.find((r) => !r.bg);
+    const sure = clipTop && clipRanks && (await import('./clip')).clipProb(clipRanks, clipTop.en) >= 0.3 ? clipTop.ru : undefined;
+    foundLabel = sure ?? anyLabel(await getPreds()) ?? clipTop?.ru;
     found = foundLabel ? `Это ${foundLabel}` : colorPhrase(getShares());
   }
   return { match, maybe: await isMaybe(check, ctx), reason, found, foundLabel };

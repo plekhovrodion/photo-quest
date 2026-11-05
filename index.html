@@ -11,11 +11,11 @@
       .loading-screen.pre-splash { position: fixed; inset: 0; z-index: 80; display: flex; align-items: center; justify-content: center; padding: 24px; background: radial-gradient(circle at 50% 38%, #f2fff4 0, #d9f6de 55%, #bfeccb 100%); }
       .pre-splash .loc-progress { width: min(100%, 560px); height: 40px; }
       .pre-splash .loc-track { height: 40px; border-radius: 999px; padding: 4px; background: rgba(255, 255, 255, .75); overflow: hidden; }
-      .pre-splash .loc-fill { display: block; width: var(--w, 0%); height: 100%; border-radius: 999px; background: #66d385; transition: width .25s ease-out; }
+      .pre-splash .loc-fill { display: block; width: var(--w, 25%); height: 100%; border-radius: 999px; background-color: #66d385; background-image: url('/photo_quest/art/loc/stripe-a.svg'); background-repeat: repeat-x; background-size: 30px 100%; transition: width .25s ease-out; }
     </style>
   </head>
   <body>
-    <div id="app" aria-live="polite"><div class="loading-screen pre-splash"><div class="loc-progress" role="progressbar" aria-label="Загрузка" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0"><div class="loc-track"><div class="loc-fill" style="--w:0%"></div></div></div></div></div>
+    <div id="app" aria-live="polite"><div class="loading-screen pre-splash"><div class="loc-progress" role="progressbar" aria-label="Загрузка" aria-valuemin="0" aria-valuemax="100" aria-valuenow="25"><div class="loc-track"><div class="loc-fill" style="--w:25%"></div></div></div></div></div>
     <script type="module" src="/src/main.ts"></script>
   </body>
 </html>

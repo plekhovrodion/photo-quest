@@ -9,12 +9,14 @@ const GIVE_UP_MS = 4000; // если сеть медленная, показыв
 function overlay(): { paint(p: number): void; remove(): void } {
   const splash = document.querySelector<HTMLElement>('.pre-splash');
   const el = splash ?? document.createElement('div');
-  el.className = 'loading-screen';
+  // Keep the critical pre-splash sizing rules after JS takes over, so the bar
+  // doesn't jump while the app stylesheet is loading.
+  el.className = splash ? 'loading-screen pre-splash' : 'loading-screen';
   if (!splash) {
     el.setAttribute('role', 'dialog');
     el.setAttribute('aria-modal', 'true');
     el.setAttribute('aria-label', 'Загрузка');
-    el.innerHTML = `<div class="loc-progress" role="progressbar" aria-label="Загрузка" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0"><div class="loc-track"><div class="loc-fill"></div></div></div>`;
+    el.innerHTML = `<div class="loc-progress" role="progressbar" aria-label="Загрузка" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0"><div class="loc-track"><div class="loc-fill" style="background-image:url('${import.meta.env.BASE_URL}art/loc/stripe-a.svg')"></div></div></div>`;
     document.body.appendChild(el);
   }
   const fill = el.querySelector<HTMLElement>('.loc-fill')!;
@@ -35,7 +37,7 @@ export async function bootFirstStep(): Promise<void> {
   const t0 = performance.now();
   let done = 0;
   const screen = overlay();
-  const paint = () => screen.paint(Math.min(done / total, (performance.now() - t0) / MIN_SHOW_MS));
+  const paint = () => screen.paint(Math.max(0.25, Math.min(done / total, (performance.now() - t0) / MIN_SHOW_MS)));
   const tick = () => { done++; paint(); };
   const timer = setInterval(paint, 100);
   const fonts = Promise.all(FONTS.map((f) => document.fonts?.load(f).catch(() => []).finally(tick)));

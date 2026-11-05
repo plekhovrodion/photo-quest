@@ -1,9 +1,9 @@
 export type Kind = 'color' | 'object';
 
-// Локальная проверка без сервера: по цвету пикселей или классам YOLO.
+// Локальная проверка без сервера: по цвету пикселей или по классам предметов (COCO-SSD) и CLIP.
 export type LocalCheck =
   | { kind: 'color'; color: import('../vision/color').ColorName }
-  | { kind: 'labels'; words: string[] }
+  | { kind: 'labels'; words: string[]; clip?: string } // clip — название предмета для CLIP (src/data/clip.ts)
   | { kind: 'and'; checks: LocalCheck[] }
   | { kind: 'any' } // мягкая проверка: на фото есть узнаваемый предмет
   | { kind: 'multicolor'; min: number }; // не меньше min разных цветов
@@ -33,9 +33,27 @@ const color = (id: string, name: string, gen: string, hint: string) =>
     { kind: 'color', color: id as import('../vision/color').ColorName });
 
 // Конкретный предмет. words — английские названия классов COCO (детектор): достаточно, чтобы он назвал один из них.
-// Слова для предметов — классы COCO, которые поддерживает YOLOv10s.
+// Предметы вне COCO проверяет CLIP (clip). Старые названия ImageNet в списках безвредны: детектор их не выдаёт.
 const thing = (id: string, accusative: string, hint: string, ...words: string[]) =>
-  t('object', id, `Найди ${accusative}`, `На фото виден предмет: ${accusative}.`, hint, { kind: 'labels', words });
+  t('object', id, `Найди ${accusative}`, `На фото виден предмет: ${accusative}.`, hint, { kind: 'labels', words, clip: CLIP_OF[id] });
+
+// Название предмета для CLIP по id задания.
+const CLIP_OF: Record<string, string> = {
+  spoon: 'spoon', cup: 'cup', plate: 'plate', bowl: 'bowl', bottle: 'bottle', fridge: 'refrigerator',
+  microwave: 'microwave oven', sink: 'sink', bed: 'bed', sofa: 'sofa', chair: 'chair', tv: 'television', book: 'book',
+  clock: 'wall clock', plant: 'potted plant', teddy: 'teddy bear', vase: 'vase', pen: 'pen', scissors: 'scissors',
+  ruler: 'ruler', laptop: 'laptop', phone: 'mobile phone', keyboard: 'computer keyboard', mouse: 'computer mouse',
+  umbrella: 'umbrella', shoe: 'shoe', backpack: 'backpack', bag: 'handbag', skateboard: 'skateboard', banana: 'banana',
+  apple: 'apple', orange: 'orange fruit', carrot: 'carrot', broccoli: 'broccoli', pizza: 'pizza', sandwich: 'sandwich',
+  cake: 'cake', bike: 'bicycle', car: 'car', bus: 'bus', bench: 'bench', dog: 'dog', cat: 'cat', bird: 'bird',
+  butterfly: 'butterfly', flower: 'flower', mushroom: 'mushroom', toothbrush: 'toothbrush', toilet: 'toilet', towel: 'towel',
+  kite: 'kite', airplane: 'airplane', train: 'train', horse: 'horse', sheep: 'sheep',
+  fork: 'fork', kettle: 'kettle', toaster: 'toaster', pan: 'frying pan', pot: 'pot', wineglass: 'wine glass', guitar: 'guitar', globe: 'globe',
+  frame: 'picture frame', calculator: 'calculator', eraser: 'eraser', pencilcase: 'pencil case', glue: 'glue stick',
+  pencil: 'pencil', shampoo: 'shampoo bottle', hairbrush: 'hairbrush', soap: 'soap', toothpaste: 'toothpaste',
+  duck: 'rubber duck', bathtub: 'bathtub', boots: 'boots', helmet: 'helmet', gloves: 'gloves', scarf: 'scarf',
+  jacket: 'jacket', tie: 'necktie', egg: 'egg', cheese: 'cheese', tomato: 'tomato',
+};
 
 const ALL_LEVELS: Level[] = [
   {
@@ -63,7 +81,9 @@ const ALL_LEVELS: Level[] = [
       thing('bottle', 'бутылку', 'В ней бывает вода или сок', 'bottle'),
       thing('fridge', 'холодильник', 'В нём живёт еда и холод', 'refrigerator'),
       thing('microwave', 'микроволновку', 'В ней разогревают еду', 'microwave'),
+      thing('kettle', 'чайник', 'В нём кипятят воду для чая', 'kettle', 'teapot'),
       thing('toaster', 'тостер', 'В нём поджаривают хлеб', 'toaster'),
+      thing('pan', 'сковородку', 'На ней жарят блины и яичницу', 'frying pan', 'skillet', 'wok'),
       thing('pot', 'кастрюлю', 'В ней варят суп', 'pot', 'saucepan', 'cooking'),
       thing('wineglass', 'бокал', 'Он на тонкой ножке', 'wine glass', 'goblet'),
       thing('fork', 'вилку', 'Ею накалывают еду', 'fork'),
@@ -81,6 +101,8 @@ const ALL_LEVELS: Level[] = [
       thing('plant', 'комнатное растение', 'Оно растёт в горшке', 'potted plant', 'flowerpot'),
       thing('teddy', 'плюшевого мишку', 'Он мягкий, с ним спят', 'teddy'),
       thing('vase', 'вазу', 'В неё ставят цветы', 'vase'),
+      thing('guitar', 'гитару', 'У неё шесть струн', 'guitar'),
+      thing('globe', 'глобус', 'Это маленькая модель Земли', 'globe'),
       thing('frame', 'картину', 'Она висит на стене в рамке', 'picture frame', 'frame'),
     ],
   },
@@ -94,6 +116,10 @@ const ALL_LEVELS: Level[] = [
       thing('phone', 'телефон', 'По нему звонят и смотрят', 'cell phone', 'telephone', 'phone'),
       thing('keyboard', 'клавиатуру', 'На ней много кнопок с буквами', 'keyboard'),
       thing('mouse', 'компьютерную мышку', 'Ею двигают стрелочку на экране', 'mouse'),
+      thing('calculator', 'калькулятор', 'Он умеет считать', 'calculator'),
+      thing('eraser', 'ластик', 'Им стирают карандаш', 'eraser', 'rubber'),
+      thing('pencilcase', 'пенал', 'В нём лежат ручки и карандаши', 'pencil case', 'pencil box'),
+      thing('glue', 'клей', 'Им склеивают бумагу', 'glue'),
       thing('pencil', 'карандаш', 'Им рисуют и пишут', 'pencil'),
     ],
   },
@@ -104,12 +130,19 @@ const ALL_LEVELS: Level[] = [
       thing('toothbrush', 'зубную щётку', 'Ею чистят зубы', 'toothbrush'),
       thing('towel', 'полотенце', 'Им вытираются после душа', 'towel'),
       thing('toilet', 'унитаз', 'Он стоит в туалете', 'toilet'),
+      thing('shampoo', 'шампунь', 'Им моют волосы', 'shampoo', 'lotion'),
+      thing('hairbrush', 'расчёску', 'Ею причёсывают волосы', 'hairbrush', 'comb', 'brush'),
+      thing('soap', 'мыло', 'Оно пенится, когда моешь руки', 'soap', 'soap dispenser'),
+      thing('toothpaste', 'зубную пасту', 'Её выдавливают на щётку', 'toothpaste'),
+      thing('duck', 'уточку', 'Она плавает в ванне', 'rubber duck', 'duck'),
+      thing('bathtub', 'ванну', 'В ней купаются', 'bathtub', 'tub'),
     ],
   },
   {
     id: 'hall', title: 'Прихожая',
     tasks: [
       thing('umbrella', 'зонт', 'Он спасает от дождя', 'umbrella'),
+      thing('shoe', 'обувь', 'Её надевают на улицу', 'shoe', 'sandal', 'loafer', 'clog', 'boot'),
       thing('backpack', 'рюкзак', 'С ним ходят в школу', 'backpack', 'knapsack'),
       thing('bag', 'сумку', 'В неё кладут вещи', 'handbag', 'purse', 'bag'),
       thing('skateboard', 'скейтборд', 'Он стоит на четырёх колёсиках', 'skateboard'),
@@ -132,6 +165,9 @@ const ALL_LEVELS: Level[] = [
       thing('pizza', 'пиццу', 'Её режут на кусочки', 'pizza'),
       thing('sandwich', 'бутерброд', 'Хлеб с чем-то вкусным', 'sandwich', 'hotdog', 'cheeseburger', 'hamburger'),
       thing('cake', 'торт', 'Его едят на день рождения', 'cake'),
+      thing('egg', 'яйцо', 'Из него вылупляются цыплята', 'egg'),
+      thing('cheese', 'сыр', 'Он жёлтый и с дырками', 'cheese'),
+      thing('tomato', 'помидор', 'Он красный и круглый', 'tomato'),
     ],
   },
   {
@@ -146,6 +182,7 @@ const ALL_LEVELS: Level[] = [
       thing('bird', 'птицу', 'Она умеет летать', 'bird'),
       thing('butterfly', 'бабочку', 'У неё яркие крылья', 'butterfly'),
       thing('flower', 'цветок', 'Он красиво пахнет', 'daisy', 'sunflower', 'flower'),
+      thing('mushroom', 'гриб', 'Он растёт в лесу, трогать его нельзя', 'mushroom', 'agaric', 'bolete'),
       thing('kite', 'воздушного змея', 'Он летает на длинной верёвочке', 'kite'),
       thing('airplane', 'самолёт', 'Он летит высоко в небе', 'airplane'),
       thing('train', 'поезд', 'Он едет по рельсам', 'train'),
@@ -161,7 +198,7 @@ const DISABLED = new Set([
   'horse', 'sheep', // улица: лошадь и овца скрыты по просьбе
   'spoon', 'cup', 'bowl', // кухня: ложка 63%, чашка 75%, миска 63% (и путается с тарелкой)
   'sofa', 'book', // комната: диван 38%, книга 75%
-  'pen', 'ruler', // школа: тонкие предметы, детектор может путать их с другими классами
+  'pen', 'ruler', // школа: тонкие предметы, уверенность CLIP низкая, друг с другом путаются
   'bag', // прихожая: сумка 63% (путается с рюкзаком)
   'carrot', // еда: 75%
   'butterfly', // двор: 80%

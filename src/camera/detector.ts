@@ -2,9 +2,9 @@ import type { Box } from './box';
 import type { Target } from './target';
 import { matchesLabels } from '../vision/labels';
 
-import { loadDetectorModel, type DetectorModel } from '../vision/models';
+import { loadCoco, type CocoModel } from '../vision/models';
 
-export const loadDetector = (): Promise<DetectorModel> => loadDetectorModel();
+export const loadDetector = (): Promise<CocoModel> => loadCoco();
 
 export interface Detection { box: Box; className: string; score: number }
 
