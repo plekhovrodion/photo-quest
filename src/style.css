@@ -753,7 +753,7 @@ button.pw-back:not(.level):not(.stop):not(.cube-btn) { position: absolute; top: 
 #app.screen-map .loc-body { padding: 24px 24px 16px; }
 #app.screen-map button.mp-tile { width: 188px; min-width: 0; height: auto; min-height: 0; padding: 8px; border: 0; border-radius: 24px; background: #fff; box-shadow: 0 6px 0 rgba(0, 0, 0, .1);
   display: flex; flex-direction: column; align-items: stretch; gap: 0; cursor: pointer; font: inherit; color: inherit; transition: transform .2s cubic-bezier(.22, 1, .36, 1), box-shadow .2s cubic-bezier(.22, 1, .36, 1);
-  animation: tk-in .7s cubic-bezier(.22, 1, .36, 1) calc(.15s + var(--i) * .16s) backwards; }
+}
 #app.screen-map button.mp-tile.left { align-self: flex-start; }
 #app.screen-map button.mp-tile.right { align-self: flex-end; }
 #app.screen-map button.mp-tile:hover { transform: translateY(-2px); box-shadow: 0 8px 0 rgba(0, 0, 0, .1); }
@@ -1089,7 +1089,6 @@ button.pw-back:not(.level):not(.stop):not(.cube-btn) { position: absolute; top: 
 
 /* Подсказка «сюда нажми»: цель пульсирует (стрелок больше нет) */
 @keyframes pulse-scale { 0%, 100% { scale: 1; } 50% { scale: 1.1; } }
-#app.screen-map button.mp-tile.pulse:not(.locked) { animation: pulse-scale 1s ease-in-out infinite; }
 #app.screen-loc button.loc-card.pulse { animation: loc-pop .8s cubic-bezier(.22, 1, .36, 1) backwards, pulse-scale 1s ease-in-out 1.2s infinite; animation-delay: calc(var(--i, 0) * 90ms + 200ms), 1.2s; }
 #app.screen-loc button.loc-play.pulse { animation: pulse-scale 1s ease-in-out infinite; }
 @media (prefers-reduced-motion: reduce) {
