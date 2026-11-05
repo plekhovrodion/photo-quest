@@ -3,6 +3,8 @@ const watched = new WeakSet<HTMLImageElement>();
 const groups = new WeakSet<HTMLElement>();
 const imageWaits = new WeakMap<HTMLImageElement, Promise<void>>();
 const backgroundWaits = new Map<string, Promise<void>>();
+const groupTimeouts = new WeakMap<HTMLElement, ReturnType<typeof setTimeout>>();
+const GROUP_LOAD_TIMEOUT_MS = 10_000;
 
 function settle(image: HTMLImageElement, state: 'loaded' | 'failed') {
   image.dataset.assetState = state;
@@ -76,6 +78,23 @@ function watchAssetGroup(host: HTMLElement) {
   groups.add(host);
   const check = () => {
     if (!host.isConnected) return;
+    if (!host.classList.contains('asset-pending')) {
+      const timeout = groupTimeouts.get(host);
+      if (timeout) clearTimeout(timeout);
+      groupTimeouts.delete(host);
+      return;
+    }
+    if (!groupTimeouts.has(host)) {
+      const timeout = setTimeout(() => {
+        groupTimeouts.delete(host);
+        if (!host.isConnected || !host.classList.contains('asset-pending')) return;
+        // Some mobile browsers never fire load/error for a stalled resource.
+        // Reveal the card after a bounded wait instead of leaving its skeleton forever.
+        host.classList.remove('asset-pending');
+        host.classList.add('asset-ready');
+      }, GROUP_LOAD_TIMEOUT_MS);
+      groupTimeouts.set(host, timeout);
+    }
     const images = Array.from(host.querySelectorAll<HTMLImageElement>('img:not(.loc-check):not(.mp-check)'));
     images.forEach(watchImage);
     const urls = backgroundUrls(host);
@@ -89,6 +108,9 @@ function watchAssetGroup(host: HTMLElement) {
       if (imagesReady && backgroundsReady && petReady) {
         host.classList.remove('asset-pending');
         host.classList.add('asset-ready');
+        const timeout = groupTimeouts.get(host);
+        if (timeout) clearTimeout(timeout);
+        groupTimeouts.delete(host);
       }
     });
   };
