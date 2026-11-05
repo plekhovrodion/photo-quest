@@ -20,7 +20,7 @@ export const ENGLISH: Record<string, Word> = {
   'object-mouse': W('computer mouse', 'компьютерная мышка'),
   'object-sink': W('sink', 'раковина'), 'object-toothbrush': W('toothbrush', 'зубная щётка'), 'object-towel': W('towel', 'полотенце'),
   'object-toilet': W('toilet', 'унитаз'),
-  'object-umbrella': W('umbrella', 'зонт'), 'object-shoe': W('shoe', 'обувь'), 'object-backpack': W('backpack', 'рюкзак'),
+  'object-umbrella': W('umbrella', 'зонт'), 'object-shoe': W('shoes', 'обувь'), 'object-backpack': W('backpack', 'рюкзак'),
   'object-bag': W('bag', 'сумка'), 'object-skateboard': W('skateboard', 'скейтборд'),
   'object-banana': W('banana', 'банан'), 'object-apple': W('apple', 'яблоко'), 'object-orange': W('orange', 'апельсин'),
   'object-carrot': W('carrot', 'морковка'), 'object-broccoli': W('broccoli', 'брокколи'), 'object-pizza': W('pizza', 'пицца'),
