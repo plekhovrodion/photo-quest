@@ -426,10 +426,9 @@ function renderOnboarding() {
 // Главная по макету: карта-дорожка из мест, плитки идут зигзагом, у каждой своя полоса прогресса; красная «Играть» прибита к низу.
 // Закрытые места остаются видимыми, но открываются только после полного прохождения «Цветов».
 function shakeLocked(b: HTMLElement, list: Phrase[]) {
-  // На телефоне попадание по одной закрытой карточке не всегда заметно.
-  // Показываем реакцию на всех местах, сохраняя сами карточки на экране.
-  const tiles = b.closest('.mp-road')?.querySelectorAll<HTMLElement>('.mp-tile') ?? [b];
-  tiles.forEach((tile) => { tile.classList.remove('shake'); void tile.offsetWidth; tile.classList.add('shake'); });
+  b.classList.remove('shake');
+  void b.offsetWidth;
+  b.classList.add('shake');
   const line = pickPhrase(list);
   speak(line.text, false, line.who);
 }

@@ -54,13 +54,31 @@ const load = (pet: PetName, i: number | Mood) => {
   if (i === 'sad-loop') i = 'sad';
   const key = `${pet}-${i}`;
   let p = json.get(key);
-  if (!p) { p = fetch(`${BASE()}anim/${pet}/${typeof i === 'number' ? `idle-${i}` : i}.json`).then((r) => r.json()); json.set(key, p); }
+  if (!p) {
+    p = fetch(`${BASE()}anim/${pet}/${typeof i === 'number' ? `idle-${i}` : i}.json`)
+      .then((r) => { if (!r.ok) throw new Error(`pet animation ${r.status}`); return r.json(); });
+    json.set(key, p);
+    void p.catch(() => { if (json.get(key) === p) json.delete(key); });
+  }
   return p;
 };
 
 function markPetAssetsReady(el: HTMLElement) {
+  if (el.classList.contains('pet-assets-ready')) return;
   el.classList.add('pet-assets-ready');
   el.dispatchEvent(new Event('pet-assets-ready', { bubbles: true }));
+}
+
+function showStaticPet(el: HTMLElement, pet: PetName, mood?: Mood) {
+  if (!el.isConnected || el.querySelector('.pet-static')) { markPetAssetsReady(el); return; }
+  const img = document.createElement('img');
+  img.className = 'pet-static';
+  img.alt = '';
+  img.addEventListener('load', () => markPetAssetsReady(el), { once: true });
+  img.addEventListener('error', () => markPetAssetsReady(el), { once: true });
+  img.src = `${BASE()}art/pets/${pet}-${mood?.startsWith('sad') ? 'sad' : 'happy'}.svg`;
+  el.appendChild(img);
+  if (img.complete) markPetAssetsReady(el);
 }
 
 // Не больше двух питомцев одновременно создают свои анимации (разбор Lottie тяжёлый для слабого телефона).
@@ -79,6 +97,11 @@ async function mount(el: HTMLElement) {
   const st: Live = { el, anims: [], boxes: [], cur: -1, visible: true, dead: false };
   live.push(st);
   const mood = el.dataset.mood as Mood | undefined; // реакция на ответ: один раз, потом снова ожидание
+  // Не оставляем скелетон навсегда, если загрузчик анимации не прислал DOMLoaded/data_failed.
+  const readyTimeout = setTimeout(() => {
+    if (!st.dead && el.isConnected && !el.classList.contains('pet-assets-ready')) showStaticPet(el, pet, mood);
+  }, 12_000);
+  el.addEventListener('pet-assets-ready', () => clearTimeout(readyTimeout), { once: true });
   let idleData: object | null;
   let emo: object | null = null;
   const loopMood = mood === 'happy-loop' || mood === 'sad-loop'; // зацикленная реакция сама крутится, idle-анимация ей не нужна
@@ -88,16 +111,7 @@ async function mount(el: HTMLElement) {
   } catch {
     // Если Lottie не загрузилась из-за краткого обрыва сети, показываем питомца
     // статичной картинкой.
-    if (!st.dead && el.isConnected && !el.querySelector('.pet-anim, .pet-static')) {
-      const img = document.createElement('img');
-      img.className = 'pet-static';
-      img.alt = '';
-      img.addEventListener('load', () => markPetAssetsReady(el), { once: true });
-      img.addEventListener('error', () => markPetAssetsReady(el), { once: true });
-      img.src = `${BASE()}art/pets/${pet}-${mood?.startsWith('sad') ? 'sad' : 'happy'}.svg`;
-      el.appendChild(img);
-      if (img.complete) markPetAssetsReady(el);
-    }
+    if (!st.dead) showStaticPet(el, pet, mood);
     return;
   }
   if (st.dead || !el.isConnected) return;
@@ -115,9 +129,11 @@ async function mount(el: HTMLElement) {
     box.className = 'pet-anim';
     el.appendChild(box);
     st.boxes.push(box);
-    const animation = lottie.loadAnimation({ container: box, renderer: 'svg', loop: true, autoplay: false, animationData: idleData });
+    let animation: AnimationItem;
+    try { animation = lottie.loadAnimation({ container: box, renderer: 'svg', loop: true, autoplay: false, animationData: idleData }); }
+    catch { box.remove(); showStaticPet(el, pet, mood); return; }
     animation.addEventListener('DOMLoaded', () => markPetAssetsReady(el));
-    animation.addEventListener('data_failed', () => markPetAssetsReady(el));
+    animation.addEventListener('data_failed', () => showStaticPet(el, pet, mood));
     st.anims.push(animation);
   }
   const idleIndex = st.anims.length ? 0 : -1;
@@ -127,9 +143,11 @@ async function mount(el: HTMLElement) {
     box.className = 'pet-anim';
     el.appendChild(box);
     const loopEmo = (mood === 'happy-loop' || mood === 'sad-loop') && !reduce;
-    const a = lottie.loadAnimation({ container: box, renderer: 'svg', loop: loopEmo, autoplay: false, animationData: emo });
+    let a: AnimationItem;
+    try { a = lottie.loadAnimation({ container: box, renderer: 'svg', loop: loopEmo, autoplay: false, animationData: emo }); }
+    catch { box.remove(); if (idleIndex >= 0) { show(idleIndex); } else showStaticPet(el, pet, mood); return; }
     a.addEventListener('DOMLoaded', () => markPetAssetsReady(el));
-    a.addEventListener('data_failed', () => markPetAssetsReady(el));
+    a.addEventListener('data_failed', () => { if (idleIndex >= 0) show(idleIndex); else showStaticPet(el, pet, mood); });
     st.boxes.push(box);
     st.anims.push(a);
     const i = st.anims.length - 1;
@@ -141,6 +159,7 @@ async function mount(el: HTMLElement) {
     if (st.visible && !document.hidden) a.goToAndPlay(0, true); else a.pause();
     return;
   }
+  if (idleIndex < 0) showStaticPet(el, pet, mood);
 }
 
 // Питомцы грузят свои анимации, только когда попадают в экран (на главной их восемь, а видно два-три): меньше трафика и работы на телефоне.

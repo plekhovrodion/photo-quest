@@ -1024,6 +1024,7 @@ button.pw-back:not(.level):not(.stop):not(.cube-btn) { position: absolute; top: 
 
 /* Подсказка «сюда нажми»: цель пульсирует (стрелок больше нет) */
 @keyframes pulse-scale { 0%, 100% { scale: 1; } 50% { scale: 1.1; } }
+#app.screen-map button.mp-tile.pulse { animation: pulse-scale 1s ease-in-out infinite; }
 #app.screen-loc button.loc-card.pulse { animation: loc-pop .8s cubic-bezier(.22, 1, .36, 1) backwards, pulse-scale 1s ease-in-out 1.2s infinite; animation-delay: calc(var(--i, 0) * 90ms + 200ms), 1.2s; }
 #app.screen-loc button.loc-play.pulse { animation: pulse-scale 1s ease-in-out infinite; }
 @media (prefers-reduced-motion: reduce) {
