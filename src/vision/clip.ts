@@ -1,5 +1,6 @@
 import { CLIP_OBJECTS } from '../data/clip';
 import { heavyModelsAllowed, fetchWithProgress, setClipReady, setClipLoading, setClipError } from './models';
+import { prepareModelCache } from './modelCache';
 import { CLIP_ACCEPT } from './clipConstants';
 export { CLIP_ACCEPT } from './clipConstants';
 
@@ -71,6 +72,7 @@ export function loadClip(): Promise<Ready> {
     worker.addEventListener('error', (e) => fail(new Error(e.message || 'CLIP worker завершился с ошибкой')));
     worker.addEventListener('messageerror', () => fail(new Error('Не удалось прочитать ответ CLIP')));
     void (async () => {
+      await prepareModelCache();
       const [bytes, textRaw] = await Promise.all([
         fetchWithProgress(CLIP_URL, 'clip', controller.signal),
         fetch(TEXT_URL, { signal: controller.signal }).then((r) => {

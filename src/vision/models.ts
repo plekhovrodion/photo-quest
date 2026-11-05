@@ -1,5 +1,7 @@
 // Модели лежат в public/models (скачаны с официальных адресов Google), поэтому грузятся с нашего же сайта:
 // быстро, кэшируются браузером и работают без интернета.
+import { prepareModelCache } from './modelCache';
+
 const BASE = import.meta.env.BASE_URL ?? '/';
 export const COCO_URL = `${BASE}models/ssdlite_mobilenet_v2/model.json`;
 
@@ -68,6 +70,7 @@ let cocoP: Promise<CocoModel> | null = null;
 export function loadCoco(): Promise<CocoModel> {
   cocoP ??= (async () => {
     status.cocoError = undefined;
+    await prepareModelCache();
     const [, coco] = await Promise.all([loadTf(), import('@tensorflow-models/coco-ssd')]);
     const model = (await coco.load({ base: 'lite_mobilenet_v2', modelUrl: COCO_URL })) as unknown as CocoModel;
     try { await model.detect(blank(320, 240), 1, 0.9); } catch { /* прогрев не обязателен */ }
