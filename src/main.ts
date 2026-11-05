@@ -324,7 +324,7 @@ function mapTile(l: Level, i: number): string {
   const locked = !isUnlocked(l);
   const target = !locked && !full && l === targetPlace;
   return `<button class="mp-tile ${i % 2 ? 'right' : 'left'}${full ? ' done' : ''}${locked ? ' locked' : ''}${target ? ' pulse' : ''}" role="listitem" data-i="${i}" style="--i:${i}" ${locked ? 'aria-disabled="true"' : ''} aria-label="${l.title}: найдено ${found} из ${total}${full ? ', всё найдено' : ''}${locked ? ', закрыто: сначала пройди уровень Цвета' : ''}">
-    <span class="mp-win is-room">${roomHtml(l.id, !locked, 'head-', full ? 'happy-loop' : 'sad-loop', locked)}</span>${full ? `<img class="loc-check mp-check" src="${LOC_BASE()}/check.svg" alt="">` : ''}
+    <span class="mp-win is-room">${roomHtml(l.id, !locked, 'head-', full ? 'happy-loop' : 'sad-loop', locked, true)}</span>${full ? `<img class="loc-check mp-check" src="${LOC_BASE()}/check.svg" alt="">` : ''}
     <span class="mp-track" role="progressbar" aria-valuemin="0" aria-valuemax="${total}" aria-valuenow="${found}"><span class="loc-fill" style="--w:${pct}%;background-image:url(${LOC_BASE()}/stripe-a.svg)"></span></span></button>`;
 }
 

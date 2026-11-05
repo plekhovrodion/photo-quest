@@ -857,6 +857,7 @@ button.pw-back:not(.level):not(.stop):not(.cube-btn) { position: absolute; top: 
 .pet { position: absolute; left: var(--px); bottom: var(--pb); width: var(--pw); aspect-ratio: 1; transform: translateX(-50%); pointer-events: none; }
 .pet-anim { position: absolute; inset: 0; display: block; }
 .pet-anim svg { display: block; width: 100%; height: 100%; }
+.pet-static { display: block; width: 100%; height: 100%; }
 
 /* Шапка места с комнатой из Figma: по бокам зеркальные копии комнаты (без питомца), края сходятся без шва */
 .loc-head.has-room { background: linear-gradient(var(--lhead) 98px, var(--lbg) 98px); }

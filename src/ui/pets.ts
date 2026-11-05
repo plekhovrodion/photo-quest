@@ -35,13 +35,15 @@ export const hasRoom = (locId: string) => locId in ROOMS;
 
 // Разметка комнаты: картинка во всю коробку 368:200 плюс место под питомца
 export type Mood = 'happy' | 'sad' | 'happy-loop' | 'sad-loop'; // happy-loop: радость по кругу (экран «Все найдено»)
-export function roomHtml(locId: string, withPet = true, set = '', mood?: Mood, useBareArt = false): string {
+export function roomHtml(locId: string, withPet = true, set = '', mood?: Mood, useBareArt = false, staticPet = false): string {
   const r = ROOMS[locId];
   if (!r) return '';
   const pet = withPet && r.pet && IDLES[r.pet] ? r.pet : undefined;
   const p = pet ? PLACE[pet] : undefined;
   return `<span class="room-box"><img class="room-img" src="${BASE()}art/rooms/${set}${locId}${pet || useBareArt ? '-bare' : ''}.svg" alt="">${
-    pet && p ? `<span class="pet" data-pet="${pet}"${mood ? ` data-mood="${mood}"` : ''} style="--px:${p.x}%;--pb:${p.bottom}%;--pw:${p.w}%" aria-hidden="true"></span>` : ''}</span>`;
+    pet && p ? staticPet
+      ? `<span class="pet" style="--px:${p.x}%;--pb:${p.bottom}%;--pw:${p.w}%" aria-hidden="true"><img class="pet-static" src="${BASE()}art/pets/${pet}-${mood?.startsWith('happy') ? 'happy' : 'sad'}.svg" alt=""></span>`
+      : `<span class="pet" data-pet="${pet}"${mood ? ` data-mood="${mood}"` : ''} style="--px:${p.x}%;--pb:${p.bottom}%;--pw:${p.w}%" aria-hidden="true"></span>` : ''}</span>`;
 }
 
 interface Live { el: HTMLElement; anims: AnimationItem[]; boxes: HTMLElement[]; cur: number; visible: boolean; dead: boolean }
