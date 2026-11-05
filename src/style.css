@@ -902,7 +902,7 @@ button.pw-back:not(.level):not(.stop):not(.cube-btn) { position: absolute; top: 
   #app.screen-tk.tk-task .tk-cam::before { border-radius: 0; }
   #app.screen-tk.tk-task .tk-live .tk-head { position: fixed; z-index: 4; left: 0; right: 0; bottom: 0; max-width: 600px; margin: 0 auto; padding: 20px; gap: 8px; background: #fff; border-radius: 32px 32px 0 0; box-shadow: 0 10px 0 #cbb7ff; }
   #app.screen-tk.tk-task .tk-card.tk-live { --tkico: 112px; }
-  #app.screen-tk.tk-task .tk-live .tk-head .tk-text { font-size: 28px; line-height: 34px; color: #221c5f; }
+  #app.screen-tk.tk-task .tk-live .tk-head .tk-text { font-size: 32px; line-height: 38px; color: #221c5f; }
   #app.screen-tk.tk-task .loc-head { --lbtn: #7a5ad0; --lbtns: #977eda; }
 }
 
