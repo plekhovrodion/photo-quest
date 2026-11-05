@@ -110,11 +110,10 @@ export function heavyModelsAllowed(): boolean {
 
 // Запускаем загрузку моделей в фоне (при старте игры и при входе в категорию).
 export function preloadModels(withClip = true): void {
-  // CLIP тяжелее (~90 МБ), поэтому грузится после лёгкого детектора и только когда игрок уже в игре.
-  // Он необязателен: без него проверка работает на COCO.
-  const light = loadCoco();
-  if (withClip && heavyModelsAllowed()) light.then(() => import('./clip')).then((m) => m.loadClip()).catch(() => {});
-  else light.catch(() => {});
+  // При входе в уровень запускаем обе загрузки независимо: ошибка COCO не должна
+  // задерживать CLIP, который нужен для предметов вне классов COCO.
+  void loadCoco().catch(() => {});
+  if (withClip && heavyModelsAllowed()) void import('./clip').then((m) => m.loadClip()).catch(() => {});
 }
 
 // Всё нужное для проверки фото уже загружено.
@@ -127,10 +126,10 @@ export async function whenModelsReady(onProgress: (p: number) => void): Promise<
   const off = onModelStatus((s) => onProgress(clipOn ? 0.17 * s.coco + 0.83 * s.clip : s.coco));
   let timer: ReturnType<typeof setTimeout> | undefined;
   try {
-    const loads = (async () => {
-      await loadCoco().catch(() => {});
-      if (clipOn) await import('./clip').then((m) => m.loadClip()).catch(() => {});
-    })();
+    const loads = Promise.all([
+      loadCoco().catch(() => {}),
+      ...(clipOn ? [import('./clip').then((m) => m.loadClip()).catch(() => {})] : []),
+    ]).then(() => {});
     // При зависшей сети или ошибке инициализации камеры не нужно бесконечно ждать модель.
     await Promise.race([loads, new Promise<void>((resolve) => { timer = setTimeout(resolve, 20_000); })]);
   } finally {
