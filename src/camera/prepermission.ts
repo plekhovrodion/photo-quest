@@ -11,16 +11,18 @@ let shownThisSession = false;
 const GRANTED_SESSION_KEY = 'photoquest.camera.granted.v1';
 
 function hasGrantedSession(): boolean {
-  try { return sessionStorage.getItem(GRANTED_SESSION_KEY) === '1'; }
-  catch { return false; }
+  try { if (localStorage.getItem(GRANTED_SESSION_KEY) === '1') return true; } catch { /* storage can be disabled */ }
+  try { return sessionStorage.getItem(GRANTED_SESSION_KEY) === '1'; } catch { return false; }
 }
 
 async function requestAndRemember<T>(request: () => Promise<T>): Promise<T> {
   try {
     const result = await request();
+    try { localStorage.setItem(GRANTED_SESSION_KEY, '1'); } catch { /* storage can be disabled */ }
     try { sessionStorage.setItem(GRANTED_SESSION_KEY, '1'); } catch { /* storage can be disabled */ }
     return result;
   } catch (error) {
+    try { localStorage.removeItem(GRANTED_SESSION_KEY); } catch { /* storage can be disabled */ }
     try { sessionStorage.removeItem(GRANTED_SESSION_KEY); } catch { /* storage can be disabled */ }
     throw error;
   }

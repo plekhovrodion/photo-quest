@@ -78,9 +78,11 @@ let quietNext = false;
 let lastShown = ''; // что нарисовано сейчас: если экран перерисовывается тем же (например, возврат с камеры), он не листается заново
 let screenSeq = 0;
 function show(html: string, cls = '') {
-  // Keep the granted stream while moving between task and quiz screens; release it
-  // when leaving the task flow (for example, back to the location map).
-  stopCamera(!cls.includes('screen-tk'));
+  // Keep the granted stream for the whole game flow. iOS Safari may ask again
+  // when getUserMedia is called after returning from a location's task list.
+  // Release it when leaving the game entirely.
+  const keepCamera = cls.includes('screen-tk') || cls.includes('screen-map') || cls.includes('screen-places');
+  stopCamera(!keepCamera);
   stopTyping();
   const dir = navDir;
   navDir = 'fwd';
