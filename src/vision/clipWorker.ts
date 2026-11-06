@@ -3,7 +3,7 @@ import * as ort from 'onnxruntime-web/wasm';
 import mjsUrl from '../../node_modules/onnxruntime-web/dist/ort-wasm-simd-threaded.mjs?url';
 import wasmUrl from '../../node_modules/onnxruntime-web/dist/ort-wasm-simd-threaded.wasm?url';
 
-const SIZE = 224;
+const SIZE = 256;
 let session: ort.InferenceSession | null = null;
 
 const normalize = (v: Float32Array): Float32Array => {

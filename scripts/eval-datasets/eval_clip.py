@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Прогоняет текущий CLIP игры по manifest Open Images.
 
-Использует тот же vision.onnx, text.json, нормализацию, центральный квадрат,
+Использует тот же vision.onnx, text.json, центральный квадрат,
 softmax x100 и порог 0.02, что src/vision/clip.ts.
 """
 import argparse
@@ -17,8 +17,7 @@ from PIL import Image, ImageOps
 ROOT = Path(__file__).resolve().parents[2]
 DATA = ROOT / '.eval-data' / 'open-images'
 MODEL = ROOT / 'public' / 'models' / 'clip'
-MEAN = np.array([0.48145466, 0.4578275, 0.40821073], dtype=np.float32)
-STD = np.array([0.26862954, 0.26130258, 0.27577711], dtype=np.float32)
+SIZE = 256
 THRESHOLD = 0.02
 
 
@@ -69,9 +68,8 @@ def object_crop(image, bbox, margin=0.12):
 
 
 def pixels(image):
-    image = center_square(image).resize((224, 224), Image.Resampling.BICUBIC)
+    image = center_square(image).resize((SIZE, SIZE), Image.Resampling.BICUBIC)
     array = np.asarray(image, dtype=np.float32) / 255
-    array = (array - MEAN) / STD
     return array.transpose(2, 0, 1)[None]
 
 
@@ -142,7 +140,7 @@ def main():
     report = {
         'generatedAt': time.strftime('%Y-%m-%dT%H:%M:%SZ', time.gmtime()),
         'manifest': str(args.manifest),
-        'model': 'CLIP ViT-B/32 q8',
+        'model': 'MobileCLIP-S0 fp16',
         'threshold': THRESHOLD,
         'total': total,
         'overall': {

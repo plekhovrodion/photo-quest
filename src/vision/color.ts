@@ -39,6 +39,9 @@ export function classifyPixel(r: number, g: number, b: number): ColorName {
 // серый металл и бежевый фон не превращаются в оранжевый предмет.
 export function matchesColorPixel(r: number, g: number, b: number, target: ColorName): boolean {
   const [h, s, v] = rgbToHsv(r, g, b);
+  // Камеры часто сдвигают красный в малиновый или оранжевый при тёплом свете.
+  // Для задания «красный» берём более широкую дугу оттенка и допускаем приглушённые оттенки.
+  if (target === 'red') return (h >= 338 || h < 25) && s >= 0.25 && v >= 0.2;
   if (target === 'yellow') return h >= 30 && h < 75 && s >= 0.25 && v >= 0.45;
   if (target === 'orange') return h >= 12 && h < 42 && s >= 0.35 && v >= 0.45;
   return classifyPixel(r, g, b) === target;

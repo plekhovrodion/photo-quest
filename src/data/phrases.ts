@@ -34,6 +34,9 @@ export const INTRO_EN: Phrase[] = [
 // Перед запросом камеры у браузера (говорит Соня).
 export const ASK_CAMERA: Phrase = P('camera-ask', 'sonya', 'Разреши доступ к камере. Тогда ты сможешь искать предметы');
 
+// Когда доступ к камере запрещён (говорит Соня).
+export const CAMERA_DENIED: Phrase = P('camera-denied', 'sonya', 'Позови родителей и следуй инструкции, чтобы подключить камеру');
+
 // Сфотографировал не то (говорит Гриша): без объяснений, что именно в кадре.
 export const TRY_AGAIN: Phrase[] = [
   P('again-1', 'grisha', 'Хм, это не то. Поищи ещё!'),
@@ -125,7 +128,7 @@ export const VIDEO_LINES: Phrase[] = [
   P('video-5', 'sonya', 'Давай играть!'),
 ];
 
-export const ALL_PHRASES: Phrase[] = [TASK_AIM, WAIT_LOADING, ...VIDEO_LINES, NEXT_HINT, ...PRAISE, ...INTRO_EN, ASK_CAMERA, ...TRY_AGAIN, ...TROUBLE, ...LEVEL_DONE, ...GAME_DONE, ...REPEAT_AFTER, QUIZ_ASK, ...QUIZ_WRONG, ...HINT_PLACE, ...HINT_ITEM, ...HINT_COLOR, ...LOCKED_HINT, ...TASK_LOCKED];
+export const ALL_PHRASES: Phrase[] = [TASK_AIM, WAIT_LOADING, ...VIDEO_LINES, NEXT_HINT, ...PRAISE, ...INTRO_EN, ASK_CAMERA, CAMERA_DENIED, ...TRY_AGAIN, ...TROUBLE, ...LEVEL_DONE, ...GAME_DONE, ...REPEAT_AFTER, QUIZ_ASK, ...QUIZ_WRONG, ...HINT_PLACE, ...HINT_ITEM, ...HINT_COLOR, ...LOCKED_HINT, ...TASK_LOCKED];
 
 // Случайная фраза, не повторяющая предыдущую из этого же списка.
 const last = new Map<Phrase[], string>();

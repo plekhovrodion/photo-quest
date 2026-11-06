@@ -1,6 +1,5 @@
 import { describe, expect, it } from 'vitest';
 import { classifyPixel, colorShares, hasColor } from './color';
-import { matchesLabels } from './labels';
 
 describe('classifyPixel', () => {
   const cases: Array<[string, [number, number, number]]> = [
@@ -29,27 +28,20 @@ describe('colorShares', () => {
   });
 });
 
-describe('matchesLabels', () => {
-  const preds = [{ className: 'coffee mug', probability: 0.5 }, { className: 'cup', probability: 0.2 }];
-  it('находит класс по целому слову', () => expect(matchesLabels(preds, ['mug'])).toBe(true));
-  it('не срабатывает на часть слова', () => expect(matchesLabels([{ className: 'open', probability: 0.9 }], ['pen'])).toBe(false));
-  it('игнорирует низкую уверенность', () => expect(matchesLabels([{ className: 'mug', probability: 0.01 }], ['mug'])).toBe(false));
-});
-
 import { evaluate } from './evaluate';
 import { LEVELS } from '../data/tasks';
 
-const ctxOf = (shares: Partial<Record<string, number>>, preds: Array<[string, number]>) => ({
+const ctxOf = (shares: Partial<Record<string, number>>, objects: string[]) => ({
   shares: () => ({ red: 0, orange: 0, yellow: 0, green: 0, blue: 0, purple: 0, pink: 0, brown: 0, white: 0, black: 0, gray: 0, ...shares }) as any,
-  predictions: () => preds.map(([className, probability]) => ({ className, probability })),
+  clip: async () => objects.map((en, i) => ({ en, ru: en, score: 1 - i * 0.1 })),
 });
 
 describe('evaluate', () => {
   it('and: нужны и цвет, и предмет', async () => {
-    const check = { kind: 'and', checks: [{ kind: 'color', color: 'red' }, { kind: 'labels', words: ['ball'] }] } as const;
-    expect(await evaluate(check as any, ctxOf({ red: 0.5 }, [['soccer ball', 0.6]]))).toBe(true);
-    expect(await evaluate(check as any, ctxOf({ red: 0.5 }, [['mug', 0.6]]))).toBe(false);
-    expect(await evaluate(check as any, ctxOf({ blue: 0.5 }, [['soccer ball', 0.6]]))).toBe(false);
+    const check = { kind: 'and', checks: [{ kind: 'color', color: 'red' }, { kind: 'labels', words: ['ball'], clip: 'ball' }] } as const;
+    expect(await evaluate(check as any, ctxOf({ red: 0.5 }, ['ball', 'mug']))).toBe(true);
+    expect(await evaluate(check as any, ctxOf({ red: 0.5 }, ['mug', 'ball']))).toBe(false);
+    expect(await evaluate(check as any, ctxOf({ blue: 0.5 }, ['ball', 'mug']))).toBe(false);
   });
   it('multicolor: два разных цвета', async () => {
     const c = { kind: 'multicolor', min: 2 } as const;
@@ -57,8 +49,8 @@ describe('evaluate', () => {
     expect(await evaluate(c, ctxOf({ red: 0.6 }, []))).toBe(false);
   });
   it('any: нужен узнаваемый предмет', async () => {
-    expect(await evaluate({ kind: 'any' }, ctxOf({}, [['mug', 0.5]]))).toBe(true);
-    expect(await evaluate({ kind: 'any' }, ctxOf({}, [['mug', 0.05]]))).toBe(false);
+    expect(await evaluate({ kind: 'any' }, ctxOf({}, ['mug', 'cup']))).toBe(true);
+    expect(await evaluate({ kind: 'any' }, ctxOf({}, ['mug', 'cup', 'bottle', 'book', 'spoon', 'plate', 'bag']))).toBe(false);
   });
 });
 
@@ -97,21 +89,6 @@ describe('colorPhrase', () => {
   });
   it('молчит, если ничего не выделяется', () => {
     expect(colorPhrase(shares({ white: 0.05, gray: 0.05 }))).toBeUndefined();
-  });
-});
-
-import { fusePredictions } from './local';
-
-describe('fusePredictions', () => {
-  it('без живого класса возвращает предсказания как есть', () => {
-    const top = [{ className: 'mug', probability: 0.3 }];
-    expect(fusePredictions(top)).toBe(top);
-  });
-  it('живой класс идёт первым и засчитывается заданию', () => {
-    const fused = fusePredictions([{ className: 'ping-pong ball', probability: 0.6 }], 'cup');
-    expect(fused[0]).toEqual({ className: 'cup', probability: 0.9 });
-    expect(matchesLabels(fused, ['cup', 'mug'])).toBe(true);
-    expect(matchesLabels(fusePredictions([{ className: 'ping-pong ball', probability: 0.6 }]), ['cup', 'mug'])).toBe(false);
   });
 });
 

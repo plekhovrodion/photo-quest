@@ -7,7 +7,7 @@ import { join } from 'node:path';
 import { env, AutoTokenizer, CLIPTextModelWithProjection } from '@huggingface/transformers';
 import { CLIP_OBJECTS } from '../src/data/clip.ts';
 
-const ID = 'Xenova/clip-vit-base-patch32';
+const ID = 'Xenova/mobileclip_s0';
 const OUT = 'public/models/clip';
 env.cacheDir = './.hf-cache';
 mkdirSync(OUT, { recursive: true });
@@ -16,7 +16,7 @@ const tok = await AutoTokenizer.from_pretrained(ID);
 const tm = await CLIPTextModelWithProjection.from_pretrained(ID, { dtype: 'q8' });
 const names = Object.keys(CLIP_OBJECTS);
 const embed = async (texts) => {
-  const { text_embeds } = await tm(tok(texts, { padding: true, truncation: true }));
+  const { text_embeds } = await tm(tok(texts, { padding: 'max_length', max_length: 77, truncation: true }));
   const D = text_embeds.dims[1];
   return texts.map((_, i) => unit(Array.from(text_embeds.data.slice(i * D, (i + 1) * D))));
 };
@@ -42,14 +42,14 @@ BACKGROUND.forEach((n, i) => { bg[n] = round(bgv[i]); });
 const D = bgv[0].length;
 writeFileSync(join(OUT, 'text.json'), JSON.stringify({ ens, bg }));
 
-// Картинная часть: берём квантованную ONNX из кэша загрузки.
+// Картинная часть: берём fp16 ONNX из кэша загрузки.
 const find = (dir) => readdirSync(dir).flatMap((f) => {
   const p = join(dir, f);
   return statSync(p).isDirectory() ? find(p) : [p];
 });
 const { AutoProcessor, CLIPVisionModelWithProjection } = await import('@huggingface/transformers');
-await CLIPVisionModelWithProjection.from_pretrained(ID, { dtype: 'q8' });
+await CLIPVisionModelWithProjection.from_pretrained(ID, { dtype: 'fp16' });
 await AutoProcessor.from_pretrained(ID);
-const vis = find('./.hf-cache').find((p) => p.endsWith('vision_model_quantized.onnx'));
+const vis = find('./.hf-cache').find((p) => p.endsWith('vision_model_fp16.onnx'));
 copyFileSync(vis, join(OUT, 'vision.onnx'));
 console.log('ok', names.length, 'меток, dim', D, statSync(join(OUT, 'vision.onnx')).size, 'байт');

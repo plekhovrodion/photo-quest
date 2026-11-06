@@ -20,9 +20,9 @@ describe('CLIP', () => {
     }
   });
 
-  it('evaluate: старые модели не узнали, CLIP узнал — засчитываем', async () => {
+  it('evaluate: CLIP узнаёт предмет и проверяет его', async () => {
     const check = { kind: 'labels' as const, words: ['bench'], clip: 'bench' };
-    const base = { shares: () => ({}) as never, predictions: () => [{ className: 'jigsaw puzzle', probability: 0.9 }] };
+    const base = { shares: () => ({}) as never };
     expect(await evaluate(check, { ...base, clip: async () => ranks('bench', 'chair') })).toBe(true);
     expect(await evaluate(check, { ...base, clip: async () => ranks('chair', 'sofa', 'bench') })).toBe(false);
     expect(await evaluate(check, { ...base, clip: async () => null })).toBe(false);
@@ -34,13 +34,15 @@ describe('«не уверен»', () => {
   const base = { shares: () => ({ red: 0.12 }) as never };
   it('предмет: слабый сигнал моделей — «возможно»', async () => {
     const check = { kind: 'labels' as const, words: ['spoon'], clip: 'spoon' };
-    const preds = (p: number) => () => [{ className: 'wooden spoon', probability: p }];
-    expect(await isMaybe(check, { ...base, predictions: preds(0.02) })).toBe(true);
-    expect(await isMaybe(check, { ...base, predictions: preds(0.001) })).toBe(false);
+    const sameScore = (count: number): ClipRank[] => Array.from({ length: count }, (_, i) => ({ en: i === 0 ? 'spoon' : `other-${i}`, ru: '', score: 0.3 }));
+    const weak = sameScore(75);
+    const veryWeak = sameScore(150);
+    expect(await isMaybe(check, { ...base, clip: async () => weak })).toBe(true);
+    expect(await isMaybe(check, { ...base, clip: async () => veryWeak })).toBe(false);
   });
   it('цвет: половина порога — «возможно»', async () => {
-    expect(await isMaybe({ kind: 'color', color: 'red' }, { ...base, predictions: () => [] })).toBe(true);
-    expect(await isMaybe({ kind: 'color', color: 'blue' }, { ...base, predictions: () => [] })).toBe(false);
+    expect(await isMaybe({ kind: 'color', color: 'red' }, base)).toBe(true);
+    expect(await isMaybe({ kind: 'color', color: 'blue' }, base)).toBe(false);
   });
 });
 

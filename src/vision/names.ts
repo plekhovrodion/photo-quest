@@ -1,5 +1,5 @@
-// Русские названия предметов для классов ImageNet, которые используются в rules.ts и tasks.ts.
-// MobileNet отвечает по-английски («coffee mug»), а заврик должен сказать «Это кружка!».
+// Русские названия предметов и синонимов CLIP для игровых реплик.
+// CLIP возвращает английскую подпись, а заврик говорит по-русски.
 // Ключи — целые слова; при нескольких совпадениях берём самый длинный ключ.
 const RU: Record<string, string> = {
   'book jacket': 'книга', 'ice cream': 'мороженое', 'sleeping bag': 'спальный мешок', 'running shoe': 'кроссовок',
@@ -40,7 +40,7 @@ const RU: Record<string, string> = {
   cheeseburger: 'чизбургер', hotdog: 'хот-дог', hamburger: 'гамбургер', purse: 'сумка', 'plastic bag': 'пакет',
   cab: 'машина', 'beach wagon': 'машина', bike: 'велосипед', bunting: 'птица', 'park bench': 'скамейка',
   'bath towel': 'полотенце', 'paper towel': 'бумажное полотенце', knapsack: 'рюкзак', 
-  // классы детектора COCO-SSD, которых нет выше
+  // Частые варианты подписей CLIP для тех же предметов.
   'sports ball': 'мяч', 'teddy bear': 'плюшевый мишка', 'cell phone': 'телефон', 'wine glass': 'бокал',
   'dining table': 'стол', 'potted plant': 'комнатное растение', 'hair drier': 'фен', 'traffic light': 'светофор',
   scissors: 'ножницы', toothbrush: 'зубная щётка', mouse: 'компьютерная мышка', banana: 'банан', apple: 'яблоко',

@@ -9,7 +9,7 @@ import { targetOf } from './camera/target';
 import { verifyPhoto } from './api/verify';
 import { COLOR_RU } from './vision/names';
 import { englishFor } from './data/english';
-import { preloadModels, loadCoco, modelStatus, onModelStatus } from './vision/models';
+import { preloadModels, modelStatus, onModelStatus } from './vision/models';
 import { confetti, confettiBehind } from './fx/confetti';
 import { typeText, stopTyping } from './fx/typewriter';
 import { speak, speakEnglish, speakPause, stopSpeech, isMuted, setMuted } from './audio/sounds';
@@ -36,6 +36,10 @@ const root = document.getElementById('app')!;
 const store = createStore();
 let progress: Progress = loadProgress();
 const colorsLevel = LEVELS.find((item) => item.id === 'colors');
+const onboardingColorTasks = colorsLevel?.tasks.slice(0, 3) ?? [];
+function onboardingComplete(): boolean {
+  return onboardingColorTasks.length === 3 && onboardingColorTasks.every((task) => progress.found[task.id] !== undefined);
+}
 let level: Level | null = null;
 let state: GameState | null = null;
 let notice = '';
@@ -110,9 +114,6 @@ function on(id: string, fn: () => void) {
 
 function startLevel(l: Level) {
   if (!isUnlocked(l)) return; // закрытое место не открываем даже напрямую
-  if (l.tasks.some((task) => targetOf(task).requiresModels)) {
-    setTimeout(() => preloadModels(), 900); // предметные модели начинают грузиться при входе в подходящее место
-  }
   level = l;
   state = null;
   render();
@@ -133,7 +134,7 @@ function modelLoadingScreen(): {
   fail(retry: () => void, back: () => void): void;
 } {
   show(`<div class="loading-screen model-loading-screen" role="status" aria-label="Загрузка распознавания">
-    <div class="loc-progress" role="progressbar" aria-label="Загрузка распознавания" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0"><div class="loc-track"><div class="loc-fill" style="background-image:url('${import.meta.env.BASE_URL}art/loc/stripe-a.svg')"></div></div></div>
+    <div class="loc-progress" role="progressbar" aria-label="Загрузка распознавания" aria-valuemin="0" aria-valuemax="100" aria-valuenow="25"><div class="loc-track"><div class="loc-fill" style="--w:25%;background-image:url('${import.meta.env.BASE_URL}art/loc/stripe-a.svg')"></div></div></div>
     <p class="model-load-error" hidden>Не удалось загрузить распознавание</p>
     <div class="model-load-actions" hidden><button id="model-retry" type="button">Повторить</button><button id="model-back" type="button">Назад</button></div>
   </div>`, 'screen-model-loading');
@@ -142,7 +143,7 @@ function modelLoadingScreen(): {
   const bar = screen.querySelector<HTMLElement>('.loc-progress')!;
   return {
     paint(value) {
-      const percent = Math.round(value * 100);
+      const percent = Math.max(25, Math.round(value * 100));
       fill.style.setProperty('--w', `${percent}%`);
       bar.setAttribute('aria-valuenow', String(percent));
     },
@@ -157,38 +158,27 @@ function modelLoadingScreen(): {
 
 async function prepareTask(task: Task, token: number): Promise<void> {
   const needsModels = targetOf(task).requiresModels ?? true;
-  const needCoco = needsModels;
   const needClip = needsModels;
   const initial = modelStatus();
-  const cocoReady = !needCoco || initial.coco >= 1;
   const clipReady = !needClip || initial.clip >= 1;
-  if (cocoReady && clipReady) {
+  if (clipReady) {
     if (token === taskLoadToken) { state = createGame([task]); render(); }
     return;
   }
 
   sayCurrentTask = null;
   let active = true;
-  const startedAt = performance.now();
   const screen = modelLoadingScreen();
   speak(WAIT_LOADING.text, false, WAIT_LOADING.who);
   const paint = () => {
     if (!active) return;
     const status = modelStatus();
-    const elapsed = performance.now() - startedAt;
-    // COCO SSD doesn't expose byte-level progress; ease its estimate forward while it loads.
-    const cocoProgress = status.coco >= 1 ? 1 : 0.92 * (1 - Math.exp(-elapsed / 12000));
-    const parts = [
-      ...(needCoco ? [cocoProgress] : []),
-      ...(needClip ? [status.clip] : []),
-    ];
-    screen.paint(parts.length ? Math.min(0.96, parts.reduce((sum, part) => sum + part, 0) / parts.length) : 0.96);
+    screen.paint(needClip ? Math.min(0.96, status.clip) : 0.96);
   };
   const unsubscribe = onModelStatus(paint);
   const timer = window.setInterval(paint, 120);
   try {
     const pending: Promise<unknown>[] = [];
-    if (needCoco && initial.coco < 1) pending.push(loadCoco());
     if (needClip && initial.clip < 1) pending.push(import('./vision/clip').then((clip) => clip.loadClip()));
     await Promise.all(pending);
     active = false;
@@ -274,7 +264,7 @@ async function processCapture(task: Task, cap: Captured) {
     if (photoUrl) URL.revokeObjectURL(photoUrl);
     photoUrl = URL.createObjectURL(photo);
     dispatch({ type: 'photo-taken' });
-    const verdict = await verifyPhoto(photo, task, { cropped: wasCropped, liveClass: cap.liveClass, liveClip: cap.liveClip });
+    const verdict = await verifyPhoto(photo, task, { cropped: wasCropped, liveClip: cap.liveClip });
     let match = verdict.match;
     // Почти подошло: не переспрашиваем ребёнка и не отказываем, а засчитываем и называем предмет по заданию.
     if (!match && verdict.maybe) {
@@ -405,7 +395,7 @@ function refreshMapTiles(places: Level[]) {
     }
     const oldCheck = tile.querySelector<HTMLImageElement>('.mp-check');
     const newCheck = fresh.querySelector<HTMLImageElement>('.mp-check');
-    if (!oldCheck && newCheck) tile.append(newCheck);
+    if (!oldCheck && newCheck) tile.querySelector('.mp-card-scene')?.append(newCheck);
     else if (oldCheck && !newCheck) oldCheck.remove();
     const oldTrack = tile.querySelector<HTMLElement>('.mp-track');
     const newTrack = fresh.querySelector<HTMLElement>('.mp-track');
@@ -425,9 +415,14 @@ function mapTile(l: Level, i: number): string {
   const full = total > 0 && found >= total;
   const locked = !isUnlocked(l);
   const target = !locked && !full && l === targetPlace;
-  return `<button class="mp-tile ${i % 2 ? 'right' : 'left'}${full ? ' done' : ''}${locked ? ' locked' : ''}${target ? ' pulse' : ''}" role="listitem" data-i="${i}" style="--i:${i}" ${locked ? 'aria-disabled="true"' : ''} aria-label="${l.title}: найдено ${found} из ${total}${full ? ', всё найдено' : ''}${locked ? ', закрыто: сначала пройди уровень Цвета' : ''}">
-    <span class="mp-win is-room asset-pending" data-asset-group="images"${!locked && hasRoom(l.id) ? ' data-asset-wait-pet="true"' : ''}>${roomHtml(l.id, !locked, 'head-', full ? 'happy-loop' : 'sad-loop', locked)}</span>${full ? `<img class="loc-check mp-check" src="${LOC_BASE()}/check.svg" alt="">` : ''}
-    <span class="mp-track" role="progressbar" aria-valuemin="0" aria-valuemax="${total}" aria-valuenow="${found}"><span class="loc-fill" style="--w:${pct}%;background-image:url(${LOC_BASE()}/stripe-a.svg)"></span></span></button>`;
+  const palette = LOC_COLORS[l.id] ?? LOC_COLORS.kitchen;
+  return `<button class="mp-tile ${i % 2 ? 'right' : 'left'}${full ? ' done' : ''}${locked ? ' locked' : ''}${target ? ' pulse' : ''}" role="listitem" data-i="${i}" style="--i:${i};--mp-accent:${palette.fill};--mp-surface:${palette.head};--mp-shadow:${LOC_COLORS.kitchen.shadow}" ${locked ? 'aria-disabled="true"' : ''} aria-label="${l.title}: найдено ${found} из ${total}${full ? ', всё найдено' : ''}${locked ? ', закрыто: сначала пройди уровень Цвета' : ''}">
+    <span class="mp-card-scene">
+      <span class="mp-win is-room asset-pending" data-asset-group="images"${hasRoom(l.id) ? ' data-asset-wait-pet="true"' : ''}>${roomHtml(l.id, true, 'head-', full ? 'happy-loop' : 'sad-loop')}</span>
+      ${full ? `<img class="loc-check mp-check" src="${LOC_BASE()}/check.svg" alt="">` : ''}
+    </span>
+    <span class="mp-track" role="progressbar" aria-label="${l.title}: найдено ${found} из ${total}" aria-valuemin="0" aria-valuemax="${total}" aria-valuenow="${found}"><span class="loc-fill" style="--w:${pct}%;background-image:url(${LOC_BASE()}/stripe-a.svg)"></span></span>
+  </button>`;
 }
 
 // Дорожка между плитками: от центра плитки вниз, широкая плавная петля на другую сторону и вниз к следующей. Рисуется под плитками.
@@ -488,15 +483,16 @@ function renderLevels() {
     ? `<div class="mp-chip mp-free" role="status" aria-label="Бесплатных заданий: ${free}"><b>${free}</b><span>бесплатных заданий</span></div>` : '';
   const accessBtn = SHOW_ACCESS_HUD && paywallUrl() ? '<button id="access" class="mp-access">Открыть доступ</button>' : '';
   const hud = `${beadsChip ? `<div class="mp-hud">${beadsChip}</div>` : ''}${freeChip || accessBtn ? `<div class="mp-hud mp-hud2">${freeChip}${accessBtn}</div>` : ''}`;
-  const places = MAP_ORDER.map((id) => LEVELS.find((l) => l.id === id)).filter((l): l is Level => !!l);
+  const intro = !onboardingComplete();
+  const places = mapPlaces();
   const next = places.find((l) => !levelFull(l)) ?? places[0]; // первое непройденное место: оно всегда открыто
   targetPlace = places.find((l) => !levelFull(l));
   const tool = (id: string, icon: string, label: string) => `<button id="${id}" class="loc-btn" aria-label="${label}"><i class="loc-i" style="--m:url(${base}/${icon}.svg)"></i></button>`;
   show(`<div class="loc mp">${mapBg()}<header class="mp-head">
       ${hud}
-      <button id="back" class="loc-btn" aria-label="На главную Учи"><i class="loc-i" style="--m:url(${base}/back.svg)"></i></button>
+      <button id="back" class="loc-btn" aria-label="Назад"><i class="loc-i" style="--m:url(${base}/back.svg)"></i></button>
       <div class="loc-tools">${tool('snd', 'sound', isMuted() ? 'Включить звук' : 'Выключить звук')}${tool('fs', 'fullscreen', 'На весь экран')}</div></header>
-    <main class="loc-body"><div class="mp-road" role="list" aria-label="Места">${places.map(mapTile).join('')}</div></main>
+    <main class="loc-body${intro ? ' intro-body' : ''}"><div class="mp-road${intro ? ' intro-only' : ''}" role="list" aria-label="Места">${places.map(mapTile).join('')}</div></main>
     ${paywallUrl() ? '<button id="buy" class="mp-buy">Купить игру</button>' : ''}
     ${bigBtn('play', playIcon(), 'Играть', false)}</div>`, `screen-loc screen-map${isMuted() ? ' muted' : ''}`);
   root.querySelectorAll<HTMLButtonElement>('.mp-tile').forEach((b) => b.addEventListener('click', () => {
@@ -509,7 +505,6 @@ function renderLevels() {
   on('access', () => { void showPaywall(); });
   on('buy', () => { void showPaywall(); });
   root.querySelector('#beads')?.addEventListener('click', () => { void showPaywall(); });
-  on('back', () => location.assign('/')); // из игры на главную Учи (тот же хост, корень сайта)
   wireLocTools();
   const road = root.querySelector<HTMLElement>('.mp-road')!;
   drawRoad(road);
@@ -612,11 +607,14 @@ const LOC_ORDER = ['kitchen', 'colors', 'room', 'school', 'bath', 'hall', 'food'
 // На карте «Цвета» всегда первый уровень; после его полного прохождения открываются все остальные.
 // (LOC_ORDER выше нельзя менять: по нему устроены спрайты иконок и шапок.)
 const MAP_ORDER = ['colors', 'kitchen', 'room', 'school', 'bath', 'hall', 'food', 'outdoor'];
+function mapPlaces(): Level[] {
+  const places = MAP_ORDER.map((id) => LEVELS.find((item) => item.id === id)).filter((item): item is Level => !!item);
+  return onboardingComplete() ? places : places.filter((place) => place.id === 'colors');
+}
 const levelFull = (l: Level) => l.tasks.length > 0 && l.tasks.every((t) => progress.found[t.id] !== undefined);
 function isUnlocked(l: Level): boolean {
   if (l.id === 'colors') return true;
-  const colors = LEVELS.find((x) => x.id === 'colors');
-  return !!colors && levelFull(colors);
+  return onboardingComplete();
 }
 // Задания, убранные из мест: в спрайте иконок их картинки остаются, поэтому индексы после них сдвигаем.
 const LOC_COUNTS = [8, 10, 9, 7, 4, 5, 8, 10];
@@ -713,19 +711,23 @@ const playIcon = () => `<img src="${LOC_BASE()}/play.svg" alt="">`;
 // Экран места по макету: шапка с фоном места, полоса прогресса, сетка карточек с иконками и кнопка «играть».
 function renderMap(l: Level) {
   const base = LOC_BASE();
+  const intro = !onboardingComplete() && l.id === 'colors';
+  const visibleTasks = intro
+    ? [onboardingColorTasks.find((task) => progress.found[task.id] === undefined)].filter((task): task is Task => !!task)
+    : l.tasks;
   const n = l.tasks.length;
   const found = l.tasks.filter((t) => progress.found[t.id] !== undefined).length;
-  const nextI = l.tasks.findIndex((t) => progress.found[t.id] === undefined); // это задание пульсирует
-  const cards = l.tasks.map((t, i) => {
+  const nextI = visibleTasks.findIndex((t) => progress.found[t.id] === undefined); // это задание пульсирует
+  const cards = visibleTasks.map((t, i) => {
     const done = progress.found[t.id] !== undefined;
     const locked = false; // задания идут по порядку: следующее открывается, когда найдено предыдущее
-    return `<button class="loc-card asset-pending${done ? ' done' : ''}${locked ? ' locked' : ''}${i === nextI ? ' pulse' : ''}" data-asset-group="sprite" data-i="${i}" style="--i:${i}" ${locked ? 'aria-disabled="true"' : ''} aria-label="${taskName(t)}${done ? ', найдено' : ''}${locked ? ', закрыто: сначала найди предыдущее' : ''}">${taskIcon(l, t)}${done ? `<img class="loc-check" src="${base}/check.svg" alt="">` : ''}</button>`;
+    return `<button class="loc-card asset-pending${done ? ' done' : ''}${locked ? ' locked' : ''}${intro || i === nextI ? ' pulse' : ''}" data-asset-group="sprite" data-i="${l.tasks.indexOf(t)}" style="--i:${i}" ${locked ? 'aria-disabled="true"' : ''} aria-label="${taskName(t)}${done ? ', найдено' : ''}${locked ? ', закрыто: сначала найди предыдущее' : ''}">${taskIcon(l, t)}${done ? `<img class="loc-check" src="${base}/check.svg" alt="">` : ''}</button>`;
   }).join('');
   const pct = n ? Math.round((found / n) * 100) : 0;
   show(`<div class="loc" style="${locVars(l)}">${locHeader(l, n > 0 && found >= n ? 'happy-loop' : undefined)}
       <main class="loc-body"><div class="loc-box">
         <div class="loc-progress" role="progressbar" aria-label="Найдено" aria-valuemin="0" aria-valuemax="${n}" aria-valuenow="${found}" aria-valuetext="${found} из ${n}"><div class="loc-track"><div class="loc-fill" style="--w:${pct}%;background-image:url(${base}/stripe-a.svg)"></div></div></div>
-        <div class="loc-grid">${cards}</div>
+        <div class="loc-grid${intro ? ' intro-single' : ''}">${cards}</div>
       </div></main>
     </div>`, `screen-loc screen-places${isMuted() ? ' muted' : ''}`);
   root.querySelectorAll<HTMLButtonElement>('.loc-card').forEach((b) =>
@@ -852,10 +854,16 @@ function render() {
     }
     case 'finish': {
       const last = s.tasks[0];
+      const onboardingTask = onboardingColorTasks.some((task) => task.id === last.id);
       const levelDone = finishTask();
       state = null;
       const L = level!;
       const proceed = () => {
+        if (onboardingTask) {
+          if (onboardingComplete()) renderLevels();
+          else renderMap(L);
+          return;
+        }
         const everything = LEVELS.every((place) => place.tasks.every((task) => progress.found[task.id] !== undefined));
         const justCompletedGame = everything && recorded?.id === last.id && recorded.newlyFound && !gameCompletionAnnounced;
         if (levelDone || justCompletedGame) return renderLevelDone();
@@ -874,6 +882,7 @@ wireMusic(); // фоновая музыка с первого касания
 // Сначала основа главного экрана (заставка «Загружаем игру», если сеть медленная), потом всё остальное по ступеням.
 void bootFirstStep().then(() => {
   render();
+  preloadModels(); // запускаем CLIP сразу после первого показа интерфейса, не блокируя экран
 
   // Подтягиваем прогресс с сервера (если он настроен) и перерисовываем, не прерывая задание.
   store.load().then((p) => {
@@ -882,13 +891,13 @@ void bootFirstStep().then(() => {
     // Серверный прогресс обновляет существующие карточки на месте: экран не моргает,
     // и запускающиеся анимации плиток не сбрасываются.
     if (!state && root.classList.contains('screen-map')) {
-      const places = MAP_ORDER.map((id) => LEVELS.find((l) => l.id === id)).filter((l): l is Level => !!l);
-      refreshMapTiles(places);
+      const places = mapPlaces();
+      if (root.querySelectorAll('.mp-tile').length !== places.length) renderLevels();
+      else refreshMapTiles(places);
     } else if (!state && root.classList.contains('screen-menu')) render();
   });
 
-  // Дальше в простое: звуки и лёгкая модель распознавания. CLIP загружается
-  // после входа в уровень, чтобы главный экран открылся без ожидания 85 МБ.
+  // Звуки догружаются в простое; модели распознавания уже загружаются в фоне.
   bootSecondStep(() => {
     startSfxLoad();
   });

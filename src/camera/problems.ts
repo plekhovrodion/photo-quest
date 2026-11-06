@@ -1,5 +1,7 @@
 // Состояния камеры, когда она не включилась: понятные экраны для ребёнка и инструкция для родителей (по макету Figma «Ошибки»).
 import { playSfx } from '../audio/sfx';
+import { speak } from '../audio/sounds';
+import { CAMERA_DENIED } from '../data/phrases';
 export type CamProblem = 'nocamera' | 'denied' | 'busy' | 'insecure' | 'other';
 export type Platform = 'ios' | 'android' | 'desktop';
 export type HelpArt = 'ios' | 'android' | 'safari' | 'firefox' | 'yandex' | 'chrome';
@@ -99,6 +101,7 @@ export function showCameraProblem(kind: CamProblem): Promise<'retry' | 'close'> 
     el.setAttribute('aria-modal', 'true');
     document.body.appendChild(el);
     playSfx('wrong-soft');
+    if (kind === 'denied') speak(CAMERA_DENIED.text, false, CAMERA_DENIED.who);
     const finish = (r: 'retry' | 'close') => { removeEventListener('keydown', onKey); el.remove(); resolve(r); };
     let view: 'problem' | 'steps' = 'problem';
     const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape') back(); };

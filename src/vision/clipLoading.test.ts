@@ -4,7 +4,6 @@ const mocks = vi.hoisted(() => ({
   bytes: vi.fn(), ready: vi.fn(), loading: vi.fn(), error: vi.fn(),
 }));
 vi.mock('./models', () => ({
-  heavyModelsAllowed: () => true,
   fetchWithProgress: mocks.bytes,
   setClipReady: mocks.ready,
   setClipLoading: mocks.loading,

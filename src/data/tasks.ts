@@ -1,6 +1,6 @@
 export type Kind = 'color' | 'object';
 
-// Локальная проверка без сервера: по цвету пикселей или по классам предметов (COCO-SSD) и CLIP.
+// Локальная проверка без сервера: цвета — по пикселям, предметы — только по CLIP.
 export type LocalCheck =
   | { kind: 'color'; color: import('../vision/color').ColorName }
   | { kind: 'labels'; words: string[]; clip?: string } // clip — название предмета для CLIP (src/data/clip.ts)
@@ -32,8 +32,7 @@ const color = (id: string, name: string, gen: string, hint: string) =>
     `На фото виден предмет ${gen} цвета, и этот цвет — основной цвет предмета.`, hint,
     { kind: 'color', color: id as import('../vision/color').ColorName });
 
-// Конкретный предмет. words — английские названия классов COCO (детектор): достаточно, чтобы он назвал один из них.
-// Предметы вне COCO проверяет CLIP (clip). Старые названия ImageNet в списках безвредны: детектор их не выдаёт.
+// Конкретный предмет. clip — подпись предмета, с которой сравнивается кадр.
 const thing = (id: string, accusative: string, hint: string, ...words: string[]) =>
   t('object', id, `Найди ${accusative}`, `На фото виден предмет: ${accusative}.`, hint, { kind: 'labels', words, clip: CLIP_OF[id] });
 
@@ -213,10 +212,9 @@ const DISABLED = new Set([
   'helmet', 'boots', // прихожая: шлем и сапоги скрыты по просьбе
 ].map((id) => `object-${id}`));
 
-const VISIBLE_COLOR_TASKS = 4;
 export const LEVELS: Level[] = ALL_LEVELS.map((l) => ({
   ...l,
-  tasks: l.tasks.filter((t, i) => !DISABLED.has(t.id) && (l.id !== 'colors' || i < VISIBLE_COLOR_TASKS)),
+  tasks: l.tasks.filter((t) => !DISABLED.has(t.id)),
 }));
 
 // Номер иконки задания в спрайте места: по порядку заданий в макете (в «Кухне» между ложкой и чашкой лежит удалённая вилка).

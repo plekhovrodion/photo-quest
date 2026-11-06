@@ -30,9 +30,8 @@ export const centerBox = (frame: { w: number; h: number }, share = 0.6): Box => 
 const lerp = (a: number, b: number, t: number) => a + (b - a) * t;
 export const lerpBox = (a: Box, b: Box, t: number): Box => ({ x: lerp(a.x, b.x, t), y: lerp(a.y, b.y, t), w: lerp(a.w, b.w, t), h: lerp(a.h, b.h, t) });
 
-// Следит за найденной рамкой: детектор присылает её несколько раз в секунду, а на экране рамка плавно
-// «догоняет» цель на каждом кадре отрисовки. Пропуски детектора (до ghostMs) не сбрасывают рамку,
-// а время, пока цель почти не двигается, показывает, что предмет «захвачен».
+// Сглаживает найденную цветовую область: на экране рамка плавно «догоняет» цель на каждом кадре.
+// Короткие пропуски (до ghostMs) не сбрасывают рамку; стабильное положение означает, что цель захвачена.
 export class BoxFollower {
   private target: Box | null = null;
   private shown: Box | null = null;
@@ -42,7 +41,7 @@ export class BoxFollower {
 
   constructor(private tauMs = 90, private ghostMs = 450, private jumpIou = 0.25, private calmIou = 0.8) {}
 
-  // Результат детектора: рамка предмета или null, если в этот раз ничего не найдено.
+  // Найденная область или null, если в этот раз ничего не обнаружено.
   observe(box: Box | null, now: number): void {
     if (box) {
       if (!this.target || iou(this.target, box) < this.jumpIou) {

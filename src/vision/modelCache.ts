@@ -11,7 +11,7 @@ export function prepareModelCache(): Promise<void> {
     try {
       await navigator.serviceWorker.register(`${BASE}model-cache-sw.js`, { scope: BASE });
       await navigator.serviceWorker.ready;
-      // CLIP весит около 85 МБ, просим браузер сохранять его между сессиями.
+      // MobileCLIP-S0 весит около 23 МБ; просим браузер сохранять его между сессиями.
       await navigator.storage?.persist?.().catch(() => false);
     } catch {
       // Без Service Worker модели всё равно загружаются обычным fetch.

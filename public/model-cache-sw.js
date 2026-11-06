@@ -1,6 +1,6 @@
 // Модели распознавания большие и редко меняются. CacheStorage сохраняет их
 // между перезагрузками и позволяет запускать уже скачанные модели без сети.
-const CACHE_NAME = 'photo-quest-models-v1';
+const CACHE_NAME = 'photo-quest-models-v3';
 
 self.addEventListener('install', (event) => {
   event.waitUntil(self.skipWaiting());

@@ -713,7 +713,6 @@ button.pw-back:not(.level):not(.stop):not(.cube-btn) { position: absolute; top: 
 .mp-bg { position: fixed; inset: 0; width: 100%; height: 100%; object-fit: cover; z-index: 0; pointer-events: none; }
 #app.screen-map > .loc { background: #ebe0ff; }
 .mp .mp-head { position: relative; z-index: 1; height: 104px; background: none; overflow: visible; }
-#app.screen-map #back { display: none; }
 #app.screen-map .loc-body { position: relative; z-index: 1; padding: 0 16px 32px; align-items: flex-start; }
 .mp-road { max-width: 720px; width: 100%; margin: 0 auto; display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; }
 .mp-path, .mp-decor { display: none; }
@@ -816,7 +815,6 @@ button.pw-back:not(.level):not(.stop):not(.cube-btn) { position: absolute; top: 
 
 /* Закрытые места и стрелка-подсказка на главной */
 #app.screen-map button.mp-tile.locked { cursor: not-allowed; }
-.mp-tile.locked .pet { display: none; }
 .mp-tile.shake { animation: mp-shake .45s ease; }
 @keyframes mp-shake { 0%, 100% { translate: 0; } 20% { translate: -8px; } 40% { translate: 8px; } 60% { translate: -5px; } 80% { translate: 5px; } }
 @media (prefers-reduced-motion: reduce) { .mp-tile.shake { animation: none; } }
@@ -1048,22 +1046,19 @@ button.pw-back:not(.level):not(.stop):not(.cube-btn) { position: absolute; top: 
   #app.screen-map button.mp-tile.pulse, #app.screen-map .mp-check, #app.screen-loc button.loc-card.pulse, #app.screen-loc button.loc-play.pulse, #app.screen-onboarding-video button.intro-play { animation: none; }
 }
 
-/* Экран «Загружаем игру»: во весь экран, полоска как на экране места */
+/* Загрузка распознавания: отдельный крупный прогресс по мобильному референсу. */
 .loading-screen { position: fixed; inset: 0; z-index: 80; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 32px;
-  padding: 24px; background: radial-gradient(circle at 50% 38%, #f2fff4 0, #d9f6de 55%, #bfeccb 100%); --lfill: #66d385; animation: ca-fade .3s ease backwards; }
+  padding: 24px; background: linear-gradient(180deg, #d8f5de 0%, #effcf1 52%, #c6edcf 100%); --lfill: #58c978; animation: ca-fade .3s ease backwards; }
 .model-loading-screen { z-index: 110; }
 .model-loading-screen[hidden] { display: none; }
+.model-loading-screen .loc-progress { width: min(100%, 600px); height: 40px; }
+.model-loading-screen .loc-track { width: 100%; height: 40px; padding: 4px; border-radius: 999px; background: rgba(255, 255, 255, .82); }
+.model-loading-screen .loc-fill { display: block; width: var(--w, 25%); height: 100%; min-width: 0; border-radius: 999px; background-color: #58c978; background-repeat: repeat-x; background-size: 30px 100%; animation: loc-grow 1.4s cubic-bezier(.22, 1, .36, 1) .35s backwards, loc-stripes 2.4s linear infinite; }
 .model-load-error { margin: 0; color: #221c5f; font-size: 20px; font-weight: 700; text-align: center; }
 .model-load-actions { display: flex; flex-wrap: wrap; justify-content: center; gap: 12px; }
 .model-load-actions[hidden], .model-load-error[hidden] { display: none; }
 .model-load-actions button { min-width: 140px; padding: 12px 20px; border: 0; border-radius: 18px; background: #66d385; color: #16532a; font: 700 18px/1.2 'Factor A', system-ui, sans-serif; cursor: pointer; }
-.loading-screen h2 { margin: 0; font-size: 28px; line-height: 36px; font-weight: 700; color: #221c5f; text-align: center; text-shadow: none; }
-.loading-screen .loc-track { background: rgba(255, 255, 255, .75); }
-.loading-screen .loc-progress { width: min(100%, 560px); }
-.loading-screen .loc-fill { width: var(--w, 0%); background-repeat: repeat-x; background-size: 30px 100%; transition: width .25s ease-out; animation: loc-stripes 2.4s linear infinite; }
-.loading-screen .loc-fill[style*="--w:0%"] { display: block; width: 0; }
-@media (prefers-reduced-motion: reduce) { .loading-screen .loc-fill { animation: none; } }
-@media (min-width: 900px) { .loading-screen h2 { font-size: 40px; line-height: 48px; } }
+@media (prefers-reduced-motion: reduce) { .model-loading-screen .loc-fill { animation: none; } }
 
 /* Запрос камеры по макету «Саундчек» (то же, что для микрофона) */
 .perm-ask { position: fixed; inset: 0; z-index: 45; font-family: 'Factor A', system-ui, sans-serif; background: rgba(34, 28, 95, .55);
@@ -1162,3 +1157,134 @@ button.pw-back:not(.level):not(.stop):not(.cube-btn) { position: absolute; top: 
 /* Повторная загрузка модели доступна без выхода из камеры. */
 #app button.cam-model-retry { position: absolute; z-index: 6; bottom: calc(100px + env(safe-area-inset-bottom, 0px)); left: 50%; transform: translateX(-50%); width: min(90%, 360px); min-width: 0; min-height: 48px; padding: 12px 16px; font-size: 16px; }
 #app button.cam-model-retry[hidden] { display: none; }
+
+/* Main location cards: room scene with the original full progress track. */
+#app.screen-map .mp-road { max-width: 1200px; gap: 18px; row-gap: 28px; }
+#app.screen-map button.mp-tile,
+#app.screen-map button.mp-tile.left,
+#app.screen-map button.mp-tile.right {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  justify-self: stretch;
+  align-self: stretch;
+  width: auto;
+  height: auto;
+  min-width: 0;
+  min-height: 0;
+  aspect-ratio: 1;
+  gap: 8px;
+  padding: 10px;
+  overflow: visible;
+  border: 3px solid rgba(255, 255, 255, .96);
+  border-radius: 26px;
+  background: linear-gradient(145deg, #fff 5%, #faf8ff 100%);
+  box-shadow: 0 10px 0 var(--mp-shadow, #cbb7ff);
+  color: #29204d;
+  transition: box-shadow .2s ease, border-color .2s ease, filter .2s ease;
+}
+#app.screen-map .mp-card-scene {
+  position: relative;
+  display: block;
+  flex: 1 1 auto;
+  min-height: 0;
+  width: 100%;
+  overflow: hidden;
+  border-radius: 18px;
+  background: var(--mp-surface, #efe6ff);
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, .75);
+}
+#app.screen-map .mp-card-scene .mp-win {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  min-height: 0;
+  aspect-ratio: auto;
+  border-radius: inherit;
+}
+#app.screen-map .mp-card-scene .mp-check {
+  position: absolute;
+  z-index: 6;
+  top: 6px;
+  right: 6px;
+  width: 34px;
+  height: 34px;
+  pointer-events: none;
+}
+#app.screen-map .mp-track {
+  display: block;
+  flex: none;
+  width: 100%;
+  height: 28px;
+  margin: 0;
+  padding: 4px;
+  overflow: hidden;
+  border-radius: 999px;
+  background: rgba(102, 211, 133, .2);
+}
+#app.screen-map .mp-track .loc-fill {
+  display: block;
+  min-width: 0;
+  height: 100%;
+  border-radius: inherit;
+  background-color: var(--lfill, #66d385);
+  background-size: 30px 100%;
+}
+#app.screen-map .mp-track .loc-fill[style*="--w:0%"] { display: none; }
+#app.screen-map button.mp-tile.done { border-color: #e3ffed; }
+#app.screen-map button.mp-tile:hover { transform: translateY(-3px); box-shadow: 0 12px 0 var(--mp-shadow, #cbb7ff); }
+#app.screen-map button.mp-tile:active { transform: none; box-shadow: 0 6px 0 var(--mp-shadow, #cbb7ff); }
+@keyframes mp-card-in { from { opacity: 0; transform: translateY(18px) scale(.94); } }
+@media (hover: hover) {
+  #app.screen-map button.mp-tile:not(.locked):hover { transform: translateY(-3px); }
+}
+@media (prefers-reduced-motion: no-preference) {
+  #app.screen-map button.mp-tile:not(.shake) { animation: mp-card-in .55s cubic-bezier(.22, 1, .36, 1) calc(var(--i, 0) * 70ms + 100ms) backwards; }
+  #app.screen-map button.mp-tile.pulse:not(.shake) { animation: mp-card-in .55s cubic-bezier(.22, 1, .36, 1) calc(var(--i, 0) * 70ms + 100ms) backwards, pulse-scale 1s ease-in-out calc(var(--i, 0) * 70ms + .85s) infinite; }
+}
+@media (max-width: 479px) {
+  #app.screen-map .mp-road { gap: 15px; row-gap: 25px; }
+  #app.screen-map button.mp-tile,
+  #app.screen-map button.mp-tile.left,
+  #app.screen-map button.mp-tile.right { padding: 8px; gap: 8px; border-radius: 22px; }
+  #app.screen-map .mp-card-scene { border-radius: 16px; }
+  #app.screen-map .mp-track { height: 22px; }
+}
+@media (min-width: 900px) {
+  #app.screen-map .mp-road { gap: 24px; row-gap: 34px; }
+  #app.screen-map button.mp-tile,
+  #app.screen-map button.mp-tile.left,
+  #app.screen-map button.mp-tile.right { padding: 14px; gap: 12px; border-radius: 30px; }
+  #app.screen-map .mp-card-scene { border-radius: 21px; }
+  #app.screen-map .mp-track { height: 32px; }
+}
+
+/* Короткий онбординг: одна центральная локация, затем одна центральная карточка цвета. */
+#app.screen-map .loc-body.intro-body { align-items: center; justify-content: center; padding: 0 16px; }
+#app.screen-map .mp-road.intro-only { display: grid; grid-template-columns: minmax(0, 1fr); justify-items: center; width: calc((100% - 18px) / 2); justify-content: center; align-content: center; max-width: 100%; min-height: 100%; gap: 0; }
+#app.screen-map .mp-road.intro-only .mp-tile { width: 100%; justify-self: center; align-self: center; }
+#app.screen-places .loc-grid.intro-single { grid-template-columns: minmax(0, 1fr); justify-items: center; width: calc((100% - 16px) / 2); margin-inline: auto; }
+@media (max-width: 479px) {
+  #app.screen-map .mp-road.intro-only { width: calc((100% - 15px) / 2); }
+}
+@media (min-width: 900px) {
+  #app.screen-map .loc-body.intro-body { padding: 0 64px; }
+  #app.screen-map .mp-road.intro-only { width: calc((min(100%, 1200px) - 72px) / 4); }
+}
+@media (min-width: 600px) {
+  #app.screen-places .loc-grid.intro-single { width: calc((100% - 48px) / 3); }
+}
+@media (orientation: landscape) and (max-height: 500px) and (min-width: 480px) and (max-width: 899px) {
+  #app.screen-map .mp-road.intro-only { width: calc((100% - 30px) / 4); }
+  #app.screen-places .loc-grid.intro-single { width: calc((100% - 36px) / 4); }
+}
+@media (orientation: landscape) and (max-height: 500px) and (min-width: 480px) and (max-width: 899px) {
+  #app.screen-map .mp-road { gap: 10px; row-gap: 20px; }
+  #app.screen-map button.mp-tile,
+  #app.screen-map button.mp-tile.left,
+  #app.screen-map button.mp-tile.right { padding: 7px; gap: 6px; border-radius: 18px; }
+  #app.screen-map .mp-card-scene { border-radius: 13px; }
+  #app.screen-map .mp-track { height: 32px; }
+}

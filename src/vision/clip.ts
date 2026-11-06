@@ -1,18 +1,16 @@
 import { CLIP_OBJECTS } from '../data/clip';
-import { heavyModelsAllowed, fetchWithProgress, setClipReady, setClipLoading, setClipError } from './models';
+import { fetchWithProgress, setClipReady, setClipLoading, setClipError } from './models';
 import { prepareModelCache } from './modelCache';
 import { CLIP_ACCEPT } from './clipConstants';
 export { CLIP_ACCEPT } from './clipConstants';
 
-// CLIP (ViT-B/32, квантованный): сравниваем фото с описаниями всех предметов игры и смотрим, на каком месте нужный.
+// MobileCLIP-S0 fp16: сравниваем фото с описаниями предметов игры и смотрим, на каком месте нужный.
 // Описания посчитаны заранее (scripts/build-clip.mjs), в браузере считается только картинка.
 const BASE = import.meta.env.BASE_URL;
 export const CLIP_URL = `${BASE}models/clip/vision.onnx`;
 const TEXT_URL = `${BASE}models/clip/text.json`;
 
-const SIZE = 224;
-const MEAN = [0.48145466, 0.4578275, 0.40821073];
-const STD = [0.26862954, 0.26130258, 0.27577711];
+const SIZE = 256;
 
 type Table = [string, Float32Array][];
 export type TextSet = 'ens';
@@ -26,7 +24,6 @@ let readyP: Promise<Ready> | null = null;
 
 export function loadClip(): Promise<Ready> {
   if (readyP) return readyP;
-  if (!heavyModelsAllowed()) return Promise.reject(new Error('CLIP отключён на этом устройстве'));
   setClipLoading();
   const attempt = new Promise<Ready>((resolve, reject) => {
     const worker = new Worker(new URL('./clipWorker.ts', import.meta.url), { type: 'module' });
@@ -92,7 +89,8 @@ export function loadClip(): Promise<Ready> {
   return attempt;
 }
 
-// Вырез кадра -> 224x224, значения по правилам CLIP. 'full' — весь кадр целиком с серыми полями.
+// Центральный квадрат -> 256x256 и RGB в диапазоне 0..1, как в MobileCLIP-S0.
+// 'full' — весь кадр целиком с серыми полями.
 export type CropKind = 'center' | 'full' | 'start' | 'end';
 
 export function toPixels(src: CanvasImageSource, w: number, h: number, kind: CropKind = 'center'): Float32Array {
@@ -102,7 +100,7 @@ export function toPixels(src: CanvasImageSource, w: number, h: number, kind: Cro
   const g = c.getContext('2d', { willReadFrequently: true })!;
   g.imageSmoothingQuality = 'high';
   if (kind === 'full') {
-    g.fillStyle = 'rgb(124,116,104)'; // среднее значение CLIP, поля не влияют на признаки
+    g.fillStyle = 'rgb(124,116,104)'; // нейтральные поля для полного кадра
     g.fillRect(0, 0, SIZE, SIZE);
     const k = SIZE / Math.max(w, h);
     g.drawImage(src, 0, 0, w, h, (SIZE - w * k) / 2, (SIZE - h * k) / 2, w * k, h * k);
@@ -115,7 +113,7 @@ export function toPixels(src: CanvasImageSource, w: number, h: number, kind: Cro
   const out = new Float32Array(3 * SIZE * SIZE);
   const plane = SIZE * SIZE;
   for (let i = 0; i < plane; i++) {
-    for (let ch = 0; ch < 3; ch++) out[ch * plane + i] = (d[i * 4 + ch] / 255 - MEAN[ch]) / STD[ch];
+    for (let ch = 0; ch < 3; ch++) out[ch * plane + i] = d[i * 4 + ch] / 255;
   }
   return out;
 }

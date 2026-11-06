@@ -34,7 +34,7 @@ describe('expandBox', () => {
 
 describe('BoxFollower', () => {
   const a = { x: 100, y: 100, w: 100, h: 100 };
-  it('держит рамку-призрак при коротких пропусках детектора', () => {
+  it('держит рамку-призрак при коротких пропусках находки', () => {
     const f = new BoxFollower();
     f.observe(a, 0);
     f.frame(0);

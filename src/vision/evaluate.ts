@@ -1,14 +1,12 @@
 import type { LocalCheck } from '../data/tasks';
 import { COLOR_SHARE_MIN, hasColor, type ColorName } from './color';
-import { matchesLabels, type Prediction } from './labels';
-import type { ClipRank } from './clip';
+import { CLIP_ACCEPT, clipAccepts, clipProb, type ClipRank } from './clip';
 
-// Ленивый контекст: цвета и предсказания детектора считаются только если нужны.
+// Ленивый контекст: вычисляем цветовые доли или CLIP ранжирование только когда они нужны.
 export interface Ctx {
   shares(): Record<ColorName, number> | Promise<Record<ColorName, number>>;
-  predictions(): Prediction[] | Promise<Prediction[]>;
   liveClip?: boolean; // CLIP узнал предмет в живой камере: засчитываем без повторной проверки
-  clip?(): Promise<ClipRank[] | null>; // CLIP считается только если остальные модели не узнали предмет
+  clip?(): Promise<ClipRank[] | null>;
 }
 
 export const ANY_PROB_MIN = 0.15; // «на фото есть узнаваемый предмет»
@@ -21,16 +19,20 @@ export async function evaluate(check: LocalCheck, ctx: Ctx): Promise<boolean> {
       return hasColor(await ctx.shares(), check.color);
     case 'labels': {
       if (ctx.liveClip) return true;
-      if (matchesLabels(await ctx.predictions(), check.words)) return true;
       if (!check.clip || !ctx.clip) return false;
       const ranks = await ctx.clip();
-      return !!ranks && (await import('./clip')).clipAccepts(ranks, check.clip);
+      return !!ranks && clipAccepts(ranks, check.clip);
     }
     case 'and':
       for (const c of check.checks) if (!(await evaluate(c, ctx))) return false;
       return true;
     case 'any':
-      return (await ctx.predictions()).some((p) => p.probability >= ANY_PROB_MIN);
+      if (!ctx.clip) return false;
+      {
+        const ranks = await ctx.clip();
+        const top = ranks?.find((rank) => !rank.bg);
+        return !!ranks && !!top && clipProb(ranks, top.en) >= ANY_PROB_MIN;
+      }
     case 'multicolor': {
       const s = await ctx.shares();
       return CHROMATIC.filter((c) => s[c] >= MULTI_SHARE_MIN).length >= check.min;
@@ -39,18 +41,18 @@ export async function evaluate(check: LocalCheck, ctx: Ctx): Promise<boolean> {
 }
 
 // «Не уверен»: фото почти подошло. Тогда игра не отказывает, а спрашивает ребёнка.
-export const PROB_MAYBE = 0.015; // детектор видит нужный класс, но совсем слабо
 export const COLOR_MAYBE = COLOR_SHARE_MIN / 2;
+const CLIP_MAYBE = CLIP_ACCEPT / 2;
 
 export async function isMaybe(check: LocalCheck, ctx: Ctx): Promise<boolean> {
   switch (check.kind) {
     case 'color':
       return (await ctx.shares())[check.color] >= COLOR_MAYBE;
     case 'labels': {
-      const weak = (await ctx.predictions()).some(
-        (p) => p.probability >= PROB_MAYBE && check.words.some((w) => new RegExp(`\\b${w}\\b`, 'i').test(p.className)),
-      );
-      return weak;
+      if (!check.clip || !ctx.clip) return false;
+      const ranks = await ctx.clip();
+      const probability = ranks ? clipProb(ranks, check.clip) : 0;
+      return probability >= CLIP_MAYBE && probability < CLIP_ACCEPT;
     }
     default:
       return false;

@@ -11,7 +11,7 @@ function overlay(): { paint(p: number): void; remove(): void } {
   const el = splash ?? document.createElement('div');
   // Keep the critical pre-splash sizing rules after JS takes over, so the bar
   // doesn't jump while the app stylesheet is loading.
-  el.className = splash ? 'loading-screen pre-splash' : 'loading-screen';
+  el.className = splash ? 'loading-screen model-loading-screen pre-splash' : 'loading-screen model-loading-screen';
   if (!splash) {
     el.setAttribute('role', 'dialog');
     el.setAttribute('aria-modal', 'true');
