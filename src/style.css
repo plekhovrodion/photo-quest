@@ -1077,7 +1077,7 @@ button.pw-back:not(.level):not(.stop):not(.cube-btn) { position: absolute; top: 
 .pm-mcard { position: relative; width: min(413px, calc(100% - 32px)); box-sizing: border-box; padding: 32px 42px; background: #fff; border-radius: 35px;
   display: flex; flex-direction: column; align-items: center; gap: 12px; text-align: center; transform: translateY(144px); animation: pm-pop .45s cubic-bezier(.22, 1, .36, 1) .1s backwards; }
 .pm-fox-mobile { position: absolute; left: 50%; bottom: 100%; width: 268px; height: 288px; max-width: none; transform: translateX(-50%); pointer-events: none; }
-.perm-ask .pm-mcard h2 { font-size: 36px; line-height: 42px; font-weight: 700; color: rgba(9, 21, 38, .85); text-wrap: balance; }
+.perm-ask .pm-mcard h2 { font-size: 32px; line-height: 38px; font-weight: 700; color: rgba(9, 21, 38, .85); text-wrap: balance; }
 .perm-ask .pm-mcard p { font-size: 20px; line-height: 24px; font-weight: 400; margin-bottom: 12px; }
 .perm-ask .pm-mcard p b { font-weight: 700; }
 .perm-ask button.pm-next:not(.level):not(.stop):not(.cube-btn):not(.x) { position: relative; width: 208px; min-width: 0; height: 80px; min-height: 0; padding: 0; border: 0; border-radius: 24px; overflow: hidden;
