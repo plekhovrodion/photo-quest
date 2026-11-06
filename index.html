@@ -11,7 +11,7 @@
       .loading-screen.pre-splash { position: fixed; inset: 0; z-index: 80; display: flex; align-items: center; justify-content: center; padding: 24px; background: radial-gradient(circle at 50% 38%, #f2fff4 0, #d9f6de 55%, #bfeccb 100%); }
       .pre-splash .loc-progress { width: min(100%, 560px); height: 40px; }
       .pre-splash .loc-track { height: 40px; border-radius: 999px; padding: 4px; background: rgba(255, 255, 255, .75); overflow: hidden; }
-      .pre-splash .loc-fill { display: block; width: var(--w, 25%); height: 100%; border-radius: 999px; background-color: #66d385; background-image: url('/photo_quest/art/loc/stripe-a.svg'); background-repeat: repeat-x; background-size: 30px 100%; transition: width .25s ease-out; animation: pre-splash-stripes 2.4s linear infinite; }
+      .pre-splash .loc-fill { display: block; width: var(--w, 25%); height: 100%; border-radius: 999px; background-color: #66d385; background-image: repeating-linear-gradient(135deg, rgba(255,255,255,.45) 0 6px, transparent 6px 13px); background-repeat: repeat; background-size: 30px 100%; transition: width .25s ease-out; animation: pre-splash-stripes 2.4s linear infinite; }
       @keyframes pre-splash-stripes { to { background-position: 30px 0; } }
     </style>
   </head>

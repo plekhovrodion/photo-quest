@@ -78,7 +78,9 @@ let quietNext = false;
 let lastShown = ''; // что нарисовано сейчас: если экран перерисовывается тем же (например, возврат с камеры), он не листается заново
 let screenSeq = 0;
 function show(html: string, cls = '') {
-  stopCamera(); // экран перерисовывается: живая камера прежнего экрана закрывается
+  // Keep the granted stream while moving between task and quiz screens; release it
+  // when leaving the task flow (for example, back to the location map).
+  stopCamera(!cls.includes('screen-tk'));
   stopTyping();
   const dir = navDir;
   navDir = 'fwd';

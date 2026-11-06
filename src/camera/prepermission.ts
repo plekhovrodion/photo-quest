@@ -8,6 +8,23 @@ import { playSfx } from '../audio/sfx';
 import { ASK_CAMERA } from '../data/phrases';
 
 let shownThisSession = false;
+const GRANTED_SESSION_KEY = 'photoquest.camera.granted.v1';
+
+function hasGrantedSession(): boolean {
+  try { return sessionStorage.getItem(GRANTED_SESSION_KEY) === '1'; }
+  catch { return false; }
+}
+
+async function requestAndRemember<T>(request: () => Promise<T>): Promise<T> {
+  try {
+    const result = await request();
+    try { sessionStorage.setItem(GRANTED_SESSION_KEY, '1'); } catch { /* storage can be disabled */ }
+    return result;
+  } catch (error) {
+    try { sessionStorage.removeItem(GRANTED_SESSION_KEY); } catch { /* storage can be disabled */ }
+    throw error;
+  }
+}
 
 async function permissionState(): Promise<PermissionState | 'unknown'> {
   try {
@@ -45,7 +62,11 @@ export const onCameraPromptClosed = (fn: () => void) => { onClosed = fn; };
 // Выполняет запрос камеры (getUserMedia) и пока он ждёт ответа, показывает подсказку.
 export async function withCameraPrompt<T>(request: () => Promise<T>): Promise<T> {
   const st = await permissionState();
-  if (st === 'granted' || st === 'denied' || (st === 'unknown' && shownThisSession)) return request();
+  // Safari and some mobile browsers don't reliably expose camera permission state.
+  // Remember a successful grant for this tab so a reload doesn't show our own prompt again.
+  if (st === 'granted' || hasGrantedSession() || st === 'denied' || (st === 'unknown' && shownThisSession)) {
+    return requestAndRemember(request);
+  }
   shownThisSession = true;
 
   const el = document.createElement('div');
@@ -70,7 +91,7 @@ export async function withCameraPrompt<T>(request: () => Promise<T>): Promise<T>
   } else say();
 
   try {
-    return await request();
+    return await requestAndRemember(request);
   } finally {
     el.remove();
     onClosed?.();

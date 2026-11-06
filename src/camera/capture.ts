@@ -61,7 +61,21 @@ interface Found { box: Box; label: string; className?: string; matches: boolean 
 // (на каждом кадре экрана, плавно догоняет цель). «Снять» вырезает предмет по рамке.
 // stopLive() закрывает камеру снаружи (уход с экрана); тогда промис завершается null.
 let stopLive: (() => void) | null = null;
-export const stopCamera = () => stopLive?.();
+let cameraSession: MediaStream | null = null;
+const hasLiveTracks = (s: MediaStream | null) => !!s && s.getTracks().some((track) => track.readyState === 'live');
+function releaseCameraSession() {
+  stop(cameraSession);
+  cameraSession = null;
+}
+
+// Stop frame processing between screens, but keep the granted stream while the child
+// moves between task/camera/quiz screens. Some mobile browsers prompt again for each
+// new getUserMedia call even after the user already allowed the camera.
+export const stopCamera = (releaseStream = false) => {
+  stopLive?.();
+  if (releaseStream) releaseCameraSession();
+};
+window.addEventListener('pagehide', () => stopCamera(true));
 
 function liveCamera(target: Target, host: HTMLElement): Promise<Captured | null> {
   return new Promise((resolve) => {
@@ -76,7 +90,6 @@ function liveCamera(target: Target, host: HTMLElement): Promise<Captured | null>
     const canvas = overlay.querySelector<HTMLCanvasElement>('.cam-boxes')!;
     const hint = overlay.querySelector<HTMLElement>('.cam-hint')!;
     const dbgEl = overlay.querySelector<HTMLElement>('.cam-debug');
-    let stream: MediaStream | null = null;
     let alive = true;
     let raf = 0;
     let visibilityHandler: (() => void) | null = null;
@@ -91,7 +104,6 @@ function liveCamera(target: Target, host: HTMLElement): Promise<Captured | null>
       cancelAnimationFrame(raf);
       if (visibilityHandler) document.removeEventListener('visibilitychange', visibilityHandler);
       unsub();
-      stop(stream);
       if (stopLive === stopThis) stopLive = null;
       resolve(r);
     };
@@ -393,10 +405,16 @@ function liveCamera(target: Target, host: HTMLElement): Promise<Captured | null>
     // Запуск камеры; при отказе или ошибке показываем экран с причиной, оттуда можно попробовать снова.
     const start = async () => {
       try {
-        const s = await withCameraPrompt(() => navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment', width: { ideal: 1280 }, height: { ideal: 720 } }, audio: false }));
-        if (!alive) { stop(s); return; }
-        stream = s;
+        if (!hasLiveTracks(cameraSession)) {
+          cameraSession = null;
+          const s = await withCameraPrompt(() => navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment', width: { ideal: 1280 }, height: { ideal: 720 } }, audio: false }));
+          if (!alive) { stop(s); return; }
+          cameraSession = s;
+        }
+        const s = cameraSession!;
+        if (!alive) return;
         video.srcObject = s;
+        void video.play().catch(() => {});
       } catch (err) {
         if (!alive) return;
         const act = await showCameraProblem(classifyCameraError(err));

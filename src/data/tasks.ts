@@ -213,7 +213,11 @@ const DISABLED = new Set([
   'helmet', 'boots', // прихожая: шлем и сапоги скрыты по просьбе
 ].map((id) => `object-${id}`));
 
-export const LEVELS: Level[] = ALL_LEVELS.map((l) => ({ ...l, tasks: l.tasks.filter((t) => !DISABLED.has(t.id)) }));
+const VISIBLE_COLOR_TASKS = 4;
+export const LEVELS: Level[] = ALL_LEVELS.map((l) => ({
+  ...l,
+  tasks: l.tasks.filter((t, i) => !DISABLED.has(t.id) && (l.id !== 'colors' || i < VISIBLE_COLOR_TASKS)),
+}));
 
 // Номер иконки задания в спрайте места: по порядку заданий в макете (в «Кухне» между ложкой и чашкой лежит удалённая вилка).
 export const ICON_INDEX: Record<string, number> = Object.fromEntries(
