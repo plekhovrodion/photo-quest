@@ -22,8 +22,14 @@ async function requestAndRemember<T>(request: () => Promise<T>): Promise<T> {
     try { sessionStorage.setItem(GRANTED_SESSION_KEY, '1'); } catch { /* storage can be disabled */ }
     return result;
   } catch (error) {
-    try { localStorage.removeItem(GRANTED_SESSION_KEY); } catch { /* storage can be disabled */ }
-    try { sessionStorage.removeItem(GRANTED_SESSION_KEY); } catch { /* storage can be disabled */ }
+    // Camera startup can fail after the browser has already granted permission
+    // (for example, because iOS temporarily reports the camera as busy).
+    // Keep the remembered grant for transient capture errors.
+    const name = error instanceof DOMException ? error.name : '';
+    if (name === 'NotAllowedError') {
+      try { localStorage.removeItem(GRANTED_SESSION_KEY); } catch { /* storage can be disabled */ }
+      try { sessionStorage.removeItem(GRANTED_SESSION_KEY); } catch { /* storage can be disabled */ }
+    }
     throw error;
   }
 }

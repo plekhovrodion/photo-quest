@@ -996,9 +996,15 @@ button.pw-back:not(.level):not(.stop):not(.cube-btn) { position: absolute; top: 
 @media (min-width: 480px) { #app.screen-map button.mp-tile, #app.screen-map button.mp-tile.left, #app.screen-map button.mp-tile.right { border-radius: 36px; } .mp .mp-win { border-radius: 24px; } }
 @media (min-width: 900px) { #app.screen-map button.mp-tile, #app.screen-map button.mp-tile.left, #app.screen-map button.mp-tile.right { border-radius: 40px; } .mp .mp-win { border-radius: 28px; } }
 
-/* Safari iOS can leave newly inserted task cards briefly invisible during a tap transition. */
+/* Keep home location cards in place during iOS touch handling. */
 @supports (-webkit-touch-callout: none) {
-  #app.screen-places .loc-card:not(.pulse) { animation: none; }
+  #app.screen-map button.mp-tile:active {
+    transform: none !important;
+    translate: none;
+    scale: 1;
+    box-shadow: 0 10px 0 #cbb7ff !important;
+    animation-play-state: paused;
+  }
 }
 
 /* Экран с камерой на десктопе: белая карточка с заданием по центру экрана, кнопки поверх */
