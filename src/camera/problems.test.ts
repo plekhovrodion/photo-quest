@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { cameraProblemScreen, classifyCameraError, detectPlatform, instructionSteps, PROBLEM_SCREENS, unavailableReason } from './problems';
+import { classifyCameraError, detectPlatform, instructionSteps, PROBLEM_SCREENS, unavailableReason } from './problems';
 
 describe('ошибки камеры', () => {
   it('различает отказ, отсутствие, занятость и прочее', () => {
@@ -39,7 +39,7 @@ describe('платформа и инструкция', () => {
     const all = (['ios', 'android', 'safari', 'yandex', 'firefox', 'chrome', 'edge'] as const).map(instructionSteps);
     for (const steps of all) expect(steps.length).toBeGreaterThanOrEqual(3);
     expect(all[0].join(' ')).toMatch(/Safari/);
-    expect(all[1].join(' ')).toMatch(/Chrome/);
+    expect(all[1].join(' ')).toMatch(/браузер/);
     expect(new Set(all.map((s) => s.join('|'))).size).toBe(7);
   });
 });
@@ -54,20 +54,6 @@ describe('helpArt', () => {
     expect(helpArt('Mozilla/5.0 Chrome/120 YaBrowser/24 Safari/537', 'desktop')).toBe('yandex');
     expect(helpArt('x', 'ios')).toBe('ios');
     expect(helpArt('x', 'android')).toBe('android');
-  });
-});
-
-
-describe('повторный запрос камеры на телефоне', () => {
-  it('после отказа повторяет запрос без инструкции на iOS и Android', () => {
-    for (const platform of ['ios', 'android'] as const) {
-      expect(cameraProblemScreen('denied', platform).next).toBe('retry');
-      expect(cameraProblemScreen('denied', platform).body).toBe('');
-    }
-  });
-  it('сохраняет помощь на компьютере и для других ошибок', () => {
-    expect(cameraProblemScreen('denied', 'desktop').next).toBe('instructions');
-    expect(cameraProblemScreen('busy', 'ios')).toBe(PROBLEM_SCREENS.busy);
   });
 });
 
@@ -98,5 +84,27 @@ describe('инструкции по браузерам', () => {
     expect(instructionSteps('firefox').join(' ')).toContain('«Использовать по умолчанию»');
     expect(instructionSteps('ios').join(' ')).toContain('«Настройки для веб-сайтов»');
     expect(instructionSteps('ios').join(' ')).not.toContain('переключатель');
+  });
+});
+
+
+describe('мобильные браузеры', () => {
+  it.each([
+    ['Android Chrome/130 Safari/537', 'android', 'android-chrome'],
+    ['Android Chrome/130 YaBrowser/24', 'android', 'android-yandex'],
+    ['Android Chrome/130 EdgA/130', 'android', 'android-edge'],
+    ['Android Chrome/130 OPR/80', 'android', 'android-opera'],
+    ['Android Firefox/130', 'android', 'android-firefox'],
+    ['iPhone CriOS/130 Safari/605', 'ios', 'ios-chrome'],
+    ['iPhone FxiOS/130', 'ios', 'ios-firefox'],
+    ['iPhone Version/18 Safari/605', 'ios', 'ios'],
+  ] as const)('выбирает инструкцию для %s', (ua, platform, expected) => {
+    expect(helpArt(ua, platform)).toBe(expected);
+  });
+  it('использует мобильные пути Яндекса, Opera и Edge', () => {
+    expect(instructionSteps('android-yandex').join(' ')).toContain('«О сайте»');
+    expect(instructionSteps('android-opera').join(' ')).toContain('щита');
+    expect(instructionSteps('android-edge').join(' ')).toContain('Microsoft Edge');
+    expect(instructionSteps('ios-chrome').join(' ')).toContain('Google Chrome');
   });
 });

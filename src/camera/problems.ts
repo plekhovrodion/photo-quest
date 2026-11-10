@@ -4,7 +4,8 @@ import { speak } from '../audio/sounds';
 import { CAMERA_DENIED } from '../data/phrases';
 export type CamProblem = 'nocamera' | 'denied' | 'busy' | 'insecure' | 'other';
 export type Platform = 'ios' | 'android' | 'desktop';
-export type HelpArt = 'ios' | 'android' | 'safari' | 'firefox' | 'yandex' | 'chrome' | 'edge';
+type MobileBrowser = 'chrome' | 'yandex' | 'edge' | 'opera' | 'firefox';
+export type HelpArt = `android-${MobileBrowser}` | `ios-${MobileBrowser}` | 'ios' | 'android' | 'safari' | 'firefox' | 'yandex' | 'chrome' | 'edge';
 
 // Что пошло не так по ошибке getUserMedia.
 export function classifyCameraError(err: unknown): CamProblem {
@@ -28,7 +29,15 @@ export function detectPlatform(ua = navigator.userAgent, touchPoints = navigator
 
 // Инструкция на телефоне зависит от системы, на компьютере — от браузера.
 export function helpArt(ua = navigator.userAgent, p: Platform = detectPlatform(ua)): HelpArt {
-  if (p !== 'desktop') return p;
+  if (p !== 'desktop') {
+    let browser: MobileBrowser | null = null;
+    if (/YaBrowser/i.test(ua)) browser = 'yandex';
+    else if (/EdgA|EdgiOS/i.test(ua)) browser = 'edge';
+    else if (/OPR|Opera|OPiOS|OPT\//i.test(ua)) browser = 'opera';
+    else if (/Firefox|FxiOS/i.test(ua)) browser = 'firefox';
+    else if (/Chrome|Chromium|CriOS/i.test(ua)) browser = 'chrome';
+    return browser ? `${p}-${browser}` : p;
+  }
   if (/YaBrowser/i.test(ua)) return 'yandex';
   if (/Firefox/i.test(ua)) return 'firefox';
   if (/Edg/i.test(ua)) return 'edge';
@@ -39,18 +48,38 @@ export function helpArt(ua = navigator.userAgent, p: Platform = detectPlatform(u
 // Шаги подключения камеры по платформам.
 const BACK = 'Вернись в игру и нажми «Попробовать ещё раз»';
 export function instructionSteps(p: HelpArt | 'desktop'): string[] {
+  const names: Record<MobileBrowser, string> = {
+    chrome: 'Google Chrome', yandex: 'Яндекс Браузер', edge: 'Microsoft Edge', opera: 'Opera', firefox: 'Mozilla Firefox',
+  };
+  if (p.startsWith('android-') || p.startsWith('ios-')) {
+    const browser = p.slice(p.indexOf('-') + 1) as MobileBrowser;
+    const name = names[browser];
+    if (p.startsWith('ios-')) return [
+      `Открой «Настройки» iPhone или iPad → «Приложения» → ${name}. В старых версиях iOS найди браузер прямо в «Настройках»`,
+      'Если есть пункт «Камера», разреши доступ',
+      'Вернись на сайт игры, обнови страницу и разреши камеру в запросе браузера',
+      BACK,
+    ];
+    const system = `Открой «Настройки» телефона → «Приложения» → ${name} → «Разрешения» → «Камера» и разреши доступ`;
+    if (browser === 'edge' || browser === 'firefox') return [system, 'Вернись на сайт игры, обнови страницу и разреши камеру в запросе браузера', BACK];
+    const site = browser === 'yandex'
+      ? ['Нажми три точки рядом с адресной строкой', 'Нажми на адрес сайта игры или «О сайте»', 'Найди «Камера» и выбери «Разрешить»']
+      : browser === 'opera'
+        ? ['Нажми значок щита рядом с адресной строкой', 'Выбери «Разрешения» и разреши доступ к камере']
+        : ['Нажми значок настроек рядом с адресом сайта', 'Найди «Камера» в разрешениях сайта и выбери «Разрешить»', 'Если разрешений нет, обнови страницу и нажми «Разрешить» в запросе камеры'];
+    return [...site, `Если не помогло: ${system}`, 'Вернись в браузер и обнови страницу', BACK];
+  }
   if (p === 'ios') return [
-    'Открой «Настройки» iPhone или iPad и найди Safari',
+    'Открой «Настройки» iPhone или iPad → «Приложения» → Safari. В старых версиях iOS найди Safari прямо в «Настройках»',
     'В разделе «Настройки для веб-сайтов» выбери «Камера»',
     'Выбери «Разрешить» или «Спрашивать»',
     BACK,
   ];
   if (p === 'android') return [
-    'Нажми значок слева от адреса сайта (замок или настройки)',
-    'Выбери «Разрешения» → «Камера»',
-    'Включи переключатель «Камера»',
+    'Открой «Настройки» телефона → «Приложения» и найди браузер, в котором открыта игра',
+    'Открой «Разрешения» → «Камера» и разреши доступ',
+    'Вернись в браузер, обнови страницу и разреши камеру в запросе',
     BACK,
-    'Не вышло? Открой «Настройки» телефона → «Приложения» → Chrome → «Разрешения» → «Камера» → «Разрешить»',
   ];
   if (p === 'safari') return [
     'Открой меню Safari и выбери «Настройки»',
@@ -96,13 +125,6 @@ export const PROBLEM_SCREENS: Record<CamProblem, Screen> = {
   other: { title: 'Не получилось включить камеру', body: 'Попробуй ещё раз. Если не выходит, обнови страницу', button: 'Попробовать ещё раз', next: 'retry' },
 };
 
-export function cameraProblemScreen(kind: CamProblem, platform: Platform): Screen {
-  if (kind === 'denied' && platform !== 'desktop') {
-    return { title: 'Разреши доступ к камере', body: '', button: 'Включить камеру', next: 'retry' };
-  }
-  return PROBLEM_SCREENS[kind];
-}
-
 const esc = (t: string) => t.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
 
 // Полноэкранный экран ошибки. Закрыть («назад», Esc, «Хорошо») или попробовать снова.
@@ -115,7 +137,7 @@ export function showCameraProblem(kind: CamProblem): Promise<'retry' | 'close'> 
     el.setAttribute('aria-modal', 'true');
     document.body.appendChild(el);
     playSfx('wrong-soft');
-    if (kind === 'denied' && detectPlatform() === 'desktop') speak(CAMERA_DENIED.text, false, CAMERA_DENIED.who);
+    if (kind === 'denied') speak(CAMERA_DENIED.text, false, CAMERA_DENIED.who);
     const finish = (r: 'retry' | 'close') => { removeEventListener('keydown', onKey); el.remove(); resolve(r); };
     let view: 'problem' | 'steps' = 'problem';
     const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape') back(); };
@@ -124,7 +146,7 @@ export function showCameraProblem(kind: CamProblem): Promise<'retry' | 'close'> 
 
     function render(v: 'problem' | 'steps') {
       view = v;
-      const s = cameraProblemScreen(kind, detectPlatform());
+      const s = PROBLEM_SCREENS[kind];
       const backBtn = `<button class="cp-back" type="button" aria-label="Назад"><i class="loc-i" style="--m:url(${base}/back.svg)"></i></button>`;
       if (v === 'steps') {
         const steps = instructionSteps(helpArt()).map((t) => `<li>${esc(t)}</li>`).join('');
