@@ -40,6 +40,7 @@ export function canUseLiveCamera(): boolean {
 const LOCK_MS = 450; // сколько рамка должна стоять почти на месте, чтобы стать зелёной
 const LOCK_MATCH_MS = 250; // быстрее, если найден именно тот предмет, что в задании
 const MARGIN = 0.12; // запас вокруг предмета при обрезке
+const COLOR_HOLD_MS = 1000; // цвет должен оставаться в кадре одну секунду
 const COLOR_GAP_MS = 50; // цветовое пятно считается за миллисекунды — можно чаще
 const LOST_HINT_MS = 3000; // через сколько без рамки подсказываем, что делать
 const SMALL = { w: 96, h: 72 };
@@ -148,6 +149,7 @@ function liveCamera(target: Target, host: HTMLElement): Promise<Captured | null>
 
     let busy = false;
     let lastStart = 0;
+    let colorSince: number | null = null;
     const baseGap = target.color || debug ? COLOR_GAP_MS : 1000;
     let gap = baseGap;
     const detectLoop = async () => {
@@ -162,6 +164,12 @@ function liveCamera(target: Target, host: HTMLElement): Promise<Captured | null>
           const now = performance.now();
           follower.observe(f?.box ?? null, now);
           if (f) current = { label: f.label, matches: f.matches };
+          if (target.color && !needClip) {
+            if (f?.matches) {
+              colorSince ??= now;
+              if (now - colorSince >= COLOR_HOLD_MS) void found();
+            } else colorSince = null;
+          }
           const ms = now - t;
           stats.inferMs = stats.inferMs ? stats.inferMs * 0.8 + ms * 0.2 : ms;
           stats.inferRuns++;
@@ -269,7 +277,7 @@ function liveCamera(target: Target, host: HTMLElement): Promise<Captured | null>
         const f = follower.frame(now);
         const lockNeeded = current.matches ? LOCK_MATCH_MS : LOCK_MS;
         const locked = !!f.box && f.stableMs >= lockNeeded && !f.ghost;
-        if (!foundAt) {
+        if (!foundAt && !(target.color && !needClip)) {
           const sure = liveOk() || (locked && current.matches);
           if (!sure) okSince = 0;
           else {
@@ -277,7 +285,7 @@ function liveCamera(target: Target, host: HTMLElement): Promise<Captured | null>
             if (now - okSince >= (liveOk() ? AUTO_CLIP_MS : AUTO_LOCK_MS) && video.videoWidth) void found();
           }
         }
-        if (f.box && video.videoWidth) {
+        if (!target.color && f.box && video.videoWidth) {
           // видео заполняет экран с обрезкой (object-fit: cover): масштаб один на обе оси, плюс сдвиг по центру
           const sc = Math.max(w / video.videoWidth, h / video.videoHeight);
           const offX = (w - video.videoWidth * sc) / 2, offY = (h - video.videoHeight * sc) / 2;
@@ -353,6 +361,10 @@ function liveCamera(target: Target, host: HTMLElement): Promise<Captured | null>
       host.classList.add('found');
       playSfx('star');
       const shot = await grab();
+      if (target.color && !needClip) {
+        if (alive) done(shot);
+        return;
+      }
       setTimeout(() => { if (alive) done(shot); }, Math.max(0, FOUND_ANIM_MS - (performance.now() - foundAt)));
     };
 
@@ -367,6 +379,7 @@ function liveCamera(target: Target, host: HTMLElement): Promise<Captured | null>
       },
       onPause() {
         previewReady = false;
+        colorSince = null;
         previewVersion++;
         liveProb = 0;
         best = null;

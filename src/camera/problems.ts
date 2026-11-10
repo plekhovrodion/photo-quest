@@ -4,7 +4,7 @@ import { speak } from '../audio/sounds';
 import { CAMERA_DENIED } from '../data/phrases';
 export type CamProblem = 'nocamera' | 'denied' | 'busy' | 'insecure' | 'other';
 export type Platform = 'ios' | 'android' | 'desktop';
-export type HelpArt = 'ios' | 'android' | 'safari' | 'firefox' | 'yandex' | 'chrome';
+export type HelpArt = 'ios' | 'android' | 'safari' | 'firefox' | 'yandex' | 'chrome' | 'edge';
 
 // Что пошло не так по ошибке getUserMedia.
 export function classifyCameraError(err: unknown): CamProblem {
@@ -26,12 +26,13 @@ export function detectPlatform(ua = navigator.userAgent, touchPoints = navigator
   return 'desktop';
 }
 
-// Какую анимированную подсказку показать: на телефоне по системе, на компьютере по браузеру (Edge и Opera устроены как Chrome).
+// Инструкция на телефоне зависит от системы, на компьютере — от браузера.
 export function helpArt(ua = navigator.userAgent, p: Platform = detectPlatform(ua)): HelpArt {
   if (p !== 'desktop') return p;
   if (/YaBrowser/i.test(ua)) return 'yandex';
   if (/Firefox/i.test(ua)) return 'firefox';
-  if (/Chrome|Chromium|Edg|OPR/i.test(ua)) return 'chrome';
+  if (/Edg/i.test(ua)) return 'edge';
+  if (/Chrome|Chromium|OPR/i.test(ua)) return 'chrome';
   return 'safari';
 }
 
@@ -39,11 +40,10 @@ export function helpArt(ua = navigator.userAgent, p: Platform = detectPlatform(u
 const BACK = 'Вернись в игру и нажми «Попробовать ещё раз»';
 export function instructionSteps(p: HelpArt | 'desktop'): string[] {
   if (p === 'ios') return [
-    'Нажми «Аа» слева в адресной строке Safari',
-    'Выбери «Настройки веб-сайта»',
-    'Включи переключатель «Камера»',
+    'Открой «Настройки» iPhone или iPad и найди Safari',
+    'В разделе «Настройки для веб-сайтов» выбери «Камера»',
+    'Выбери «Разрешить» или «Спрашивать»',
     BACK,
-    'Не вышло? Открой «Настройки» → Safari → «Камера» и выбери «Спросить» или «Разрешить»',
   ];
   if (p === 'android') return [
     'Нажми значок слева от адреса сайта (замок или настройки)',
@@ -53,28 +53,35 @@ export function instructionSteps(p: HelpArt | 'desktop'): string[] {
     'Не вышло? Открой «Настройки» телефона → «Приложения» → Chrome → «Разрешения» → «Камера» → «Разрешить»',
   ];
   if (p === 'safari') return [
-    'Нажми «Safari» в верхней строке экрана и выбери «Настройки для этого сайта»',
-    'Включи переключатель «Камера»',
-    'Обнови страницу',
-    BACK,
+    'Открой меню Safari и выбери «Настройки»',
+    'Перейди на вкладку «Сайты» и выбери «Камера»',
+    'Найди сайт игры и выбери «Разрешить»',
+    'Вернись в игру и нажми «Попробовать ещё раз»',
   ];
   if (p === 'yandex') return [
     'Нажми значок замка слева от адреса сайта',
-    'Выбери «Настройки сайта»',
-    'Включи переключатель «Камера»',
+    'В разделе «Разрешения» выбери «Камера»',
+    'Выбери «Разрешить»',
     'Обнови страницу',
     BACK,
   ];
   if (p === 'firefox') return [
-    'Нажми значок замка слева от адреса сайта',
-    'Выбери «Подключение защищено» → «Разрешения»',
-    'Рядом с «Использовать камеру» убери блокировку',
+    'Нажми значок щита или замка слева от адреса сайта',
+    'Нажми «Подробнее» или стрелку и открой «Разрешения»',
+    'Рядом с «Использовать камеру» сними галочку «Использовать по умолчанию» и выбери «Разрешить»',
     'Обнови страницу',
     BACK,
   ];
-  return [ // chrome, edge, opera и прочие
-    'Нажми значок настроек слева от адреса сайта',
-    'Включи переключатель «Камера»',
+  if (p === 'edge') return [
+    'Нажми значок замка слева от адреса сайта',
+    'Выбери «Разрешения для этого сайта»',
+    'Найди «Камера» и выбери «Разрешить»',
+    'Обнови страницу',
+    BACK,
+  ];
+  return [ // Chrome, Opera и прочие
+    'Нажми значок настроек или замка слева от адреса сайта',
+    'Найди «Камера» и выбери «Разрешить»',
     'Обнови страницу',
     BACK,
   ];
@@ -121,10 +128,8 @@ export function showCameraProblem(kind: CamProblem): Promise<'retry' | 'close'> 
       const backBtn = `<button class="cp-back" type="button" aria-label="Назад"><i class="loc-i" style="--m:url(${base}/back.svg)"></i></button>`;
       if (v === 'steps') {
         const steps = instructionSteps(helpArt()).map((t) => `<li>${esc(t)}</li>`).join('');
-        // анимированная подсказка art/help/camera-<браузер>.svg; пока файла нет, остаётся синяя заглушка
-        const media = `<figure class="cp-media"><div class="cpm-gif"><img src="${import.meta.env.BASE_URL}art/help/camera-${helpArt()}.svg" alt="" onerror="this.remove()"></div></figure>`;
         el.setAttribute('aria-label', 'Инструкция');
-        el.innerHTML = `${backBtn}<main class="cp-main"><section class="cp-card cp-steps"><h2>Инструкция</h2><div class="cp-steps-body">${media}<ol>${steps}</ol></div></section></main>
+        el.innerHTML = `${backBtn}<main class="cp-main"><section class="cp-card cp-steps"><h2>Инструкция</h2><div class="cp-steps-body"><ol>${steps}</ol></div></section></main>
           <div class="cp-bar"><button class="cp-btn" type="button">Попробовать ещё раз</button></div>`;
         el.querySelector('.cp-btn')!.addEventListener('click', () => finish('retry'));
       } else {

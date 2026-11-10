@@ -4,7 +4,6 @@ import { LEVELS, ICON_INDEX, ICON_ABS, type Level, type Task } from './data/task
 import { createGame, currentTask, reduce, STARS_PER_TASK, type Action, type GameState } from './game/state';
 import { PRAISE, INTRO_EN, TRY_AGAIN, TROUBLE, LEVEL_DONE, GAME_DONE, REPEAT_AFTER, QUIZ_ASK, QUIZ_WRONG, LOCKED_HINT, TASK_LOCKED, TASK_AIM, WAIT_LOADING, NEXT_HINT, ONBOARDING_HINT, ONBOARDING_CAMERA, type Phrase, HINT_PLACE, HINT_ITEM, HINT_COLOR, pickPhrase } from './data/phrases';
 import { takePhoto, compressPhoto, stopCamera, type Captured } from './camera/capture';
-import { onCameraPromptClosed } from './camera/prepermission';
 import { targetOf } from './camera/target';
 import { verifyPhoto } from './api/verify';
 import { COLOR_RU } from './vision/names';
@@ -83,11 +82,17 @@ function setChrome(cls: string) {
 let quietNext = false;
 let lastShown = ''; // что нарисовано сейчас: если экран перерисовывается тем же (например, возврат с камеры), он не листается заново
 let screenSeq = 0;
+let taskReminderTimer: ReturnType<typeof setInterval> | undefined;
+function stopTaskReminder() {
+  clearInterval(taskReminderTimer);
+  taskReminderTimer = undefined;
+}
 function show(html: string, cls = '') {
   // Keep the granted stream for the whole game flow. iOS Safari may ask again
   // when getUserMedia is called after returning from a location's task list.
   // Release it when leaving the game entirely.
   const keepCamera = cls.includes('screen-tk') || cls.includes('screen-map') || cls.includes('screen-places');
+  stopTaskReminder();
   stopCamera(!keepCamera);
   stopTyping();
   const dir = navDir;
@@ -256,21 +261,30 @@ function finishTask(): boolean {
 // Живая камера открыта прямо на экране задания, кнопки нет: предмет узнан — камера снимает сама.
 // Если камеру не включили (отказ, нет https), возвращаем к заданиям места.
 let camOn = false;
-// Окно «Разреши доступ к камере» перебивает озвучку задания: после него говорим задание заново (если ребёнок всё ещё на этом экране).
+// Задание озвучиваем после фактического запуска видеопотока.
 let sayCurrentTask: (() => void) | null = null;
-onCameraPromptClosed(() => {
-  const seq = screenSeq;
-  const sayTask = sayCurrentTask;
-  if (state?.phase === 'task') setTimeout(() => { if (seq === screenSeq) sayTask?.(); }, 250);
-});
 async function openCamera(task: Task) {
   const host = root.querySelector<HTMLElement>('#tkcam');
   if (!host) return;
   camOn = true;
+  host.addEventListener('playing', () => {
+    if (!host.isConnected || state?.phase !== 'task') return;
+    if (promptSpoken !== task.id) {
+      promptSpoken = task.id;
+      sayCurrentTask?.();
+    }
+    stopTaskReminder();
+    taskReminderTimer = setInterval(() => {
+      if (document.hidden || !host.isConnected || state?.phase !== 'task') return;
+      sayCurrentTask?.();
+    }, 15_000);
+  }, true);
+  host.addEventListener('pause', stopTaskReminder, true);
   const target = targetOf(task);
   // Камера открывается сразу; распознавание работает без статусной полоски поверх видео.
   if (!host.isConnected) { camOn = false; return; } // пока грузилось, ребёнок ушёл с экрана
   void takePhoto(target, host).then((cap) => {
+    if (host.isConnected) stopTaskReminder();
     camOn = false;
     if (!cap) {
       if (!host.isConnected) return;
@@ -337,9 +351,9 @@ function renderOnboarding() {
   const mobileUrl = import.meta.env.BASE_URL + 'video/onboarding-mobile.mp4';
   const desktopUrl = import.meta.env.BASE_URL + 'video/onboarding.mp4';
   show(`<div class="intro-video-wrap">
-    <video class="intro-video" autoplay playsinline preload="auto" aria-label="Видео-знакомство с игрой">
+    <video class="intro-video" playsinline preload="auto" aria-label="Видео-знакомство с игрой">
     </video>
-    <button id="intro-play" class="intro-play" type="button" aria-label="Воспроизвести видео" hidden><img class="intro-play-icon" src="${import.meta.env.BASE_URL}art/loc/onboarding-play.svg" alt=""></button>
+    <button id="intro-play" class="intro-play" type="button" aria-label="Воспроизвести видео"><img class="intro-play-icon" src="${import.meta.env.BASE_URL}art/loc/onboarding-play.svg" alt=""></button>
   </div>`, 'screen-onboarding-video');
   const video = root.querySelector<HTMLVideoElement>('.intro-video')!;
   const wrap = root.querySelector<HTMLElement>('.intro-video-wrap')!;
@@ -364,7 +378,7 @@ function renderOnboarding() {
   };
   const loadVideo = (url: string) => {
     wrap.classList.remove('is-ready', 'is-playing');
-    play.hidden = true;
+    play.hidden = false;
     video.src = url;
     video.load();
   };
@@ -372,7 +386,6 @@ function renderOnboarding() {
   video.addEventListener('loadeddata', () => {
     if (finished) return;
     wrap.classList.add('is-ready');
-    attemptPlay();
   });
   video.addEventListener('ended', finish, { once: true });
   video.addEventListener('error', () => {
@@ -838,6 +851,9 @@ function render() {
       if (s.phase === 'task') void openCamera(task!); // в фазе camera снимок уже сделан и обрабатывается
       const tutorialPrompt = !onboardingComplete() ? ONBOARDING_CAMERA[task!.id] : undefined;
       const sayTask = () => {
+        const video = root.querySelector<HTMLVideoElement>('#tkcam video');
+        if (state?.phase !== 'task' || !video?.srcObject || video.paused || video.readyState < 2
+          || document.hidden || document.querySelector('.cam-problem, .perm-ask')) return;
         if (tutorialPrompt) {
           speak(tutorialPrompt.text, false, tutorialPrompt.who);
         } else {
@@ -847,7 +863,6 @@ function render() {
       };
       sayCurrentTask = s.phase === 'task' ? sayTask : null;
       root.querySelector('#tkhead')?.addEventListener('click', sayTask); // нажатие на задание повторяет его
-      if (!notice && promptSpoken !== task!.id) { promptSpoken = task!.id; sayTask(); } // не повторяем при открытии камеры и возврате
       notice = '';
       break;
     }
@@ -905,6 +920,8 @@ function render() {
       const L = level!;
       const proceed = () => {
         if (onboardingTask) {
+          const next = onboardingColorTasks.find((task) => progress.found[task.id] === undefined);
+          if (next) return startTask(next);
           level = null;
           renderLevels();
           return;

@@ -59,10 +59,6 @@ function desktopHtml(side: PromptSide): string {
   return `${fox}<div class="pm-card"><h2>${TITLE}</h2></div>`;
 }
 
-// Пока окно просьбы говорит само, оно перебивает озвучку задания. Когда окно закрылось, экран задания договаривает (см. main.ts).
-let onClosed: (() => void) | null = null;
-export const onCameraPromptClosed = (fn: () => void) => { onClosed = fn; };
-
 // Выполняет запрос камеры (getUserMedia) и пока он ждёт ответа, показывает подсказку.
 export async function withCameraPrompt<T>(request: () => Promise<T>): Promise<T> {
   const mobile = matchMedia('(pointer: coarse)').matches || innerWidth < 700;
@@ -93,6 +89,5 @@ export async function withCameraPrompt<T>(request: () => Promise<T>): Promise<T>
     return await requestAndRemember(request);
   } finally {
     el.remove();
-    onClosed?.();
   }
 }

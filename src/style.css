@@ -603,9 +603,6 @@ body::before, body::after { animation: none; }
 .cp-card.cp-steps { align-items: stretch; text-align: left; gap: 24px; padding: 40px 32px; }
 .cp-steps h2 { text-align: left; }
 .cp-steps-body { display: grid; gap: 32px; }
-.cp-media { margin: 0; border-radius: 24px; overflow: hidden; background: #1c2f78; aspect-ratio: 16 / 10; }
-.cpm-gif { position: relative; width: 100%; height: 100%; background: radial-gradient(120% 90% at 30% 20%, #3556b8, #1c2f78 70%); }
-.cpm-gif img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
 .cp-steps ol { margin: 0; padding-left: 28px; display: grid; gap: 16px; font-size: 20px; line-height: 28px; font-weight: 400; color: #221c5f; }
 .cp-bar { position: absolute; left: 0; right: 0; bottom: 0; display: flex; justify-content: center; padding: 16px 16px calc(24px + env(safe-area-inset-bottom, 0px)); }
 .cam-problem button.cp-btn:not(.level):not(.stop):not(.cube-btn):not(.x) { width: 100%; max-width: 600px; height: 64px; min-height: 64px; padding: 16px 24px; border: 0; border-radius: 24px; background: #8a5eff; color: #fff; font: 700 22px/26px 'Factor A', system-ui, sans-serif; text-shadow: none;
@@ -1230,7 +1227,6 @@ button.pw-back:not(.level):not(.stop):not(.cube-btn) { position: absolute; top: 
   background-size: 30px 100%;
 }
 #app.screen-map .mp-track .loc-fill[style*="--w:0%"] { display: none; }
-#app.screen-map button.mp-tile.done { border-color: #e3ffed; }
 #app.screen-map button.mp-tile:hover { transform: translateY(-3px); box-shadow: 0 12px 0 var(--mp-shadow, #cbb7ff); }
 #app.screen-map button.mp-tile:active { transform: none; box-shadow: 0 6px 0 var(--mp-shadow, #cbb7ff); }
 @keyframes mp-card-in { from { opacity: 0; transform: translateY(18px) scale(.94); } }
@@ -1255,6 +1251,7 @@ button.pw-back:not(.level):not(.stop):not(.cube-btn) { position: absolute; top: 
   #app.screen-map button.mp-tile.left,
   #app.screen-map button.mp-tile.right { padding: 14px; gap: 12px; border-radius: 30px; }
   #app.screen-map .mp-card-scene { border-radius: 21px; }
+  #app.screen-map .mp-card-scene .mp-check { width: 56px; height: 56px; }
   #app.screen-map .mp-track { height: 32px; }
 }
 
@@ -1288,4 +1285,25 @@ button.pw-back:not(.level):not(.stop):not(.cube-btn) { position: absolute; top: 
   #app.screen-map button.mp-tile.right { padding: 7px; gap: 6px; border-radius: 18px; }
   #app.screen-map .mp-card-scene { border-radius: 13px; }
   #app.screen-map .mp-track { height: 32px; }
+}
+
+/* Подсказка появляется вместе с пульсацией кнопки задания. */
+#app.screen-tk button.loc-play { position: relative; }
+#app.screen-tk button.loc-play.pulse::after {
+  content: '';
+  position: absolute;
+  bottom: calc(100% + 12px);
+  left: 50%;
+  translate: -50% 0;
+  width: 81px;
+  height: 90px;
+  background: url('/art/loc/arrow-tutorial.svg') center / contain no-repeat;
+  pointer-events: none;
+  animation: onboarding-arrow 1.2s ease-in-out infinite;
+}
+@media (orientation: landscape) and (max-height: 500px) {
+  #app.screen-tk button.loc-play.pulse::after { width: 54px; height: 60px; bottom: calc(100% + 8px); }
+}
+@media (prefers-reduced-motion: reduce) {
+  #app.screen-tk button.loc-play.pulse::after { animation: none; }
 }

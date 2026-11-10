@@ -36,11 +36,11 @@ describe('платформа и инструкция', () => {
   });
 
   it('у каждой платформы своя инструкция с шагом про возврат в игру', () => {
-    const all = (['ios', 'android', 'safari', 'yandex', 'firefox', 'chrome'] as const).map(instructionSteps);
+    const all = (['ios', 'android', 'safari', 'yandex', 'firefox', 'chrome', 'edge'] as const).map(instructionSteps);
     for (const steps of all) expect(steps.length).toBeGreaterThanOrEqual(3);
     expect(all[0].join(' ')).toMatch(/Safari/);
     expect(all[1].join(' ')).toMatch(/Chrome/);
-    expect(new Set(all.map((s) => s.join('|'))).size).toBe(6);
+    expect(new Set(all.map((s) => s.join('|'))).size).toBe(7);
   });
 });
 
@@ -49,7 +49,7 @@ describe('helpArt', () => {
   it('по браузеру на компьютере и по системе на телефоне', () => {
     expect(helpArt('Mozilla/5.0 (Macintosh) AppleWebKit Version/17 Safari/605', 'desktop')).toBe('safari');
     expect(helpArt('Mozilla/5.0 Chrome/120 Safari/537', 'desktop')).toBe('chrome');
-    expect(helpArt('Mozilla/5.0 Chrome/120 Safari/537 Edg/120', 'desktop')).toBe('chrome');
+    expect(helpArt('Mozilla/5.0 Chrome/120 Safari/537 Edg/120', 'desktop')).toBe('edge');
     expect(helpArt('Mozilla/5.0 Gecko Firefox/121', 'desktop')).toBe('firefox');
     expect(helpArt('Mozilla/5.0 Chrome/120 YaBrowser/24 Safari/537', 'desktop')).toBe('yandex');
     expect(helpArt('x', 'ios')).toBe('ios');
@@ -68,5 +68,35 @@ describe('повторный запрос камеры на телефоне', (
   it('сохраняет помощь на компьютере и для других ошибок', () => {
     expect(cameraProblemScreen('denied', 'desktop').next).toBe('instructions');
     expect(cameraProblemScreen('busy', 'ios')).toBe(PROBLEM_SCREENS.busy);
+  });
+});
+
+
+describe('инструкция Safari на компьютере', () => {
+  it('ведёт к разрешению камеры на вкладке Сайты', () => {
+    const steps = instructionSteps('safari').join(' ');
+    expect(steps).toContain('«Настройки»');
+    expect(steps).toContain('«Сайты»');
+    expect(steps).toContain('«Камера»');
+    expect(steps).toContain('«Разрешить»');
+    expect(steps).not.toContain('переключатель');
+  });
+});
+
+
+describe('инструкции по браузерам', () => {
+  it('показывает отдельный путь для Edge', () => {
+    expect(instructionSteps('edge').join(' ')).toContain('«Разрешения для этого сайта»');
+  });
+  it('указывает Разрешить в Chrome и Яндексе', () => {
+    for (const browser of ['chrome', 'yandex'] as const) {
+      expect(instructionSteps(browser).join(' ')).toContain('«Разрешить»');
+      expect(instructionSteps(browser).join(' ')).not.toContain('переключатель');
+    }
+  });
+  it('описывает разрешения Firefox и настройки Safari на iOS', () => {
+    expect(instructionSteps('firefox').join(' ')).toContain('«Использовать по умолчанию»');
+    expect(instructionSteps('ios').join(' ')).toContain('«Настройки для веб-сайтов»');
+    expect(instructionSteps('ios').join(' ')).not.toContain('переключатель');
   });
 });
