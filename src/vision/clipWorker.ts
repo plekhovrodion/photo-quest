@@ -20,6 +20,7 @@ const handleMessage = async (e: MessageEvent<{ type: 'init'; bytes: ArrayBuffer 
       ort.env.wasm.wasmPaths = { wasm: wasmUrl, mjs: mjsUrl };
       ort.env.wasm.numThreads = 1;
       session = await ort.InferenceSession.create(new Uint8Array(m.bytes), { executionProviders: ['wasm'] });
+      (self as unknown as Worker).postMessage({ type: 'stage', stage: 'warmup' });
       const input = new ort.Tensor('float32', new Float32Array(3 * SIZE * SIZE), [1, 3, SIZE, SIZE]);
       try {
         const out = await session.run({ pixel_values: input });

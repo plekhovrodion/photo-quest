@@ -1,14 +1,15 @@
 import { CLIP_OBJECTS } from '../data/clip';
-import { fetchWithProgress, setClipReady, setClipLoading, setClipError } from './models';
+import { fetchWithProgress, setClipReady, setClipLoading, setClipStage, setClipError } from './models';
 import { prepareModelCache } from './modelCache';
-import { CLIP_ACCEPT } from './clipConstants';
+import { CLIP_ACCEPT, CLIP_MODEL_VERSION } from './clipConstants';
+import { assertRecognitionSupport } from './clipSupport';
 export { CLIP_ACCEPT } from './clipConstants';
 
 // MobileCLIP-S0 fp16: сравниваем фото с описаниями предметов игры и смотрим, на каком месте нужный.
 // Описания посчитаны заранее (scripts/build-clip.mjs), в браузере считается только картинка.
 const BASE = import.meta.env.BASE_URL;
-export const CLIP_URL = `${BASE}models/clip/vision.onnx`;
-const TEXT_URL = `${BASE}models/clip/text.json`;
+export const CLIP_URL = `${BASE}models/clip/vision.onnx?v=${CLIP_MODEL_VERSION}`;
+const TEXT_URL = `${BASE}models/clip/text.json?v=${CLIP_MODEL_VERSION}`;
 
 const SIZE = 256;
 
@@ -26,6 +27,7 @@ export function loadClip(): Promise<Ready> {
   if (readyP) return readyP;
   setClipLoading();
   const attempt = new Promise<Ready>((resolve, reject) => {
+    assertRecognitionSupport();
     const worker = new Worker(new URL('./clipWorker.ts', import.meta.url), { type: 'module' });
     const controller = new AbortController();
     const waiting = new Map<number, { ok: (v: Float32Array) => void; fail: (e: Error) => void; timer: ReturnType<typeof setTimeout> }>();
@@ -56,7 +58,7 @@ export function loadClip(): Promise<Ready> {
     });
     worker.addEventListener('message', (e: MessageEvent) => {
       if (dead) return;
-      const m = e.data as { type: string; id?: number; emb?: Float32Array; message?: string };
+      const m = e.data as { type: string; id?: number; emb?: Float32Array; message?: string; stage?: 'warmup' };
       if (m.type === 'ready') {
         clearTimeout(initTimer);
         setClipReady();
@@ -64,7 +66,8 @@ export function loadClip(): Promise<Ready> {
       } else if (m.type === 'result') {
         const pending = waiting.get(m.id!);
         if (pending) { clearTimeout(pending.timer); pending.ok(m.emb!); waiting.delete(m.id!); }
-      } else if (m.type === 'error') fail(new Error(m.message ?? 'Ошибка CLIP'));
+      } else if (m.type === 'stage' && m.stage) setClipStage(m.stage);
+      else if (m.type === 'error') fail(new Error(m.message ?? 'Ошибка CLIP'));
     });
     worker.addEventListener('error', (e) => fail(new Error(e.message || 'CLIP worker завершился с ошибкой')));
     worker.addEventListener('messageerror', () => fail(new Error('Не удалось прочитать ответ CLIP')));
@@ -79,7 +82,10 @@ export function loadClip(): Promise<Ready> {
       ]);
       const table = (o: Record<string, number[]>): Table => Object.entries(o).map(([k, v]) => [k, Float32Array.from(v)]);
       tables = { sets: { ens: table(textRaw.ens) }, bg: table(textRaw.bg) };
-      if (!dead) worker.postMessage({ type: 'init', bytes }, [bytes]);
+      if (!dead) {
+        setClipStage('initialize');
+        worker.postMessage({ type: 'init', bytes }, [bytes]);
+      }
     })().catch((error) => fail(new Error(String(error))));
   });
   readyP = attempt;

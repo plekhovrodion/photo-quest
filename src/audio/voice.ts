@@ -16,65 +16,122 @@ export function recordedFor(text: string, english = false): string | null {
 // url = null — тишина на ms миллисекунд (пауза, чтобы ребёнок успел повторить слово); onStart вызывается, когда очередь дошла до пункта.
 interface Item { url: string | null; text: string; english: boolean; ms?: number; onStart?: () => void; onEnd?: () => void }
 let queue: Item[] = [];
+let player: HTMLAudioElement | null = null;
 let current: HTMLAudioElement | null = null;
+let currentItem: Item | null = null;
+let playbackId = 0;
 let pauseTimer: ReturnType<typeof setTimeout> | null = null;
-let pauseEnd: (() => void) | null = null;
+let waitingForTouch = false;
+const touchEvents = ['touchend', 'pointerup', 'click', 'keydown'] as const;
 
-export function stopRecorded() {
+// complete завершает ожидание фраз при выключении звука, чтобы игра продолжилась.
+export function stopRecorded(mode: 'cancel' | 'finish-current' | 'complete' = 'cancel') {
+  const completedItems = mode === 'complete' ? [currentItem, ...queue] : [];
   queue = [];
-  waiting = null;
-  if (pauseTimer) { clearTimeout(pauseTimer); pauseTimer = null; pauseEnd?.(); pauseEnd = null; }
-  if (!current) return;
-  current.pause();
-  current = null;
+  stopWaitingForTouch();
+  if (pauseTimer) { clearTimeout(pauseTimer); pauseTimer = null; }
+  if (mode === 'finish-current' && current) return;
+  playbackId++;
+  currentItem = null;
+  if (current) {
+    current.onended = null;
+    current.onerror = null;
+    current.onpause = null;
+    current.pause();
+    current = null;
+  }
+  completedItems.forEach((item) => item?.onEnd?.());
 }
 
 function next() {
+  if (waitingForTouch) return;
+  const id = ++playbackId;
   const item = queue.shift();
+  currentItem = item ?? null;
   if (!item) { current = null; return; }
   if (item.url === null) {
     current = null;
     item.onStart?.();
-    pauseEnd = item.onEnd ?? null;
-    pauseTimer = setTimeout(() => { pauseTimer = null; pauseEnd?.(); pauseEnd = null; next(); }, item.ms ?? 0);
+    if (playbackId !== id) return;
+    pauseTimer = setTimeout(() => {
+      pauseTimer = null;
+      currentItem = null;
+      item.onEnd?.();
+      if (playbackId === id) next();
+    }, item.ms ?? 0);
     return;
   }
-  const a = new Audio(item.url);
+  // На iPhone разрешение на воспроизведение сохраняется у одного плеера
+  // между русскими фразами и английскими словами.
+  const a = player ??= new Audio();
   current = a;
-  a.onended = () => { if (current === a) next(); };
+  const finish = () => {
+    if (current !== a || playbackId !== id) return;
+    current = null;
+    currentItem = null;
+    item.onEnd?.();
+    if (playbackId === id) next();
+  };
+  a.onended = finish;
+  a.onerror = finish;
+  a.onpause = () => {
+    if (current === a && playbackId === id) resumeRecorded();
+  };
+  a.src = item.url;
   a.play().catch((e: unknown) => {
-    if (current === a) current = null;
-    if ((e as { name?: string })?.name === 'NotAllowedError') { waitForTouch([item, ...queue]); return; }
-    // другая ошибка (файл не загрузился и т. п.): остаток очереди бросаем
-    queue = [];
+    // Отмена старой записи не должна затрагивать уже запущенную новую очередь.
+    if (current !== a || playbackId !== id) return;
+    current = null;
+    currentItem = null;
+    if ((e as { name?: string })?.name === 'NotAllowedError') {
+      queue.unshift(item);
+      waitForTouch();
+      return;
+    }
+    // Если одна запись недоступна, продолжаем со следующего слова или фразы.
+    item.onEnd?.();
+    if (playbackId === id) next();
   });
+}
+
+// После системной паузы продолжаем запись с прежней позиции.
+// Если Safari требует жест, повторяем play() при следующем касании.
+function resumeRecorded() {
+  if (!current || !current.paused || current.ended || document.hidden) return;
+  void current.play().catch(() => {});
+}
+
+if (typeof document !== 'undefined') {
+  document.addEventListener('visibilitychange', resumeRecorded);
+  touchEvents.forEach((event) => document.addEventListener(event, resumeRecorded, true));
 }
 
 // iPhone и другие браузеры не дают играть звук без касания: подсказка при входе на страницу ждёт первого касания и звучит тогда.
 // Смена экрана (stopRecorded) отменяет ожидание, чтобы старая фраза не прозвучала не к месту.
-let waiting: Item[] | null = null;
-function waitForTouch(items: Item[]) {
-  const had = !!waiting;
-  queue = [];
-  waiting = items;
-  if (had) return;
-  const events = ['touchend', 'pointerup', 'click', 'keydown'] as const;
-  const go = () => {
-    events.forEach((ev) => document.removeEventListener(ev, go, true));
-    const w = waiting;
-    waiting = null;
-    if (w?.length) { queue = w; next(); }
-  };
-  events.forEach((ev) => document.addEventListener(ev, go, true));
+function stopWaitingForTouch() {
+  if (!waitingForTouch) return;
+  waitingForTouch = false;
+  touchEvents.forEach((event) => document.removeEventListener(event, resumeOnTouch, true));
+}
+
+function resumeOnTouch() {
+  stopWaitingForTouch();
+  next();
+}
+
+function waitForTouch() {
+  if (waitingForTouch) return;
+  waitingForTouch = true;
+  touchEvents.forEach((event) => document.addEventListener(event, resumeOnTouch, true));
 }
 
 // true — запись поставлена (или пошла); false — файла нет.
 // queue = true: дождаться, пока договорит предыдущая запись.
-export function playRecorded(text: string, queued = false, english = false): boolean {
+export function playRecorded(text: string, queued = false, english = false, onEnd?: () => void): boolean {
   const url = recordedFor(text, english);
   if (!url) return false;
   if (!queued) stopRecorded();
-  queue.push({ url, text, english });
+  queue.push({ url, text, english, onEnd });
   if (!current && !pauseTimer) next();
   return true;
 }

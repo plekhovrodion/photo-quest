@@ -494,7 +494,7 @@ body::before, body::after { animation: none; }
 #app.screen-loc button.loc-btn { position: absolute; top: calc(24px + var(--safe-top)); width: 56px; min-width: 56px; height: 56px; min-height: 56px; padding: 0; border: 0; border-radius: 20px; background: #fff;
   box-shadow: 0 8px 0 var(--lbtns); display: grid; place-items: center; cursor: pointer; transition: transform .2s cubic-bezier(.22, 1, .36, 1), box-shadow .2s cubic-bezier(.22, 1, .36, 1); }
 .loc-i { display: block; width: 24px; height: 24px; background: var(--lbtn); -webkit-mask: var(--m) center / contain no-repeat; mask: var(--m) center / contain no-repeat; }
-#app.screen-loc #back { left: 24px; }
+#app.screen-loc #back { position: fixed; left: 24px; z-index: 40; }
 #app.screen-loc .loc-tools { position: absolute; inset: 0; pointer-events: none; }
 #app.screen-loc .loc-tools .loc-btn { pointer-events: auto; right: 24px; }
 #app.screen-loc .loc-tools #snd { right: 92px; }
@@ -589,7 +589,8 @@ body::before, body::after { animation: none; }
 
 /* ===== Экраны «камера не включилась» по макету Figma «Ошибки» ===== */
 .cam-problem { position: fixed; inset: 0; z-index: 40; display: flex; flex-direction: column; background: #f5efff; color: #221c5f; font-family: 'Factor A', system-ui, sans-serif; animation: fade-in .3s ease; }
-.cam-problem button.cp-back:not(.level):not(.stop):not(.cube-btn):not(.x) { position: absolute; top: calc(24px + env(safe-area-inset-top, 0px)); left: 24px; width: 56px; min-width: 56px; height: 56px; min-height: 56px; padding: 0; border: 0; border-radius: 20px; background: #fff;
+.cam-problem.model-load-problem { z-index: 110; background: #fff; }
+.cam-problem button.cp-back:not(.level):not(.stop):not(.cube-btn):not(.x) { position: fixed; z-index: 40; top: calc(24px + env(safe-area-inset-top, 0px)); left: 24px; width: 56px; min-width: 56px; height: 56px; min-height: 56px; padding: 0; border: 0; border-radius: 20px; background: #fff;
   box-shadow: 0 8px 0 #977eda; display: grid; place-items: center; cursor: pointer; transition: transform .2s cubic-bezier(.22, 1, .36, 1), box-shadow .2s cubic-bezier(.22, 1, .36, 1); }
 .cam-problem button.cp-back:not(.level):not(.stop):not(.cube-btn):not(.x):active { transform: translateY(4px); box-shadow: 0 2px 0 #977eda; }
 .cam-problem .loc-i { background: #7a5ad0; }
@@ -1054,10 +1055,6 @@ button.pw-back:not(.level):not(.stop):not(.cube-btn) { position: absolute; top: 
 .model-loading-screen .loc-progress { width: min(100%, 600px); height: 40px; }
 .model-loading-screen .loc-track { width: 100%; height: 40px; padding: 4px; border-radius: 999px; background: rgba(255, 255, 255, .82); }
 .model-loading-screen .loc-fill { display: block; width: var(--w, 25%); height: 100%; min-width: 0; border-radius: 999px; background-color: #58c978; background-repeat: repeat-x; background-size: 30px 100%; animation: loc-grow 1.4s cubic-bezier(.22, 1, .36, 1) .35s backwards, loc-stripes 2.4s linear infinite; }
-.model-load-error { margin: 0; color: #221c5f; font-size: 20px; font-weight: 700; text-align: center; }
-.model-load-actions { display: flex; flex-wrap: wrap; justify-content: center; gap: 12px; }
-.model-load-actions[hidden], .model-load-error[hidden] { display: none; }
-.model-load-actions button { min-width: 140px; padding: 12px 20px; border: 0; border-radius: 18px; background: #66d385; color: #16532a; font: 700 18px/1.2 'Factor A', system-ui, sans-serif; cursor: pointer; }
 @media (prefers-reduced-motion: reduce) { .model-loading-screen .loc-fill { animation: none; } }
 
 /* Запрос камеры по макету «Саундчек» (то же, что для микрофона) */
@@ -1261,7 +1258,11 @@ button.pw-back:not(.level):not(.stop):not(.cube-btn) { position: absolute; top: 
   #app.screen-map .mp-track { height: 32px; }
 }
 
-/* Короткий онбординг: одна центральная локация, затем одна центральная карточка цвета. */
+/* Онбординг: стрелка над питомцем, нажатие сразу открывает камеру. */
+.onboarding-arrow { position: absolute; z-index: 3; left: 50%; bottom: calc(100% + 16px); translate: -50% 0; width: 81px; height: 90px; object-fit: contain; pointer-events: none; animation: onboarding-arrow 1.2s ease-in-out infinite; }
+@keyframes onboarding-arrow { 50% { transform: translateY(8px); } }
+@media (orientation: landscape) and (max-height: 500px) { .onboarding-arrow { width: 54px; height: 60px; bottom: calc(100% + 10px); } }
+@media (prefers-reduced-motion: reduce) { .onboarding-arrow { animation: none; } }
 #app.screen-map .loc-body.intro-body { align-items: center; justify-content: center; padding: 0 16px; }
 #app.screen-map .mp-road.intro-only { display: grid; grid-template-columns: minmax(0, 1fr); justify-items: center; width: calc((100% - 18px) / 2); justify-content: center; align-content: center; max-width: 100%; min-height: 100%; gap: 0; }
 #app.screen-map .mp-road.intro-only .mp-tile { width: 100%; justify-self: center; align-self: center; }

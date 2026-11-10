@@ -50,7 +50,9 @@ describe('evaluate', () => {
   });
   it('any: нужен узнаваемый предмет', async () => {
     expect(await evaluate({ kind: 'any' }, ctxOf({}, ['mug', 'cup']))).toBe(true);
-    expect(await evaluate({ kind: 'any' }, ctxOf({}, ['mug', 'cup', 'bottle', 'book', 'spoon', 'plate', 'bag']))).toBe(false);
+    const ambiguous = ['mug', 'cup', 'bottle', 'book', 'spoon', 'plate', 'bag']
+      .map((en) => ({ en, ru: en, score: 0.3 }));
+    expect(await evaluate({ kind: 'any' }, { ...ctxOf({}, []), clip: async () => ambiguous })).toBe(false);
   });
 });
 

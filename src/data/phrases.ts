@@ -98,6 +98,15 @@ export const HINT_COLOR: Phrase[] = [
   P('hint-color-2', 'sonya', 'Нажми на цвет, который будем искать!'),
 ];
 
+export const ONBOARDING_HINT: Phrase[] = [
+  P('onboarding-pet', 'sonya', 'Выбери питомца на экране.'),
+];
+export const ONBOARDING_CAMERA: Record<string, Phrase> = {
+  'color-red': P('onboarding-camera-red', 'sonya', 'Возьми телефон в руки и наведи камеру на предмет с красным цветом.'),
+  'color-blue': P('onboarding-camera-blue', 'sonya', 'Возьми телефон в руки и наведи камеру на предмет с синим цветом.'),
+  'color-green': P('onboarding-camera-green', 'sonya', 'Возьми телефон в руки и наведи камеру на предмет с зелёным цветом.'),
+};
+
 // Нажал на закрытое место (говорит Соня).
 export const LOCKED_HINT: Phrase[] = [
   P('locked-1', 'sonya', 'Это место пока закрыто. Сначала пройди предыдущее!'),
@@ -128,7 +137,7 @@ export const VIDEO_LINES: Phrase[] = [
   P('video-5', 'sonya', 'Давай играть!'),
 ];
 
-export const ALL_PHRASES: Phrase[] = [TASK_AIM, WAIT_LOADING, ...VIDEO_LINES, NEXT_HINT, ...PRAISE, ...INTRO_EN, ASK_CAMERA, CAMERA_DENIED, ...TRY_AGAIN, ...TROUBLE, ...LEVEL_DONE, ...GAME_DONE, ...REPEAT_AFTER, QUIZ_ASK, ...QUIZ_WRONG, ...HINT_PLACE, ...HINT_ITEM, ...HINT_COLOR, ...LOCKED_HINT, ...TASK_LOCKED];
+export const ALL_PHRASES: Phrase[] = [TASK_AIM, WAIT_LOADING, ...VIDEO_LINES, NEXT_HINT, ...PRAISE, ...INTRO_EN, ASK_CAMERA, CAMERA_DENIED, ...TRY_AGAIN, ...TROUBLE, ...LEVEL_DONE, ...GAME_DONE, ...REPEAT_AFTER, QUIZ_ASK, ...QUIZ_WRONG, ...HINT_PLACE, ...HINT_ITEM, ...HINT_COLOR, ...ONBOARDING_HINT, ...Object.values(ONBOARDING_CAMERA), ...LOCKED_HINT, ...TASK_LOCKED];
 
 // Случайная фраза, не повторяющая предыдущую из этого же списка.
 const last = new Map<Phrase[], string>();

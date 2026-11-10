@@ -2,7 +2,7 @@ import './style.css';
 import './ui/assetLoadRecovery';
 import { LEVELS, ICON_INDEX, ICON_ABS, type Level, type Task } from './data/tasks';
 import { createGame, currentTask, reduce, STARS_PER_TASK, type Action, type GameState } from './game/state';
-import { PRAISE, INTRO_EN, TRY_AGAIN, TROUBLE, LEVEL_DONE, GAME_DONE, REPEAT_AFTER, QUIZ_ASK, QUIZ_WRONG, LOCKED_HINT, TASK_LOCKED, TASK_AIM, WAIT_LOADING, NEXT_HINT, type Phrase, HINT_PLACE, HINT_ITEM, HINT_COLOR, pickPhrase } from './data/phrases';
+import { PRAISE, INTRO_EN, TRY_AGAIN, TROUBLE, LEVEL_DONE, GAME_DONE, REPEAT_AFTER, QUIZ_ASK, QUIZ_WRONG, LOCKED_HINT, TASK_LOCKED, TASK_AIM, WAIT_LOADING, NEXT_HINT, ONBOARDING_HINT, ONBOARDING_CAMERA, type Phrase, HINT_PLACE, HINT_ITEM, HINT_COLOR, pickPhrase } from './data/phrases';
 import { takePhoto, compressPhoto, stopCamera, type Captured } from './camera/capture';
 import { onCameraPromptClosed } from './camera/prepermission';
 import { targetOf } from './camera/target';
@@ -10,6 +10,7 @@ import { verifyPhoto } from './api/verify';
 import { COLOR_RU } from './vision/names';
 import { englishFor } from './data/english';
 import { preloadModels, modelStatus, onModelStatus } from './vision/models';
+import { UnsupportedRecognitionError } from './vision/clipSupport';
 import { confetti, confettiBehind } from './fx/confetti';
 import { typeText, stopTyping } from './fx/typewriter';
 import { speak, speakEnglish, speakPause, stopSpeech, isMuted, setMuted } from './audio/sounds';
@@ -69,7 +70,8 @@ const ONBOARDING = true;
 // Сверху цвет шапки места, снизу цвет фона под карточками; фон страницы делится пополам, чтобы совпало и при оттяжке.
 function setChrome(cls: string) {
   let top = '#471fb0', bottom = '#471fb0';
-  if (cls.includes('screen-onboarding-video')) { top = '#000'; bottom = '#000'; }
+  if (cls.includes('screen-model-error')) { top = '#fff'; bottom = '#fff'; }
+  else if (cls.includes('screen-onboarding-video')) { top = '#000'; bottom = '#000'; }
   else if (cls.includes('screen-loc') && level) { const c = LOC_COLORS[level.id] ?? LOC_COLORS.kitchen; top = c.head; bottom = c.bg; }
   else if (cls.includes('screen-map')) { top = '#d9c8ff'; bottom = '#8a5eff'; }
   const bg = `linear-gradient(${top} 50%, ${bottom} 50%)`;
@@ -93,7 +95,11 @@ function show(html: string, cls = '') {
   const quiet = quietNext; // перерисовка внутри экрана без перелистывания
   quietNext = false;
   const same = lastShown === `${cls}|${html}`;
-  if (!quiet && !same) { screenSeq++; stopSpeech(); } // новый экран: прежняя озвучка и её отложенные запуски не должны накладываться
+  if (!quiet && !same) {
+    screenSeq++;
+    // Автоматическая проверка и результат дают текущей фразе договорить.
+    stopSpeech(/\btk-(check|ok|bad)\b/.test(cls));
+  }
   lastShown = `${cls}|${html}`;
   root.className = quiet || same ? `${cls} quiet` : `${cls} go-${dir}`.trim(); // тот же экран заново (возврат с камеры) не листается
   setChrome(cls);
@@ -116,6 +122,10 @@ function startLevel(l: Level) {
   if (!isUnlocked(l)) return; // закрытое место не открываем даже напрямую
   level = l;
   state = null;
+  if (!onboardingComplete() && l.id === 'colors') {
+    const task = onboardingColorTasks.find((item) => progress.found[item.id] === undefined);
+    if (task) return startTask(task);
+  }
   render();
 }
 
@@ -131,12 +141,10 @@ let taskLoadToken = 0;
 
 function modelLoadingScreen(): {
   paint(progress: number): void;
-  fail(retry: () => void, back: () => void): void;
+  fail(error: unknown, retry: () => void, back: () => void): void;
 } {
   show(`<div class="loading-screen model-loading-screen" role="status" aria-label="Загрузка распознавания">
     <div class="loc-progress" role="progressbar" aria-label="Загрузка распознавания" aria-valuemin="0" aria-valuemax="100" aria-valuenow="25"><div class="loc-track"><div class="loc-fill" style="--w:25%;background-image:url('${import.meta.env.BASE_URL}art/loc/stripe-a.svg')"></div></div></div>
-    <p class="model-load-error" hidden>Не удалось загрузить распознавание</p>
-    <div class="model-load-actions" hidden><button id="model-retry" type="button">Повторить</button><button id="model-back" type="button">Назад</button></div>
   </div>`, 'screen-model-loading');
   const screen = root.querySelector<HTMLElement>('.model-loading-screen')!;
   const fill = screen.querySelector<HTMLElement>('.loc-fill')!;
@@ -147,11 +155,24 @@ function modelLoadingScreen(): {
       fill.style.setProperty('--w', `${percent}%`);
       bar.setAttribute('aria-valuenow', String(percent));
     },
-    fail(retry, back) {
-      screen.querySelector<HTMLElement>('.model-load-error')!.hidden = false;
-      screen.querySelector<HTMLElement>('.model-load-actions')!.hidden = false;
-      screen.querySelector<HTMLButtonElement>('#model-retry')!.onclick = retry;
-      screen.querySelector<HTMLButtonElement>('#model-back')!.onclick = back;
+    fail(error, retry, back) {
+      const unsupported = error instanceof UnsupportedRecognitionError;
+      const title = unsupported ? 'Нужно обновление' : 'Распознавание не запустилось';
+      const message = unsupported ? error.message : 'Попробуй ещё раз. Если не получится, позови родителей.';
+      const base = `${import.meta.env.BASE_URL}art/loc`;
+      show(`<div class="cam-problem model-load-problem" role="dialog" aria-modal="true" aria-label="${title}">
+        <button id="model-back" class="cp-back" type="button" aria-label="Назад"><i class="loc-i" style="--m:url(${base}/back.svg)"></i></button>
+        <main class="cp-main"><section class="cp-card"><img class="cp-ico" src="${base}/fox-camera.svg" alt="">
+          <h2>${title}</h2><p>${esc(message)}</p></section></main>
+        <div class="cp-bar"><button id="model-action" class="cp-btn" type="button">${unsupported ? 'Вернуться к заданиям' : 'Попробовать ещё раз'}</button></div>
+      </div>`, 'screen-model-error');
+      root.querySelector<HTMLButtonElement>('#model-back')!.onclick = back;
+      const action = root.querySelector<HTMLButtonElement>('#model-action')!;
+      action.onclick = unsupported ? back : retry;
+      root.querySelector<HTMLElement>('.model-load-problem')!.onkeydown = (event) => {
+        if (event.key === 'Escape') back();
+      };
+      action.focus({ preventScroll: true });
     },
   };
 }
@@ -185,12 +206,13 @@ async function prepareTask(task: Task, token: number): Promise<void> {
     unsubscribe();
     clearInterval(timer);
     if (token === taskLoadToken) { state = createGame([task]); render(); }
-  } catch {
+  } catch (error) {
     active = false;
     unsubscribe();
     clearInterval(timer);
     if (token !== taskLoadToken) return;
     screen.fail(
+      error,
       () => { void prepareTask(task, token); },
       () => { taskLoadToken++; toMap(); },
     );
@@ -236,7 +258,11 @@ function finishTask(): boolean {
 let camOn = false;
 // Окно «Разреши доступ к камере» перебивает озвучку задания: после него говорим задание заново (если ребёнок всё ещё на этом экране).
 let sayCurrentTask: (() => void) | null = null;
-onCameraPromptClosed(() => { if (state?.phase === 'task') setTimeout(() => sayCurrentTask?.(), 250); });
+onCameraPromptClosed(() => {
+  const seq = screenSeq;
+  const sayTask = sayCurrentTask;
+  if (state?.phase === 'task') setTimeout(() => { if (seq === screenSeq) sayTask?.(); }, 250);
+});
 async function openCamera(task: Task) {
   const host = root.querySelector<HTMLElement>('#tkcam');
   if (!host) return;
@@ -417,6 +443,7 @@ function mapTile(l: Level, i: number): string {
   const target = !locked && !full && l === targetPlace;
   const palette = LOC_COLORS[l.id] ?? LOC_COLORS.kitchen;
   return `<button class="mp-tile ${i % 2 ? 'right' : 'left'}${full ? ' done' : ''}${locked ? ' locked' : ''}${target ? ' pulse' : ''}" role="listitem" data-i="${i}" style="--i:${i};--mp-accent:${palette.fill};--mp-surface:${palette.head};--mp-shadow:${LOC_COLORS.kitchen.shadow}" ${locked ? 'aria-disabled="true"' : ''} aria-label="${l.title}: найдено ${found} из ${total}${full ? ', всё найдено' : ''}${locked ? ', закрыто: сначала пройди уровень Цвета' : ''}">
+    ${!onboardingComplete() && l.id === 'colors' ? `<img class="onboarding-arrow" src="${import.meta.env.BASE_URL}art/loc/arrow-tutorial.svg" alt="" aria-hidden="true">` : ''}
     <span class="mp-card-scene">
       <span class="mp-win is-room asset-pending" data-asset-group="images"${hasRoom(l.id) ? ' data-asset-wait-pet="true"' : ''}>${roomHtml(l.id, true, 'head-', full ? 'happy-loop' : 'sad-loop')}</span>
       ${full ? `<img class="loc-check mp-check" src="${LOC_BASE()}/check.svg" alt="">` : ''}
@@ -466,7 +493,7 @@ function mapBg(): string {
 function sayHint(sel: string, list: Phrase[]) {
   const line = pickPhrase(list);
   const seq = screenSeq;
-  setTimeout(() => { if (seq === screenSeq && root.querySelector(sel)) speak(line.text, false, line.who); }, 600);
+  setTimeout(() => { if (seq === screenSeq && root.querySelector(sel)) speak(line.text, true, line.who); }, 600);
 }
 
 function renderLevels() {
@@ -501,7 +528,7 @@ function renderLevels() {
     shakeLocked(b, LOCKED_HINT);
   }));
   on('play', () => startLevel(next));
-  sayHint('.mp-road', HINT_PLACE);
+  sayHint('.mp-road', intro ? ONBOARDING_HINT : HINT_PLACE);
   on('access', () => { void showPaywall(); });
   on('buy', () => { void showPaywall(); });
   root.querySelector('#beads')?.addEventListener('click', () => { void showPaywall(); });
@@ -599,7 +626,12 @@ function showSticker(t: Task, url: string) {
 }
 
 const toMenu = () => { goBack(); state = null; level = null; render(); };
-const toMap = () => { goBack(); state = null; render(); };
+const toMap = () => {
+  goBack();
+  state = null;
+  if (!onboardingComplete()) level = null;
+  render();
+};
 
 // Экран места по макету: шапка с фоном места, полоса прогресса, сетка карточек с иконками и кнопка «играть».
 // Иконки и шапки — спрайты из Figma (public/art/loc): порядок в спрайте — места по макету, внутри места — порядок заданий.
@@ -765,18 +797,22 @@ function renderQuiz(L: Level, justFound: Task, proceed: () => void) {
   const cards = opts.map((t, i) => `<button class="quiz-opt" data-id="${t.id}" style="--i:${i}" aria-label="${taskName(t)}">${taskIcon(owner(t), t)}</button>`).join('');
   taskScreen(L, `<div class="tk-quizcard" id="tkcard"><p class="tk-en quiz-word">${word.en}</p><div class="quiz-opts">${cards}</div></div>`, '', '', 'tk-quiz');
   const seq = screenSeq;
-  setTimeout(() => { if (seq === screenSeq) { speak(QUIZ_ASK.text, false, QUIZ_ASK.who); speakEnglish(word.en); } }, 400);
   let solved = false;
+  const askTimer = setTimeout(() => { if (seq === screenSeq && !solved) { speak(QUIZ_ASK.text, false, QUIZ_ASK.who); speakEnglish(word.en); } }, 400);
   root.querySelectorAll<HTMLButtonElement>('.quiz-opt').forEach((b) => b.addEventListener('click', () => {
     if (solved) return;
+    clearTimeout(askTimer);
     if (b.dataset.id === target.id) {
       solved = true;
       b.classList.add('right');
       playSfx('correct');
       confettiBehind(root.querySelector<HTMLElement>('.loc')!, root.querySelector<HTMLElement>('#tkcard')!);
       const praise = pickPhrase(PRAISE);
-      speak(praise.text, false, praise.who);
-      setTimeout(() => { if (seq === screenSeq) proceed(); }, 1800);
+      const answeredAt = performance.now();
+      speak(praise.text, false, praise.who, () => {
+        const delay = Math.max(0, 1800 - (performance.now() - answeredAt));
+        setTimeout(() => { if (seq === screenSeq) proceed(); }, delay);
+      });
     } else {
       b.classList.remove('wrong'); void b.offsetWidth; b.classList.add('wrong');
       playSfx('wrong-soft');
@@ -800,7 +836,15 @@ function render() {
       taskScreen(L, `<section class="tk-card tk-live" id="tkcard"><div class="tk-head" id="tkhead"><span class="tk-ico">${taskIcon(L, task!)}</span><p class="tk-text">${task!.prompt}</p></div><div class="tk-cam" id="tkcam"></div></section>`,
         `${notice ? `<div class="notice">${notice}</div>` : ''}`, '', 'tk-task');
       if (s.phase === 'task') void openCamera(task!); // в фазе camera снимок уже сделан и обрабатывается
-      const sayTask = () => { speak(task!.prompt); speak(TASK_AIM.text, true, TASK_AIM.who); }; // задание и следом «наведи камеру»
+      const tutorialPrompt = !onboardingComplete() ? ONBOARDING_CAMERA[task!.id] : undefined;
+      const sayTask = () => {
+        if (tutorialPrompt) {
+          speak(tutorialPrompt.text, false, tutorialPrompt.who);
+        } else {
+          speak(task!.prompt);
+          speak(TASK_AIM.text, true, TASK_AIM.who);
+        }
+      };
       sayCurrentTask = s.phase === 'task' ? sayTask : null;
       root.querySelector('#tkhead')?.addEventListener('click', sayTask); // нажатие на задание повторяет его
       if (!notice && promptSpoken !== task!.id) { promptSpoken = task!.id; sayTask(); } // не повторяем при открытии камеры и возврате
@@ -825,14 +869,15 @@ function render() {
         confettiBehind(root.querySelector<HTMLElement>('.loc')!, card);
         // Универсально: сначала похвала (записывается один раз), потом слово по-английски.
         const praise = pickPhrase(PRAISE);
-        speak(praise.text, false, praise.who);
+        speak(praise.text, true, praise.who);
         if (word) {
           const intro = pickPhrase(INTRO_EN); // «Вот так это будет по-английски»
           speak(intro.text, true, intro.who);
           speakEnglish(word.en); speakEnglish(word.en); // два раза слово, потом просим повторить
-          // «Повтори за мной!»: пауза, пока ребёнок говорит слово, потом слово ещё раз; кнопка «Дальше» пульсирует только после паузы.
+          // После «Повтори за мной!» произносим слово, даём ребёнку паузу и повторяем его ещё раз.
           const ask = pickPhrase(REPEAT_AFTER);
           speak(ask.text, true, ask.who);
+          speakEnglish(word.en);
           const pulseNext = () => { if (resSeq === screenSeq) root.querySelector('#next')?.classList.add('pulse'); };
           if (isMuted()) pulseNext(); else speakPause(2800, undefined, pulseNext); // кнопка оживает, когда ребёнок сказал
           speakEnglish(word.en);
@@ -846,7 +891,7 @@ function render() {
           '', bigBtn('next', retryIcon(), 'Искать снова'), 'tk-bad');
         navigator.vibrate?.([60, 40, 60]);
         playSfx('wrong-soft');
-        speak(line.text, false, line.who);
+        speak(line.text, true, line.who);
         root.querySelector('#tkcard')?.addEventListener('click', () => speak(line.text, false, line.who));
       }
       on('next', () => dispatch({ type: 'next' }));
@@ -860,8 +905,8 @@ function render() {
       const L = level!;
       const proceed = () => {
         if (onboardingTask) {
-          if (onboardingComplete()) renderLevels();
-          else renderMap(L);
+          level = null;
+          renderLevels();
           return;
         }
         const everything = LEVELS.every((place) => place.tasks.every((task) => progress.found[task.id] !== undefined));

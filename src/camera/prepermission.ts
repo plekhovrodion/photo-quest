@@ -1,7 +1,7 @@
 // Запрос камеры по макету «Саундчек» (то же, что для микрофона, только с камерой).
 // Компьютер: пока браузер показывает своё окошко с вопросом, поверх размытого фона лиса указкой показывает на это окошко,
 // а внизу (в Safari вверху) карточка «Разреши доступ к камере»; место лисы зависит от браузера, потому что окошко у них в разных местах.
-// Телефон: сначала карточка с кнопкой «Далее», и только после неё вызываем браузер; пока он спрашивает, остаётся размытый фон.
+// Телефон: сразу вызываем системный запрос камеры без дополнительной инструкции.
 // Если доступ уже есть или запрещён, экран не показываем.
 import { speak } from '../audio/sounds';
 import { playSfx } from '../audio/sfx';
@@ -59,16 +59,14 @@ function desktopHtml(side: PromptSide): string {
   return `${fox}<div class="pm-card"><h2>${TITLE}</h2></div>`;
 }
 
-const mobileHtml = () => `<div class="pm-mcard"><img class="pm-fox-mobile" src="${base()}/fox-mobile.svg" alt="">
-  <h2>${TITLE}</h2>
-  <button class="pm-next" type="button"><i class="pm-next-shadow"></i><i class="pm-next-bg"></i><span>Далее</span></button></div>`;
-
 // Пока окно просьбы говорит само, оно перебивает озвучку задания. Когда окно закрылось, экран задания договаривает (см. main.ts).
 let onClosed: (() => void) | null = null;
 export const onCameraPromptClosed = (fn: () => void) => { onClosed = fn; };
 
 // Выполняет запрос камеры (getUserMedia) и пока он ждёт ответа, показывает подсказку.
 export async function withCameraPrompt<T>(request: () => Promise<T>): Promise<T> {
+  const mobile = matchMedia('(pointer: coarse)').matches || innerWidth < 700;
+  if (mobile) return requestAndRemember(request);
   const st = await permissionState();
   // Safari and some mobile browsers don't reliably expose camera permission state.
   // Remember a successful grant for this tab so a reload doesn't show our own prompt again.
@@ -82,21 +80,14 @@ export async function withCameraPrompt<T>(request: () => Promise<T>): Promise<T>
   el.setAttribute('role', 'dialog');
   el.setAttribute('aria-modal', 'true');
   el.setAttribute('aria-label', TITLE);
-  const mobile = matchMedia('(pointer: coarse)').matches || innerWidth < 700;
   const side = promptSide();
-  el.classList.add(mobile ? 'pm-mobile' : `pm-side-${side}`);
-  el.innerHTML = mobile ? mobileHtml() : desktopHtml(side);
+  el.classList.add(`pm-side-${side}`);
+  el.innerHTML = desktopHtml(side);
   document.body.appendChild(el);
   playSfx('modal-open');
   const say = () => speak(ASK_CAMERA.text, false, ASK_CAMERA.who);
 
-  if (mobile) {
-    await new Promise<void>((resolve) => {
-      const btn = el.querySelector<HTMLButtonElement>('.pm-next')!;
-      btn.addEventListener('click', () => { el.querySelector('.pm-mcard')?.remove(); resolve(); });
-      setTimeout(() => { btn.focus({ preventScroll: true }); say(); }, 400);
-    });
-  } else say();
+  say();
 
   try {
     return await requestAndRemember(request);

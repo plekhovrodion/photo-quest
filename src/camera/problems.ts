@@ -89,6 +89,13 @@ export const PROBLEM_SCREENS: Record<CamProblem, Screen> = {
   other: { title: 'Не получилось включить камеру', body: 'Попробуй ещё раз. Если не выходит, обнови страницу', button: 'Попробовать ещё раз', next: 'retry' },
 };
 
+export function cameraProblemScreen(kind: CamProblem, platform: Platform): Screen {
+  if (kind === 'denied' && platform !== 'desktop') {
+    return { title: 'Разреши доступ к камере', body: '', button: 'Включить камеру', next: 'retry' };
+  }
+  return PROBLEM_SCREENS[kind];
+}
+
 const esc = (t: string) => t.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
 
 // Полноэкранный экран ошибки. Закрыть («назад», Esc, «Хорошо») или попробовать снова.
@@ -101,7 +108,7 @@ export function showCameraProblem(kind: CamProblem): Promise<'retry' | 'close'> 
     el.setAttribute('aria-modal', 'true');
     document.body.appendChild(el);
     playSfx('wrong-soft');
-    if (kind === 'denied') speak(CAMERA_DENIED.text, false, CAMERA_DENIED.who);
+    if (kind === 'denied' && detectPlatform() === 'desktop') speak(CAMERA_DENIED.text, false, CAMERA_DENIED.who);
     const finish = (r: 'retry' | 'close') => { removeEventListener('keydown', onKey); el.remove(); resolve(r); };
     let view: 'problem' | 'steps' = 'problem';
     const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape') back(); };
@@ -110,7 +117,7 @@ export function showCameraProblem(kind: CamProblem): Promise<'retry' | 'close'> 
 
     function render(v: 'problem' | 'steps') {
       view = v;
-      const s = PROBLEM_SCREENS[kind];
+      const s = cameraProblemScreen(kind, detectPlatform());
       const backBtn = `<button class="cp-back" type="button" aria-label="Назад"><i class="loc-i" style="--m:url(${base}/back.svg)"></i></button>`;
       if (v === 'steps') {
         const steps = instructionSteps(helpArt()).map((t) => `<li>${esc(t)}</li>`).join('');

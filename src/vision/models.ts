@@ -1,8 +1,9 @@
 // Runtime status and loading helpers for the single recognition model: CLIP.
 import { prepareModelCache } from './modelCache';
 
-export interface ModelStatus { clip: number; clipError?: string }
-const status: ModelStatus = { clip: 0 };
+export type ClipStage = 'idle' | 'download' | 'initialize' | 'warmup' | 'ready';
+export interface ModelStatus { clip: number; clipStage: ClipStage; clipError?: string }
+const status: ModelStatus = { clip: 0, clipStage: 'idle' };
 const listeners = new Set<(s: ModelStatus) => void>();
 const emit = () => listeners.forEach((listener) => listener({ ...status }));
 
@@ -35,8 +36,9 @@ export async function fetchWithProgress(url: string, _key: 'clip', signal?: Abor
   return out.buffer;
 }
 
-export function setClipReady(): void { status.clip = 1; status.clipError = undefined; emit(); }
-export function setClipLoading(): void { status.clip = 0; status.clipError = undefined; emit(); }
+export function setClipReady(): void { status.clip = 1; status.clipStage = 'ready'; status.clipError = undefined; emit(); }
+export function setClipLoading(): void { status.clip = 0; status.clipStage = 'download'; status.clipError = undefined; emit(); }
+export function setClipStage(stage: ClipStage): void { status.clipStage = stage; emit(); }
 export function setClipError(error: unknown): void { status.clip = 0; status.clipError = String(error); emit(); }
 
 // Start loading CLIP in the background; task entry can await the same in-flight promise.

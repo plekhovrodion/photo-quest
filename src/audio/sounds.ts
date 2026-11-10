@@ -15,7 +15,7 @@ export function setMuted(m: boolean) {
   setMusicEnabled(!m);
   if (!m) playSfx('toggle-on');
   try { localStorage.setItem('pq-muted', m ? '1' : '0'); } catch { /* ignore */ }
-  if (m) stopRecorded();
+  if (m) stopRecorded('complete');
 }
 
 // Озвучка только записанная (ElevenLabs, public/voice). Голос браузера («робот») не используем: если записи нет, фраза молчит.
@@ -24,14 +24,14 @@ export const VOICE_ENABLED = true;
 export type Speaker = 'grisha' | 'sonya';
 
 // queue = true: договорить предыдущую запись, а не обрывать её. Кто говорит, определяет сама запись.
-export function speak(text: string, queue = false, _who: Speaker = 'grisha') {
-  if (!VOICE_ENABLED || muted) return;
-  playRecorded(text, queue);
+export function speak(text: string, queue = false, _who: Speaker = 'grisha', onEnd?: () => void) {
+  if (!VOICE_ENABLED || muted) { onEnd?.(); return; }
+  if (!playRecorded(text, queue, false, onEnd)) onEnd?.();
 }
 
-// Оборвать всю озвучку: при смене экрана, чтобы фразы не накладывались.
-export function stopSpeech() {
-  stopRecorded();
+// При автоматическом результате можно дать текущей фразе договорить.
+export function stopSpeech(finishCurrent = false) {
+  stopRecorded(finishCurrent ? 'finish-current' : 'cancel');
 }
 
 // Тишина в цепочке озвучки (ребёнок повторяет слово).

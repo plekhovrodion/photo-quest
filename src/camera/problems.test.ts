@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { classifyCameraError, detectPlatform, instructionSteps, PROBLEM_SCREENS, unavailableReason } from './problems';
+import { cameraProblemScreen, classifyCameraError, detectPlatform, instructionSteps, PROBLEM_SCREENS, unavailableReason } from './problems';
 
 describe('ошибки камеры', () => {
   it('различает отказ, отсутствие, занятость и прочее', () => {
@@ -54,5 +54,19 @@ describe('helpArt', () => {
     expect(helpArt('Mozilla/5.0 Chrome/120 YaBrowser/24 Safari/537', 'desktop')).toBe('yandex');
     expect(helpArt('x', 'ios')).toBe('ios');
     expect(helpArt('x', 'android')).toBe('android');
+  });
+});
+
+
+describe('повторный запрос камеры на телефоне', () => {
+  it('после отказа повторяет запрос без инструкции на iOS и Android', () => {
+    for (const platform of ['ios', 'android'] as const) {
+      expect(cameraProblemScreen('denied', platform).next).toBe('retry');
+      expect(cameraProblemScreen('denied', platform).body).toBe('');
+    }
+  });
+  it('сохраняет помощь на компьютере и для других ошибок', () => {
+    expect(cameraProblemScreen('denied', 'desktop').next).toBe('instructions');
+    expect(cameraProblemScreen('busy', 'ios')).toBe(PROBLEM_SCREENS.busy);
   });
 });

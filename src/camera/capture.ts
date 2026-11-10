@@ -1,5 +1,5 @@
 import { classifyCameraError, showCameraProblem, unavailableReason } from './problems';
-import { withCameraPrompt } from './prepermission';
+import { releaseCameraSession, startCameraPreview } from './preview';
 import { BoxFollower, expandBox, type Box } from './box';
 import type { Target } from './target';
 import { colorBlob } from '../vision/colorBlob';
@@ -37,10 +37,6 @@ export function canUseLiveCamera(): boolean {
   return isSecureContext && !!navigator.mediaDevices?.getUserMedia;
 }
 
-function stop(stream: MediaStream | null) {
-  stream?.getTracks().forEach((t) => t.stop());
-}
-
 const LOCK_MS = 450; // сколько рамка должна стоять почти на месте, чтобы стать зелёной
 const LOCK_MATCH_MS = 250; // быстрее, если найден именно тот предмет, что в задании
 const MARGIN = 0.12; // запас вокруг предмета при обрезке
@@ -59,12 +55,6 @@ interface Found { box: Box; label: string; matches: boolean }
 // (на каждом кадре экрана, плавно догоняет цель). «Снять» вырезает предмет по рамке.
 // stopLive() закрывает камеру снаружи (уход с экрана); тогда промис завершается null.
 let stopLive: (() => void) | null = null;
-let cameraSession: MediaStream | null = null;
-const hasLiveTracks = (s: MediaStream | null) => !!s && s.getTracks().some((track) => track.readyState === 'live');
-function releaseCameraSession() {
-  stop(cameraSession);
-  cameraSession = null;
-}
 
 // Stop frame processing between screens, but keep the granted stream while the child
 // moves between task/camera/quiz screens. Some mobile browsers prompt again for each
@@ -73,7 +63,6 @@ export const stopCamera = (releaseStream = false) => {
   stopLive?.();
   if (releaseStream) releaseCameraSession();
 };
-window.addEventListener('pagehide', () => stopCamera(true));
 
 function liveCamera(target: Target, host: HTMLElement): Promise<Captured | null> {
   return new Promise((resolve) => {
@@ -90,7 +79,9 @@ function liveCamera(target: Target, host: HTMLElement): Promise<Captured | null>
     const dbgEl = overlay.querySelector<HTMLElement>('.cam-debug');
     let alive = true;
     let raf = 0;
-    let visibilityHandler: (() => void) | null = null;
+    let stopPreview: (() => void) | null = null;
+    let previewReady = false;
+    let previewVersion = 0;
     let resumeClip: (() => void) | null = null;
     let clipTimer: ReturnType<typeof setTimeout> | undefined;
     let startClip: (() => void) | null = null;
@@ -100,7 +91,7 @@ function liveCamera(target: Target, host: HTMLElement): Promise<Captured | null>
       alive = false;
       clearTimeout(clipTimer);
       cancelAnimationFrame(raf);
-      if (visibilityHandler) document.removeEventListener('visibilitychange', visibilityHandler);
+      stopPreview?.();
       unsub();
       if (stopLive === stopThis) stopLive = null;
       resolve(r);
@@ -162,7 +153,7 @@ function liveCamera(target: Target, host: HTMLElement): Promise<Captured | null>
     const detectLoop = async () => {
       if (!alive) return;
       const t = performance.now();
-      if (!document.hidden && !busy && video.readyState >= 2 && t - lastStart >= gap) {
+      if (previewReady && !document.hidden && !busy && video.readyState >= 2 && t - lastStart >= gap) {
         busy = true;
         lastStart = t;
         try {
@@ -202,34 +193,42 @@ function liveCamera(target: Target, host: HTMLElement): Promise<Captured | null>
       startClip();
       let clipBusy = false;
       const clipLoop = async () => {
-        if (!alive || !clipReady || document.hidden || clipBusy) return;
+        if (!alive || !previewReady || !clipReady || document.hidden || clipBusy) return;
         clearTimeout(clipTimer);
         clipBusy = true;
         const t = performance.now();
-        if (clipReady && video.readyState >= 2 && video.videoWidth) {
-          try {
-            const vw = video.videoWidth, vh = video.videoHeight;
-            const snap = document.createElement('canvas');
-            snap.width = vw; snap.height = vh;
-            snap.getContext('2d')!.drawImage(video, 0, 0);
-            if (!clipModule) throw new Error('CLIP module is not ready');
-            const ranks = await clipModule.rankObjects(snap, vw, vh);
-            if (!alive) return;
-            const p = clip ? clipModule.clipProb(ranks, clip) : 0;
-            if (clip) {
-              liveProb = liveProb * 0.35 + p * 0.65; // сглаживаем, чтобы индикатор не мигал
-              current = { label: CLIP_OBJECTS[clip] ?? clip, matches: liveProb >= LIVE_OK };
-            }
-            clipRuns++;
-            clipMs = clipMs ? clipMs * 0.7 + (performance.now() - t) * 0.3 : performance.now() - t;
-            const now = performance.now();
-            if (clip) {
-              if (!best || p >= best.prob || now - best.t > BEST_KEEP_MS) best = { prob: p, t: now, canvas: snap };
-            }
-          } catch (e) { clipErr = String(e).slice(0, 80); clipReady = false; liveProb = 0; best = null; }
+        const version = previewVersion;
+        try {
+          if (video.readyState < 2 || !video.videoWidth) return;
+          const vw = video.videoWidth, vh = video.videoHeight;
+          const snap = document.createElement('canvas');
+          snap.width = vw; snap.height = vh;
+          snap.getContext('2d')!.drawImage(video, 0, 0);
+          if (!clipModule) throw new Error('CLIP module is not ready');
+          const ranks = await clipModule.rankObjects(snap, vw, vh);
+          if (!alive || !previewReady || document.hidden || version !== previewVersion) return;
+          const p = clip ? clipModule.clipProb(ranks, clip) : 0;
+          if (clip) {
+            liveProb = liveProb * 0.35 + p * 0.65; // сглаживаем, чтобы индикатор не мигал
+            current = { label: CLIP_OBJECTS[clip] ?? clip, matches: liveProb >= LIVE_OK };
+          }
+          clipRuns++;
+          clipMs = clipMs ? clipMs * 0.7 + (performance.now() - t) * 0.3 : performance.now() - t;
+          const now = performance.now();
+          if (clip && (!best || p >= best.prob || now - best.t > BEST_KEEP_MS)) {
+            best = { prob: p, t: now, canvas: snap };
+          }
+        } catch (e) {
+          clipErr = String(e).slice(0, 80);
+          clipReady = false;
+          liveProb = 0;
+          best = null;
+        } finally {
+          clipBusy = false;
+          if (alive && previewReady && clipReady && !document.hidden) {
+            clipTimer = setTimeout(clipLoop, Math.max(CLIP_MIN_INTERVAL_MS, Math.min(900, clipMs * 0.6)));
+          }
         }
-        clipBusy = false;
-        if (alive && clipReady && !document.hidden) clipTimer = setTimeout(clipLoop, Math.max(CLIP_MIN_INTERVAL_MS, Math.min(900, clipMs * 0.6)));
       };
       resumeClip = () => { void clipLoop(); };
       video.addEventListener('playing', () => { startedAt ||= performance.now(); resumeClip?.(); });
@@ -302,20 +301,6 @@ function liveCamera(target: Target, host: HTMLElement): Promise<Captured | null>
       if (now - stats.fpsStart > 1000) { stats.fps = Math.round((stats.frames * 1000) / (now - stats.fpsStart)); stats.frames = 0; stats.fpsStart = now; }
       if (dbgEl && stats.frames % 15 === 0) dbgEl.textContent = debugText();
     };
-    raf = requestAnimationFrame(render);
-    visibilityHandler = () => {
-      if (document.hidden) {
-        cancelAnimationFrame(raf);
-        clearTimeout(clipTimer);
-        video.pause();
-      } else {
-        void video.play().catch(() => {});
-        raf = requestAnimationFrame(render);
-        resumeClip?.();
-      }
-    };
-    document.addEventListener('visibilitychange', visibilityHandler);
-
     // ---- отладочная панель (?debug=1) ----
     const report = () => {
       const f = follower.current();
@@ -363,7 +348,7 @@ function liveCamera(target: Target, host: HTMLElement): Promise<Captured | null>
     });
     // Предмет узнан: подсвечиваем зелёным с анимацией, потом отдаём снимок на проверку; кнопку нажимать не нужно.
     const found = async () => {
-      if (foundAt || !alive) return;
+      if (foundAt || !alive || !previewReady) return;
       foundAt = performance.now();
       host.classList.add('found');
       playSfx('star');
@@ -371,27 +356,32 @@ function liveCamera(target: Target, host: HTMLElement): Promise<Captured | null>
       setTimeout(() => { if (alive) done(shot); }, Math.max(0, FOUND_ANIM_MS - (performance.now() - foundAt)));
     };
 
-    // Запуск камеры; при отказе или ошибке показываем экран с причиной, оттуда можно попробовать снова.
-    const start = async () => {
-      try {
-        if (!hasLiveTracks(cameraSession)) {
-          cameraSession = null;
-          const s = await withCameraPrompt(() => navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment', width: { ideal: 1280 }, height: { ideal: 720 } }, audio: false }));
-          if (!alive) { stop(s); return; }
-          cameraSession = s;
-        }
-        const s = cameraSession!;
+    stopPreview = startCameraPreview(video, {
+      onReady() {
         if (!alive) return;
-        video.srcObject = s;
-        void video.play().catch(() => {});
-      } catch (err) {
-        if (!alive) return;
-        const act = await showCameraProblem(classifyCameraError(err));
-        if (!alive) return;
-        if (act === 'retry') void start(); else done(null);
-      }
-    };
-    void start();
+        previewReady = true;
+        startedAt = performance.now();
+        cancelAnimationFrame(raf);
+        raf = requestAnimationFrame(render);
+        resumeClip?.();
+      },
+      onPause() {
+        previewReady = false;
+        previewVersion++;
+        liveProb = 0;
+        best = null;
+        okSince = 0;
+        current.matches = false;
+        cancelAnimationFrame(raf);
+        clearTimeout(clipTimer);
+      },
+      async onError(error) {
+        const act = await showCameraProblem(classifyCameraError(error));
+        if (!alive) return false;
+        if (act === 'close') done(null);
+        return act === 'retry';
+      },
+    });
   });
 }
 

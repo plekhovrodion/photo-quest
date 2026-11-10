@@ -1,12 +1,13 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 const mocks = vi.hoisted(() => ({
-  bytes: vi.fn(), ready: vi.fn(), loading: vi.fn(), error: vi.fn(),
+  bytes: vi.fn(), ready: vi.fn(), loading: vi.fn(), stage: vi.fn(), error: vi.fn(),
 }));
 vi.mock('./models', () => ({
   fetchWithProgress: mocks.bytes,
   setClipReady: mocks.ready,
   setClipLoading: mocks.loading,
+  setClipStage: mocks.stage,
   setClipError: mocks.error,
 }));
 
@@ -85,5 +86,27 @@ describe('CLIP lifetime across camera screens', () => {
     await expect(loadClip()).rejects.toThrow('CLIP text: 404');
     expect(mocks.ready).not.toHaveBeenCalled();
     expect(FakeWorker.instances[0].terminate).toHaveBeenCalledOnce();
+  });
+
+  it('checks browser support before downloading weights or starting a worker', async () => {
+    vi.stubGlobal('WebAssembly', { validate: () => false });
+    vi.stubGlobal('navigator', { userAgent: 'iPhone OS 15_0', maxTouchPoints: 1 });
+    const { loadClip } = await import('./clip');
+    await expect(loadClip()).rejects.toThrow('Обновите iOS');
+    expect(mocks.bytes).not.toHaveBeenCalled();
+    expect(FakeWorker.instances).toHaveLength(0);
+    expect(mocks.error).toHaveBeenCalled();
+  });
+
+  it('downloads matching versions of the model and text embeddings', async () => {
+    const { loadClip, CLIP_URL } = await import('./clip');
+    await loadClip();
+    const model = new URL(CLIP_URL, 'https://example.com');
+    const text = new URL(vi.mocked(fetch).mock.calls[0][0] as string, 'https://example.com');
+    expect(model.searchParams.get('v')).toBeTruthy();
+    expect(text.searchParams.get('v')).toBe(model.searchParams.get('v'));
+    expect(mocks.stage).toHaveBeenCalledWith('initialize');
+    FakeWorker.instances[0].reply({ type: 'stage', stage: 'warmup' });
+    expect(mocks.stage).toHaveBeenCalledWith('warmup');
   });
 });
