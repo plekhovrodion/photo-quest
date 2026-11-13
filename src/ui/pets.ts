@@ -116,6 +116,7 @@ async function mount(el: HTMLElement) {
   }
   if (st.dead || !el.isConnected) return;
   await slot(); // ограничиваем одновременную инициализацию SVG-анимаций на телефоне
+  if (st.dead || !el.isConnected) return;
   const reduce = matchMedia('(prefers-reduced-motion: reduce)').matches;
   const show = (i: number) => {
     st.cur = i;

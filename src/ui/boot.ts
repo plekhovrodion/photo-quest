@@ -31,7 +31,7 @@ let secondDone: Promise<void> | null = null;
 export const whenBootDone = (): Promise<void> => secondDone ?? Promise.resolve();
 
 // Первая ступень: заставка без текста, не меньше MIN_SHOW_MS; полоска идёт по меньшему из «реально загружено» и «прошло времени».
-export async function bootFirstStep(): Promise<void> {
+export async function bootFirstStep(ready: Promise<unknown> = Promise.resolve()): Promise<void> {
   mark('старт');
   const total = FONTS.length;
   const t0 = performance.now();
@@ -41,11 +41,14 @@ export async function bootFirstStep(): Promise<void> {
   const tick = () => { done++; paint(); };
   const timer = setInterval(paint, 100);
   const fonts = Promise.all(FONTS.map((f) => document.fonts?.load(f).catch(() => []).finally(tick)));
-  await Promise.race([
-    Promise.all([fonts, new Promise((ok) => setTimeout(ok, MIN_SHOW_MS))]),
-    new Promise((ok) => setTimeout(ok, GIVE_UP_MS)),
-  ]);
-  clearInterval(timer);
+  try {
+    await Promise.all([ready, Promise.race([
+      Promise.all([fonts, new Promise((ok) => setTimeout(ok, MIN_SHOW_MS))]),
+      new Promise((ok) => setTimeout(ok, GIVE_UP_MS)),
+    ])]);
+  } finally {
+    clearInterval(timer);
+  }
   screen.paint(1);
   await new Promise((ok) => setTimeout(ok, 250)); // полоска успевает дойти до края
   screen.remove();

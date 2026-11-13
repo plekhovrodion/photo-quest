@@ -32,24 +32,34 @@ export function configureEconomy(baseUrl: string, headers: () => Record<string, 
 
 // Записать находку на сервере (это и есть списание бусин). 'insufficient': бусин не хватило, находка не принята;
 // 'offline': сервер недоступен, находка остаётся на устройстве и уйдёт при следующей синхронизации.
-export async function claimFound(taskId: string, stars: number): Promise<Claim> {
+export async function claimFound(taskId: string, stars: number, signal?: AbortSignal): Promise<Claim> {
+  signal?.throwIfAborted();
   if (!api) return 'ok';
+  const controller = new AbortController();
+  const abort = () => controller.abort(signal?.reason);
+  signal?.addEventListener('abort', abort, { once: true });
+  const timer = setTimeout(() => controller.abort(), api.timeoutMs);
   try {
     const res = await fetch(`${api.baseUrl}/progress/found/${encodeURIComponent(taskId)}`, {
       method: 'PUT',
       credentials: 'include',
       headers: { 'Content-Type': 'application/json', ...api.headers() },
       body: JSON.stringify({ stars }),
-      signal: AbortSignal.timeout(api.timeoutMs),
+      signal: controller.signal,
     });
     if (res.status === 403) {
       applyBeads({ beads_cost: beads.cost, beads_remaining: 0 });
       return 'insufficient';
     }
+    if (res.status === 409) location.reload();
     if (!res.ok) return 'offline';
     applyBeads(await res.json());
     return 'ok';
   } catch {
+    signal?.throwIfAborted();
     return 'offline';
+  } finally {
+    clearTimeout(timer);
+    signal?.removeEventListener('abort', abort);
   }
 }

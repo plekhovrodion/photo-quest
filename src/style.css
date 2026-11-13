@@ -189,7 +189,7 @@ button.stop.done { animation: stop-in .55s calc(var(--i, 0) * 60ms + .25s) var(-
 
 /* ===== Единые крупные фиолетовые кнопки ===== */
 :root { --btn: #7c3aed; --btn-d: #4c1d95; --btn2: #9061f9; --btn2-d: #5b21b6; --btn-w: min(100%, 380px); --btn-h: 80px; --icon: 68px; }
-button:not(.level):not(.stop):not(.cube-btn) {
+button:not(.level):not(.stop):not(.cube-btn):not(:where(.feedback-button, .feedback-dialog button, .beads-limit button)) {
   width: var(--btn-w); min-width: 0; height: var(--btn-h); min-height: var(--btn-h); padding: 0 28px; flex: none;
   display: inline-flex; align-items: center; justify-content: center; gap: 12px; text-align: center; line-height: 1.1;
   font-size: 30px; font-weight: 800; border-radius: 28px; color: #fff; background: var(--btn);
@@ -197,7 +197,7 @@ button:not(.level):not(.stop):not(.cube-btn) {
 }
 button.secondary:not(.level):not(.stop):not(.cube-btn) { color: #fff; background: var(--btn2); box-shadow: 0 9px 0 var(--btn2-d), 0 16px 24px rgba(10, 5, 40, .4); }
 button.small:not(.level):not(.stop):not(.cube-btn) { width: var(--icon); min-width: var(--icon); height: var(--icon); min-height: var(--icon); padding: 0; font-size: 30px; border-radius: 22px; }
-button:not(.level):not(.stop):not(.cube-btn):active:not(:disabled) { transform: translateY(7px); box-shadow: 0 2px 0 var(--btn-d), 0 6px 12px rgba(10, 5, 40, .4); }
+button:not(.level):not(.stop):not(.cube-btn):not(:where(.feedback-button, .feedback-dialog button, .beads-limit button)):active:not(:disabled) { transform: translateY(7px); box-shadow: 0 2px 0 var(--btn-d), 0 6px 12px rgba(10, 5, 40, .4); }
 button.secondary:not(.level):not(.stop):not(.cube-btn):active:not(:disabled) { box-shadow: 0 2px 0 var(--btn2-d), 0 6px 12px rgba(10, 5, 40, .4); }
 .chip { height: var(--icon); padding: 0 22px; font-size: 28px; display: inline-flex; align-items: center; gap: 8px; }
 .hud-right { gap: 10px; }
@@ -1305,4 +1305,37 @@ button.pw-back:not(.level):not(.stop):not(.cube-btn) { position: absolute; top: 
 }
 @media (prefers-reduced-motion: reduce) {
   #app.screen-tk button.loc-play.pulse::after { animation: none; }
+}
+
+/* Текст интерфейса без декоративных теней. */
+body * { text-shadow: none !important; }
+
+/* Кнопка курса по макету Figma, закреплена в правом нижнем углу карты. */
+#app.screen-map button.mp-buy {
+  position: fixed;
+  left: auto;
+  right: calc(24px + env(safe-area-inset-right, 0px));
+  bottom: calc(24px + env(safe-area-inset-bottom, 0px));
+  z-index: 20;
+  width: fit-content;
+  max-width: none;
+  min-width: 0;
+  min-height: 56px;
+  height: 56px;
+  padding: 16px 24px;
+  border: 0;
+  border-radius: 24px;
+  background: #66d385;
+  box-shadow: 0 6px 0 #4cbc6c;
+  color: #fff;
+  font: 700 20px/24px 'Factor A', sans-serif;
+  text-shadow: none;
+  white-space: nowrap;
+}
+#app.screen-map button.mp-buy:active { transform: translateY(6px); box-shadow: none; }
+@media (min-width: 900px) {
+  #app.screen-map button.mp-buy { height: 72px; min-height: 72px; font-size: 24px; line-height: 28px; }
+}
+@media (max-width: 380px) {
+  #app.screen-map button.mp-buy { right: calc(16px + env(safe-area-inset-right, 0px)); padding-inline: 18px; font-size: 18px; }
 }

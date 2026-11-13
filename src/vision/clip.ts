@@ -1,7 +1,8 @@
-import { CLIP_OBJECTS } from '../data/clip';
+import { scoreEmbeds, type Table, type ClipRank } from './clipScoring';
+export { clipProb, clipAccepts, clipHas, CLIP_TOP, scoreEmbeds, type ClipRank } from './clipScoring';
 import { fetchWithProgress, setClipReady, setClipLoading, setClipStage, setClipError } from './models';
 import { prepareModelCache } from './modelCache';
-import { CLIP_ACCEPT, CLIP_MODEL_VERSION } from './clipConstants';
+import { CLIP_MODEL_VERSION } from './clipConstants';
 import { assertRecognitionSupport } from './clipSupport';
 export { CLIP_ACCEPT } from './clipConstants';
 
@@ -13,8 +14,8 @@ const TEXT_URL = `${BASE}models/clip/text.json?v=${CLIP_MODEL_VERSION}`;
 
 const SIZE = 256;
 
-type Table = [string, Float32Array][];
 export type TextSet = 'ens';
+export interface ScoreOpts { set: TextSet; bg: boolean }
 interface Ready {
   run(pixels: Float32Array): Promise<Float32Array>;
   sets: Record<TextSet, Table>; // описания предметов: одна фраза или ансамбль из нескольких
@@ -124,7 +125,6 @@ export function toPixels(src: CanvasImageSource, w: number, h: number, kind: Cro
   return out;
 }
 
-export interface ClipRank { en: string; ru: string; score: number; bg?: boolean }
 
 // Какие вырезы проверяем: центр всегда; для вытянутого кадра ещё его края, плюс весь кадр целиком.
 export function cropsFor(w: number, h: number, multi: boolean): CropKind[] {
@@ -138,22 +138,6 @@ export async function embedCrops(src: CanvasImageSource, w: number, h: number, c
   const out: Float32Array[] = [];
   for (const k of crops) out.push(await m.run(toPixels(src, w, h, k)));
   return out;
-}
-
-const dot = (a: Float32Array, b: Float32Array) => {
-  let s = 0;
-  for (let i = 0; i < a.length; i++) s += a[i] * b[i];
-  return s;
-};
-
-export interface ScoreOpts { set: TextSet; bg: boolean }
-
-// Сходство по вырезам: для каждого предмета берём лучший вырез. Фон идёт в тот же список.
-export function scoreEmbeds(embeds: Float32Array[], tables: { objects: Table; bg: Table }, bgOn: boolean): ClipRank[] {
-  const best = (t: Float32Array) => Math.max(...embeds.map((e) => dot(e, t)));
-  const objs = tables.objects.map(([en, t]) => ({ en, ru: CLIP_OBJECTS[en] ?? en, score: best(t) }));
-  const bgs = bgOn ? tables.bg.map(([n, t]) => ({ en: `~${n}`, ru: n, score: best(t), bg: true })) : [];
-  return [...objs, ...bgs].sort((a, b) => b.score - a.score);
 }
 
 // Рабочие настройки; значения выбраны по замерам (см. README).
@@ -172,25 +156,3 @@ export async function clipTables() {
   const m = await loadClip();
   return { sets: m.sets, bg: m.bg };
 }
-
-// Вероятность предмета среди всех вариантов (предметы игры и «фон»): softmax с масштабом CLIP (100).
-export function clipProb(ranks: ClipRank[], en: string): number {
-  if (!ranks.length) return 0;
-  const top = ranks[0].score;
-  let sum = 0, mine = 0;
-  for (const r of ranks) {
-    const z = Math.exp(100 * (r.score - top));
-    sum += z;
-    if (r.en === en) mine = z;
-  }
-  return mine / sum;
-}
-
-// Порог засчитывания. Замер: при 0,02 узнаётся 87,7% (было 88,3% по правилу «в первых шести»), а путаница
-// с соседними предметами того же места вдвое реже: 10% вместо 20%.
-export const clipAccepts = (ranks: ClipRank[], en: string): boolean => clipProb(ranks, en) >= CLIP_ACCEPT;
-
-// Нужный предмет входит в первые `top` по сходству.
-export const CLIP_TOP = 2;
-export const clipHas = (ranks: ClipRank[], en: string, top = CLIP_TOP): boolean =>
-  ranks.slice(0, top).some((r) => r.en === en);

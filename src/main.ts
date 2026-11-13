@@ -3,19 +3,20 @@ import './ui/assetLoadRecovery';
 import { LEVELS, ICON_INDEX, ICON_ABS, type Level, type Task } from './data/tasks';
 import { createGame, currentTask, reduce, STARS_PER_TASK, type Action, type GameState } from './game/state';
 import { PRAISE, INTRO_EN, TRY_AGAIN, TROUBLE, LEVEL_DONE, GAME_DONE, REPEAT_AFTER, QUIZ_ASK, QUIZ_WRONG, LOCKED_HINT, TASK_LOCKED, TASK_AIM, WAIT_LOADING, NEXT_HINT, ONBOARDING_HINT, ONBOARDING_CAMERA, type Phrase, HINT_PLACE, HINT_ITEM, HINT_COLOR, pickPhrase } from './data/phrases';
-import { takePhoto, compressPhoto, stopCamera, type Captured } from './camera/capture';
+import { takePhoto, stopCamera, type Captured } from './camera/capture';
 import { targetOf } from './camera/target';
-import { verifyPhoto } from './api/verify';
+import { captureTask } from './game/capture';
 import { COLOR_RU } from './vision/names';
 import { englishFor } from './data/english';
 import { preloadModels, modelStatus, onModelStatus } from './vision/models';
 import { UnsupportedRecognitionError } from './vision/clipSupport';
-import { confetti, confettiBehind } from './fx/confetti';
+import { confettiBehind } from './fx/confetti';
 import { typeText, stopTyping } from './fx/typewriter';
 import { speak, speakEnglish, speakPause, stopSpeech, isMuted, setMuted } from './audio/sounds';
 import { hasRoom, roomHtml, mountPets, unmountPets, type Mood } from './ui/pets';
-import { canAfford, claimFound, getBeads } from './api/economy';
+import { canAfford, getBeads } from './api/economy';
 import { showNotice } from './ui/notice';
+import { showBeadsLimit } from './ui/beadsLimit';
 import { locPattern } from './ui/locPattern';
 import { showPaywall } from './ui/paywall';
 import { paywallUrl } from './api/paywall';
@@ -24,17 +25,15 @@ import { setMusicEnabled, wireMusic } from './audio/music';
 import { bootFirstStep, bootSecondStep } from './ui/boot';
 import { isOnboarded, markOnboarded } from './onboarding';
 import { objectSvg, colorBallSvg, fitObject } from './map/objects';
-import { album, toSticker, type Sticker } from './album';
 import { CLIP_OBJECTS } from './data/clip';
-import { loadProgress, recordTask, type Progress } from './progress';
+import { recordTask, type Progress } from './progress';
 import { createStore } from './storage/store';
-import { checkIcon, backIcon } from './ui/icons';
-import { placeSvg } from './map/places';
 import { mapDecor } from './ui/mapDecor';
+import { feedbackButton, openFeedback } from './ui/feedback';
 
 const root = document.getElementById('app')!;
 const store = createStore();
-let progress: Progress = loadProgress();
+let progress: Progress = { levels: {}, found: {} };
 const colorsLevel = LEVELS.find((item) => item.id === 'colors');
 const onboardingColorTasks = colorsLevel?.tasks.slice(0, 3) ?? [];
 function onboardingComplete(): boolean {
@@ -43,11 +42,6 @@ function onboardingComplete(): boolean {
 let level: Level | null = null;
 let state: GameState | null = null;
 let notice = '';
-let view: 'album' | null = null;
-const stickers = new Map<string, Sticker>();
-void album.all().then((all) => all.forEach((x) => stickers.set(x.id, x)));
-let photoUrl = '';
-
 function dispatch(a: Action) {
   state = reduce(state!, a);
   render();
@@ -55,14 +49,9 @@ function dispatch(a: Action) {
 
 const esc = (t: string) => t.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
 
-// Реплика заврика: для экранного диктора лежит целиком, на экране печатается по буквам.
-const bubble = (text: string) =>
-  `<div class="bubble" data-say="${esc(text)}"><span class="sr-only">${esc(text)}</span><span class="typed" aria-hidden="true"></span></div>`;
-
 // Направление перехода: вперёд (по умолчанию) или назад (кнопки «назад», «закрыть»).
 let navDir: 'fwd' | 'back' = 'fwd';
 const goBack = () => { navDir = 'back'; };
-const reduceMotion = () => matchMedia('(prefers-reduced-motion: reduce)').matches;
 
 const ONBOARDING = true;
 // Цвет «рамки» браузера: статус-бар сверху и область под панелью снизу окрашиваем под экран.
@@ -83,11 +72,14 @@ let quietNext = false;
 let lastShown = ''; // что нарисовано сейчас: если экран перерисовывается тем же (например, возврат с камеры), он не листается заново
 let screenSeq = 0;
 let taskReminderTimer: ReturnType<typeof setInterval> | undefined;
+let disposeScreen: (() => void) | null = null;
 function stopTaskReminder() {
   clearInterval(taskReminderTimer);
   taskReminderTimer = undefined;
 }
 function show(html: string, cls = '') {
+  disposeScreen?.();
+  disposeScreen = null;
   // Keep the granted stream for the whole game flow. iOS Safari may ask again
   // when getUserMedia is called after returning from a location's task list.
   // Release it when leaving the game entirely.
@@ -143,6 +135,12 @@ function nextTaskAfter(l: Level, cur: Task): Task | null {
 
 let promptSpoken: string | null = null;
 let taskLoadToken = 0;
+let taskSession: AbortController | null = null;
+function cancelTask() {
+  taskLoadToken++;
+  taskSession?.abort();
+  taskSession = null;
+}
 
 function modelLoadingScreen(): {
   paint(progress: number): void;
@@ -226,7 +224,9 @@ async function prepareTask(task: Task, token: number): Promise<void> {
 
 function startTask(task: Task) {
   if (!canAfford(progress.found[task.id] !== undefined)) { void showNoBeads(); return; }
-  const token = ++taskLoadToken;
+  cancelTask();
+  taskSession = new AbortController();
+  const token = taskLoadToken;
   promptSpoken = null;
   recorded = null; // новое прохождение задания: прежний итог не переиспользуем
   void prepareTask(task, token);
@@ -234,10 +234,9 @@ function startTask(task: Task) {
 
 // Бусины закончились: новое задание не открыть, найденные доступны. Если подключён пейвол, предлагаем полный доступ.
 async function showNoBeads(): Promise<void> {
-  const text = 'Найденные ты можешь пройти снова.';
-  if (!paywallUrl()) { await showNotice({ title: 'Бусины закончились', text, button: 'Понятно' }); return; }
-  const answer = await showNotice({ title: 'Бусины закончились', text, button: 'Открыть полный доступ', second: 'Понятно' });
-  if (answer === 'main') await showPaywall();
+  const canPurchase = !!paywallUrl();
+  const answer = await showBeadsLimit();
+  if (answer === 'main' && canPurchase) await showPaywall();
 }
 
 // Сохраняет награду за найденное задание; возвращает, закрыта ли категория целиком.
@@ -260,13 +259,11 @@ function finishTask(): boolean {
 
 // Живая камера открыта прямо на экране задания, кнопки нет: предмет узнан — камера снимает сама.
 // Если камеру не включили (отказ, нет https), возвращаем к заданиям места.
-let camOn = false;
 // Задание озвучиваем после фактического запуска видеопотока.
 let sayCurrentTask: (() => void) | null = null;
 async function openCamera(task: Task) {
   const host = root.querySelector<HTMLElement>('#tkcam');
   if (!host) return;
-  camOn = true;
   host.addEventListener('playing', () => {
     if (!host.isConnected || state?.phase !== 'task') return;
     if (promptSpoken !== task.id) {
@@ -282,69 +279,44 @@ async function openCamera(task: Task) {
   host.addEventListener('pause', stopTaskReminder, true);
   const target = targetOf(task);
   // Камера открывается сразу; распознавание работает без статусной полоски поверх видео.
-  if (!host.isConnected) { camOn = false; return; } // пока грузилось, ребёнок ушёл с экрана
+  if (!host.isConnected) return; // пока грузилось, ребёнок ушёл с экрана
   void takePhoto(target, host).then((cap) => {
     if (host.isConnected) stopTaskReminder();
-    camOn = false;
     if (!cap) {
       if (!host.isConnected) return;
       toMap(); // камеры нет (отказ, нет https): играть нечем, возвращаем ребёнка к заданиям места
       return;
     }
-    void processCapture(task, cap);
+    if (host.isConnected) void processCapture(task, cap);
   });
 }
 
 async function processCapture(task: Task, cap: Captured) {
+  const session = taskSession;
+  if (!session || session.signal.aborted) return;
   dispatch({ type: 'start-camera' });
-  // живая камера уже вырезала предмет или отдала целый кадр
-  const wasCropped = cap.cropped;
   try {
-    const photo = await compressPhoto(cap.blob);
-    if (photoUrl) URL.revokeObjectURL(photoUrl);
-    photoUrl = URL.createObjectURL(photo);
-    dispatch({ type: 'photo-taken' });
-    const verdict = await verifyPhoto(photo, task, { cropped: wasCropped, liveClip: cap.liveClip });
-    let match = verdict.match;
-    // Почти подошло: не переспрашиваем ребёнка и не отказываем, а засчитываем и называем предмет по заданию.
-    if (!match && verdict.maybe) {
-      match = true;
+    const result = await captureTask(task, cap, session.signal, () => dispatch({ type: 'photo-taken' }));
+    session.signal.throwIfAborted();
+    if (result.claim === 'insufficient') {
+      notice = 'no-beads';
+      dispatch({ type: 'check-failed' });
+      void showNoBeads();
+      return;
     }
-    if (match) {
-      try {
-        const sticker: Sticker = { id: task.id, blob: await toSticker(photo), ts: Date.now() };
-        stickers.set(task.id, sticker);
-        void album.put(sticker);
-      } catch { /* без наклейки игра продолжается */ }
-    }
-    if (match) {
-      // Находка засчитывается на сервере (там же списываются бусины): не хватило, значит задание не засчитано
-      const claim = await claimFound(task.id, STARS_PER_TASK);
-      if (claim === 'insufficient') {
-        notice = 'no-beads'; // не повторяем озвучку задания при возврате на экран
-        dispatch({ type: 'check-failed' });
-        void showNoBeads();
-        return;
-      }
-    }
-    dispatch({ type: 'verified', match });
+    if (result.match && result.claim === 'ok') store.confirm?.(task.id, STARS_PER_TASK);
+    dispatch({ type: 'verified', match: result.match });
   } catch {
+    if (session.signal.aborted || !state) return;
     const trouble = pickPhrase(TROUBLE);
     notice = trouble.text;
     speak(trouble.text, false, trouble.who);
-    if (state!.phase === 'camera') dispatch({ type: 'cancel-camera' });
-    else dispatch({ type: 'check-failed' });
+    dispatch({ type: state.phase === 'camera' ? 'cancel-camera' : 'check-failed' });
   }
 }
 
-
 // «Найди предмет с красным цветом» -> «предмет с красным цветом»
 const goalOf = (task: Task) => task.prompt.replace(/^Найди\s+/, '').replace(/[!.]$/, '');
-
-function hud(left: string, mid = '', label = '', right = '') {
-  const aria = label ? ` role="img" aria-label="${label}"` : ' aria-hidden="true"';
-  return `<div class="hud">${left}<div class="pips"${aria}>${mid}</div><div class="hud-right">${right}</div></div>`;
-}
 
 function renderOnboarding() {
   const mobileVideo = window.matchMedia('(max-width: 767px)').matches;
@@ -533,24 +505,36 @@ function renderLevels() {
       <button id="back" class="loc-btn" aria-label="Назад"><i class="loc-i" style="--m:url(${base}/back.svg)"></i></button>
       <div class="loc-tools">${tool('snd', 'sound', isMuted() ? 'Включить звук' : 'Выключить звук')}${tool('fs', 'fullscreen', 'На весь экран')}</div></header>
     <main class="loc-body${intro ? ' intro-body' : ''}"><div class="mp-road${intro ? ' intro-only' : ''}" role="list" aria-label="Места">${places.map(mapTile).join('')}</div></main>
-    ${paywallUrl() ? '<button id="buy" class="mp-buy">Купить игру</button>' : ''}
-    ${bigBtn('play', playIcon(), 'Играть', false)}</div>`, `screen-loc screen-map${isMuted() ? ' muted' : ''}`);
+    <button id="buy" class="mp-buy" type="button">Купить игру</button>
+    ${bigBtn('play', playIcon(), 'Играть', false)}${feedbackButton()}</div>`, `screen-loc screen-map${isMuted() ? ' muted' : ''}`);
   root.querySelectorAll<HTMLButtonElement>('.mp-tile').forEach((b) => b.addEventListener('click', () => {
     const pl = places[Number(b.dataset.i)];
     if (isUnlocked(pl)) return startLevel(pl);
     shakeLocked(b, LOCKED_HINT);
   }));
   on('play', () => startLevel(next));
+  on('feedback', () => {
+    stopSpeech();
+    void openFeedback(root.querySelector<HTMLButtonElement>('#feedback')!);
+  });
   sayHint('.mp-road', intro ? ONBOARDING_HINT : HINT_PLACE);
   on('access', () => { void showPaywall(); });
-  on('buy', () => { void showPaywall(); });
+  on('buy', () => { if (paywallUrl()) void showPaywall(); });
   root.querySelector('#beads')?.addEventListener('click', () => { void showPaywall(); });
   wireLocTools();
   const road = root.querySelector<HTMLElement>('.mp-road')!;
   drawRoad(road);
   // Перерисовка только при смене размера (первый вызов наблюдателя пропускаем, иначе он оборвёт анимацию)
   let w = road.offsetWidth, h = road.offsetHeight;
-  new ResizeObserver(() => { if (road.offsetWidth !== w || road.offsetHeight !== h) { w = road.offsetWidth; h = road.offsetHeight; drawRoad(road); } }).observe(road);
+  const observer = new ResizeObserver(() => {
+    if (road.offsetWidth !== w || road.offsetHeight !== h) {
+      w = road.offsetWidth;
+      h = road.offsetHeight;
+      drawRoad(road);
+    }
+  });
+  observer.observe(road);
+  disposeScreen = () => observer.disconnect();
 }
 
 // Картинка к заданию: цветное пятно для цвета, контурный значок для предмета (ребёнок, который не читает, поймёт без звука).
@@ -570,76 +554,9 @@ function taskName(t: Task): string {
   return goalOf(t);
 }
 
-const openAlbum = () => { view = 'album'; render(); };
-const closeAlbum = () => { goBack(); view = null; render(); };
-
-let albumUrls = new Map<string, string>();
-
-async function renderAlbum() {
-  const all = await album.all().catch(() => [] as Sticker[]);
-  all.forEach((x) => stickers.set(x.id, x));
-  albumUrls.forEach((u) => URL.revokeObjectURL(u));
-  const urls = new Map<string, string>();
-  albumUrls = urls;
-  const total = LEVELS.reduce((n, l) => n + l.tasks.length, 0);
-  const have = LEVELS.reduce((n, l) => n + l.tasks.filter((t) => stickers.has(t.id)).length, 0);
-  let k = 0;
-  const sections = LEVELS.map((l) => {
-    const cards = l.tasks.map((t) => {
-      const st = stickers.get(t.id);
-      const tilt = (((k++ * 37) % 7) - 3) * 1.1;
-      if (!st) return `<div class="sticker empty" style="--tilt:${tilt}deg"><span class="q">${taskArt(t, t.local?.kind === 'color' ? 'obj3d sil sil-color' : 'obj3d sil')}</span><small>${esc(taskName(t))}</small></div>`;
-      const url = URL.createObjectURL(st.blob);
-      urls.set(t.id, url);
-      return `<button class="sticker" data-t="${t.id}" style="--tilt:${tilt}deg;--i:${k}" aria-label="${esc(taskName(t))}"><img src="${url}" alt=""><small>${esc(taskName(t))}</small></button>`;
-    }).join('');
-    const got = l.tasks.filter((t) => stickers.has(t.id)).length;
-    return `<section class="album-sec"><h2>${l.title}<span>${got}/${l.tasks.length}</span></h2><div class="album-grid">${cards}</div></section>`;
-  }).join('');
-  show(`${hud(`<button id="back" class="secondary small" aria-label="Назад">${backIcon()}</button>`)}
-    <h1>Мои находки</h1><p>Найдено ${have} из ${total}</p>
-    <div class="album">${have === 0 ? '<p class="album-empty">Находи предметы, и они появятся здесь!</p>' : ''}${sections}
-    <p class="album-note">Фото хранятся только на этом устройстве.</p></div>`, 'screen-album');
-  on('back', closeAlbum);
-  root.querySelectorAll<HTMLButtonElement>('.sticker[data-t]').forEach((b) =>
-    b.addEventListener('click', () => {
-      const t = LEVELS.flatMap((l) => l.tasks).find((x) => x.id === b.dataset.t)!;
-      showSticker(t, urls.get(t.id)!);
-    }),
-  );
-}
-
-// Крупная наклейка: фото, название, звёзды; фото можно удалить.
-function showSticker(t: Task, url: string) {
-  if (document.querySelector('.modal-overlay')) return;
-  const overlay = document.createElement('div');
-  overlay.className = 'modal-overlay';
-  overlay.setAttribute('role', 'dialog');
-  overlay.setAttribute('aria-modal', 'true');
-  overlay.setAttribute('aria-label', taskName(t));
-  overlay.innerHTML = `<div class="modal sticker-modal">
-    <img class="sticker-big" src="${url}" alt="">
-    <h2>${esc(taskName(t))}</h2>
-    <button class="st-ok" type="button">Закрыть</button>
-    <button class="st-del secondary" type="button">Удалить фото</button>
-  </div>`;
-  document.body.appendChild(overlay);
-  const close = () => { overlay.remove(); removeEventListener('keydown', onKey); };
-  const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape') close(); };
-  addEventListener('keydown', onKey);
-  overlay.addEventListener('click', (e) => { if (e.target === overlay) close(); });
-  overlay.querySelector('.st-ok')!.addEventListener('click', close);
-  overlay.querySelector('.st-del')!.addEventListener('click', async () => {
-    stickers.delete(t.id);
-    await album.remove(t.id).catch(() => {});
-    close();
-    render();
-  });
-  overlay.querySelector<HTMLElement>('.st-ok')!.focus();
-}
-
-const toMenu = () => { goBack(); state = null; level = null; render(); };
+const toMenu = () => { cancelTask(); goBack(); state = null; level = null; render(); };
 const toMap = () => {
+  cancelTask();
   goBack();
   state = null;
   if (!onboardingComplete()) level = null;
@@ -837,7 +754,6 @@ function renderQuiz(L: Level, justFound: Task, proceed: () => void) {
 }
 
 function render() {
-  if (view === 'album') return renderAlbum();
   if (!level) return !ONBOARDING || isOnboarded() ? renderLevels() : renderOnboarding();
   if (!state) return renderMap(level);
   const s = state;
@@ -924,6 +840,7 @@ function render() {
           if (next) return startTask(next);
           level = null;
           renderLevels();
+          preloadModels();
           return;
         }
         const everything = LEVELS.every((place) => place.tasks.every((task) => progress.found[task.id] !== undefined));
@@ -941,26 +858,22 @@ function render() {
 wireSfx(); // звуки кликов и событий (файлы звуков грузятся после первого экрана)
 wireMusic(); // фоновая музыка с первого касания
 
-// Сначала основа главного экрана (заставка «Загружаем игру», если сеть медленная), потом всё остальное по ступеням.
-void bootFirstStep().then(() => {
+// Bind the authenticated student's storage before accepting new finds.
+const readyProgress = store.load().then((p) => { progress = p; });
+store.subscribe?.((p) => {
+  progress = p;
+  if (!state && root.classList.contains('screen-map')) {
+    const places = mapPlaces();
+    if (root.querySelectorAll('.mp-tile').length !== places.length) renderLevels();
+    else refreshMapTiles(places);
+  }
+});
+void bootFirstStep(readyProgress).then(() => {
   render();
-  preloadModels(); // запускаем CLIP сразу после первого показа интерфейса, не блокируя экран
-
-  // Подтягиваем прогресс с сервера (если он настроен) и перерисовываем, не прерывая задание.
-  store.load().then((p) => {
-    progress = p;
-
-    // Серверный прогресс обновляет существующие карточки на месте: экран не моргает,
-    // и запускающиеся анимации плиток не сбрасываются.
-    if (!state && root.classList.contains('screen-map')) {
-      const places = mapPlaces();
-      if (root.querySelectorAll('.mp-tile').length !== places.length) renderLevels();
-      else refreshMapTiles(places);
-    } else if (!state && root.classList.contains('screen-menu')) render();
-  });
-
-  // Звуки догружаются в простое; модели распознавания уже загружаются в фоне.
-  bootSecondStep(() => {
-    startSfxLoad();
-  });
+  if (onboardingComplete()) preloadModels();
+  bootSecondStep(startSfxLoad);
+}).catch(() => {
+  document.querySelector('.pre-splash')?.remove();
+  void showNotice({ title: 'Не удалось загрузить прогресс', text: 'Проверь соединение и попробуй ещё раз.', button: 'Попробовать ещё раз' })
+    .then(() => location.reload());
 });

@@ -26,6 +26,13 @@ describe('recordTask', () => {
 });
 
 describe('старый прогресс', () => {
+  it('пересчитывает завершённость по находкам и текущим заданиям', () => {
+    vi.stubGlobal('localStorage', {
+      getItem: () => JSON.stringify({ found: { 'color-red': 3 }, levels: { colors: { passed: true, stars: 30 } } }),
+    });
+    expect(loadProgress().levels).toEqual({});
+    vi.unstubAllGlobals();
+  });
   it('сохраняет находки и убирает удалённую валюту', () => {
     vi.stubGlobal('localStorage', {
       getItem: () => JSON.stringify({ found: { 'color-red': 3 }, levels: {}, flashes: 12, owned: ['kitchen'], fed: { sonya: 2 } }),

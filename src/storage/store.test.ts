@@ -18,6 +18,50 @@ describe('mergeProgress', () => {
 });
 
 describe('SyncedStore', () => {
+  it('успешный PUT не вызывает повторную отправку находки', async () => {
+    const local = mem(P());
+    const remote = { load: async () => P(), save: vi.fn(), reconcile: vi.fn() };
+    const store = new SyncedStore(local, remote);
+    store.confirm('a', 3);
+    await store.save(P({ found: { a: 3 } }));
+    expect(local.data.found).toEqual({ a: 3 });
+    expect(remote.save).not.toHaveBeenCalled();
+    expect(remote.reconcile).not.toHaveBeenCalled();
+  });
+
+  it('повторяет синхронизацию после запуска без сети', async () => {
+    const remote = { load: vi.fn().mockRejectedValue(new Error('net')), save: vi.fn().mockResolvedValue(undefined) };
+    const store = new SyncedStore(mem(P({ found: { a: 3 } })), remote);
+    await store.load();
+    await store.flush();
+    expect(remote.save).toHaveBeenCalledWith(P({ found: { a: 3 } }));
+  });
+
+  it('применяет отказ сервера после восстановления связи', async () => {
+    const local = mem(P());
+    const remote = {
+      load: async () => P(), save: async () => {},
+      reconcile: vi.fn().mockResolvedValue(P()),
+    };
+    const store = new SyncedStore(local, remote);
+    await store.save(P({ found: { a: 3 } }));
+    expect(local.data.found).toEqual({});
+  });
+
+  it('отправляет новое состояние после завершения старого запроса', async () => {
+    let complete!: () => void;
+    const remote = {
+      load: async () => P(),
+      save: vi.fn().mockImplementationOnce(() => new Promise<void>((resolve) => { complete = resolve; })).mockResolvedValue(undefined),
+    };
+    const store = new SyncedStore(mem(P()), remote);
+    const first = store.save(P({ found: { a: 3 } }));
+    await vi.waitFor(() => expect(remote.save).toHaveBeenCalledTimes(1));
+    const second = store.save(P({ found: { a: 3, b: 3 } }));
+    complete();
+    await Promise.all([first, second]);
+    expect(remote.save).toHaveBeenLastCalledWith(P({ found: { a: 3, b: 3 } }));
+  });
   it('при старте сливает локальный и удалённый прогресс в оба места', async () => {
     const local = mem(P({ found: { a: 3 } }));
     const remote = mem(P({ found: { b: 2 } }));
@@ -99,5 +143,25 @@ describe('SyncedStore с итогом сервера (бусины)', () => {
     const result = await new SyncedStore(local, remote).load();
     expect(result.found).toEqual({ a: 3 });
     expect(local.data.found).toEqual({ a: 3 });
+  });
+});
+
+describe('изоляция учеников', () => {
+  it('использует только сохранение авторизованного ученика', async () => {
+    const data = new Map([
+      ['photoquest.progress.v2', JSON.stringify({ found: { 'color-red': 3 } })],
+      ['photoquest.progress.v2.user.2', JSON.stringify({ found: { 'color-blue': 3 } })],
+    ]);
+    vi.stubGlobal('localStorage', { getItem: (key: string) => data.get(key) ?? null, setItem: (key: string, value: string) => data.set(key, value) });
+    vi.stubEnv('VITE_PROGRESS_API', '/api/v1');
+    const fetchMock = vi.fn().mockResolvedValue({ ok: true, json: async () => ({ user_id: '2', found: { 'color-blue': 3 } }) });
+    vi.stubGlobal('fetch', fetchMock);
+    try {
+      const { createStore } = await import('./store');
+      const result = await createStore().load();
+      expect(result.found).toEqual({ 'color-blue': 3 });
+      expect(fetchMock).toHaveBeenCalledTimes(1);
+      expect(JSON.parse(data.get('photoquest.progress.v2')!).found).toEqual({ 'color-red': 3 });
+    } finally { vi.unstubAllGlobals(); vi.unstubAllEnvs(); }
   });
 });

@@ -1,6 +1,7 @@
 import type { LocalCheck } from '../data/tasks';
 import { COLOR_SHARE_MIN, hasColor, type ColorName } from './color';
-import { CLIP_ACCEPT, clipAccepts, clipProb, type ClipRank } from './clip';
+import { clipAccepts, clipProb, type ClipRank } from './clipScoring';
+import { CLIP_ACCEPT } from './clipConstants';
 
 // Ленивый контекст: вычисляем цветовые доли или CLIP ранжирование только когда они нужны.
 export interface Ctx {

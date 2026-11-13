@@ -1,5 +1,7 @@
 node_modules
 dist
+!vendors/feedback-form/dist/
 .git
 .claude
 .env*
+!.env.production

@@ -1,5 +1,14 @@
 stages:
+  - tests
   - build
+
+tests:
+  stage: tests
+  image: node:24.18.0-alpine
+  script:
+    - npm ci
+    - npm test
+    - npx tsc --noEmit
 
 variables:
   # Внутренние @uchi-конфиги вендорены в vendor/ (pnpm-workspace), поэтому

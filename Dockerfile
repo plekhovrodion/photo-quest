@@ -14,6 +14,7 @@ ARG no_proxy
 WORKDIR /app
 
 COPY package.json package-lock.json /app/
+COPY vendors /app/vendors
 RUN npm ci
 
 COPY . /app
