@@ -24,6 +24,8 @@ jobs:
         env:
           # Адрес сайта: на своём домене корень «/», на github.io/<репозиторий> — «/photo-quest». Задаётся переменной репозитория PAGES_BASE.
           VITE_BASE_PATH: ${{ vars.PAGES_BASE || '/photo-quest' }}
+          # На GitHub Pages прогресс хранится в браузере, серверного API здесь нет.
+          VITE_PROGRESS_API: ''
           # Плейсхолдеры Shaman в .env.production на Pages не подставляются
           VITE_CLICK_STREAM_HOST: ''
           VITE_CONTENT_PAYWALL_URL: ''
